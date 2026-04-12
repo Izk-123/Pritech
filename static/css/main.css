@@ -1,0 +1,358 @@
+/* ── PRITECH DESIGN SYSTEM 2.0 (Tailwind Companion) ── */
+/* This file adds custom glass effects, animations, and fallbacks not covered by Tailwind utilities. */
+
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --sidebar-width: 240px;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Backdrop fallback for older browsers */
+@supports not (backdrop-filter: blur(12px)) {
+  .glass-card,
+  .glass-sidebar,
+  .glass-topbar {
+    background-color: #fff !important;
+  }
+  .glass-sidebar {
+    background-color: #111827 !important;
+  }
+}
+
+/* Custom animation for fade-up */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+}
+
+/* Hover lift effects (optional, can also be done with Tailwind) */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 20px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Smooth sidebar transition */
+.sidebar-transition {
+  transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+
+/* Bottom navigation safe area for iOS */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Active navigation item indicator (used with JS) */
+.nav-item.active,
+.bottom-nav-item.active {
+  color: white !important;
+  background: rgba(37, 99, 235, 0.2);
+  border-left: 3px solid var(--primary);
+}
+
+/* Focus ring for inputs (matches Tailwind ring) */
+.input-focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Scroll reveal base */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Alert animations (for Django messages) */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.alert {
+  animation: slideDown 0.3s ease;
+}
+
+/* Mobile menu overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+}
+.sidebar-overlay.show {
+  display: block;
+}
+
+/* Responsive adjustments that Tailwind may not cover */
+@media (max-width: 768px) {
+  .main-content {
+    padding-bottom: 70px; /* space for bottom nav */
+  }
+}
+
+/* ========== MODERN TABLES ========== */
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.modern-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.modern-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.modern-table tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+.modern-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Card-based list (alternative to tables on mobile) */
+.list-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  transition: all 0.15s ease;
+}
+
+.list-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.list-card-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.list-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* ========== MODERN FORMS ========== */
+.form-floating-custom {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.form-floating-custom input,
+.form-floating-custom select,
+.form-floating-custom textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-floating-custom input:focus,
+.form-floating-custom select:focus,
+.form-floating-custom textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(65, 84, 241, 0.1);
+  outline: none;
+}
+
+.form-floating-custom label {
+  position: absolute;
+  left: 1rem;
+  top: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  transition: all 0.15s ease;
+  background: transparent;
+  padding: 0 0.25rem;
+}
+
+.form-floating-custom input:focus ~ label,
+.form-floating-custom input:not(:placeholder-shown) ~ label,
+.form-floating-custom select:focus ~ label,
+.form-floating-custom select:not([value=""]):valid ~ label,
+.form-floating-custom textarea:focus ~ label,
+.form-floating-custom textarea:not(:placeholder-shown) ~ label {
+  top: -0.5rem;
+  left: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--primary);
+  background: var(--bg-primary);
+  padding: 0 0.25rem;
+}
+
+/* ========== DETAIL INFO LIST ========== */
+.detail-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.detail-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.detail-body {
+  padding: 1.5rem;
+}
+
+.info-row {
+  display: flex;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 140px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.info-value {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ========== MOBILE DRAWER (UPDATED) ========== */
+.offcanvas {
+  background: var(--sidebar-bg);
+  color: var(--text-primary);
+  border-right: 1px solid var(--border-color);
+}
+
+.offcanvas-header {
+  background: var(--primary);
+  color: white;
+  border-bottom: none;
+}
+
+.offcanvas-title {
+  font-weight: 700;
+}
+
+.offcanvas .nav-link {
+  color: var(--text-secondary);
+  border-radius: 10px;
+  margin: 0 0.5rem;
+  transition: all 0.1s ease;
+}
+
+.offcanvas .nav-link:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.offcanvas .nav-link.active {
+  background: var(--active-bg);
+  color: var(--primary);
+}
+
+/* ========== EMPTY STATE ========== */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+}
+
+/* ========== PAGE HEADER ========== */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.page-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.page-breadcrumb {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.page-breadcrumb a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.page-breadcrumb a:hover {
+  color: var(--primary);
+}
