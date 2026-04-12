@@ -80,6 +80,8 @@
       <a href="{% url 'home' %}" class="ai-nav-link"><i class="bi bi-globe"></i> Public Site</a>
       {% if request.user.is_staff %}
       <a href="{% url 'admin:index' %}" class="ai-nav-link"><i class="bi bi-shield"></i> Admin</a>
+      <a href="{% url 'audit_log' %}" class="ai-nav-link"><i class="bi bi-journal-text"></i> Audit Log</a>
+      <a href="{% url 'page_visits' %}" class="ai-nav-link"><i class="bi bi-bar-chart"></i> Page Visits</a>
       {% endif %}
     </div>
 
@@ -154,6 +156,8 @@
         <a href="{% url 'home' %}" class="nav-link"><i class="bi bi-globe me-2"></i>Public Site</a>
         {% if request.user.is_staff %}
         <a href="{% url 'admin:index' %}" class="nav-link"><i class="bi bi-gear me-2"></i>Admin</a>
+        <a href="{% url 'audit_log' %}" class="ai-nav-link"><i class="bi bi-journal-text"></i> Audit Log</a>
+        <a href="{% url 'page_visits' %}" class="ai-nav-link"><i class="bi bi-bar-chart"></i> Page Visits</a>
         {% endif %}
         <form method="post" action="{% url 'logout' %}">
           {% csrf_token %}

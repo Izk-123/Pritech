@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load core_tags %}
+{% block title %}Audit Log{% endblock %}
+{% block page_title %}Audit Log{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">System</div>
+    <h1>Audit Log</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'page_visits' %}" class="btn btn-outline-primary">
+      <i class="bi bi-bar-chart me-1"></i> Page Visits
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Action</th>
+          <th>IP Address</th>
+          <th>User Agent</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>
+            {% if log.user %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem;">
+                {{ log.user.first_name|first|upper }}{{ log.user.last_name|first|upper }}
+              </div>
+              <span class="fw-semibold">{{ log.user.get_full_name|default:log.user.email }}</span>
+            </div>
+            {% else %}
+            <span class="text-muted">Anonymous</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge
+              {% if 'login_success' in log.action %}bg-success
+              {% elif 'logout' in log.action %}bg-secondary
+              {% elif 'login_failed' in log.action %}bg-danger
+              {% else %}bg-primary{% endif %}">
+              {{ log.action|replace:"_: " }}
+            </span>
+          </td>
+          <td>
+            <code class="small">{{ log.ip_address|default:"—" }}</code>
+          </td>
+          <td>
+            <span class="text-muted small text-truncate d-inline-block" style="max-width: 200px;" title="{{ log.user_agent }}">
+              {{ log.user_agent|truncatechars:60|default:"—" }}
+            </span>
+          </td>
+          <td class="small text-muted">{{ log.timestamp|date:"d M Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="empty-state py-4">
+              <div class="empty-icon">📋</div>
+              <p class="mb-0">No audit events yet.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <div class="text-muted small">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
+    <div class="btn-group">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary">← Prev</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

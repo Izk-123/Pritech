@@ -1,10 +1,9 @@
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Sum, Count
+from django.db.models import Sum, F, Count
 from tickets.models import Ticket
 from finance.models import Invoice
 from clients.models import ClientOrganization
-
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
@@ -15,9 +14,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ctx['open_tickets'] = Ticket.objects.exclude(status__in=['closed', 'resolved']).count()
         ctx['total_invoices'] = Invoice.objects.count()
         ctx['revenue'] = Invoice.objects.filter(status='paid').aggregate(t=Sum('total_amount'))['t'] or 0
+
+        # ✅ Fixed: use database fields with F expression
         ctx['pending_revenue'] = Invoice.objects.filter(
             status__in=['issued', 'partial', 'overdue']
-        ).aggregate(t=Sum('balance_due'))['t'] or 0
+        ).aggregate(
+            t=Sum(F('total_amount') - F('amount_paid'))
+        )['t'] or 0
+
         ctx['recent_tickets'] = Ticket.objects.select_related('client').order_by('-created_at')[:5]
         ctx['recent_invoices'] = Invoice.objects.select_related('client').order_by('-created_at')[:5]
         ctx['ticket_stats'] = {

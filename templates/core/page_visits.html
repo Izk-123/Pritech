@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Page Visits{% endblock %}
+{% block page_title %}Page Visits{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">System</div>
+    <h1>Page Visits</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'audit_log' %}" class="btn btn-outline-primary">
+      <i class="bi bi-shield me-1"></i> Audit Log
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Page</th>
+          <th>User</th>
+          <th>IP Address</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in visits %}
+        <tr>
+          <td>
+            <code class="small">{{ v.page_url }}</code>
+          </td>
+          <td>
+            {% if v.user %}
+            <span class="fw-semibold">{{ v.user.get_full_name|default:v.user.email }}</span>
+            {% else %}
+            <span class="text-muted">Guest</span>
+            {% endif %}
+          </td>
+          <td>
+            <code class="small">{{ v.ip_address|default:"—" }}</code>
+          </td>
+          <td class="small text-muted">{{ v.timestamp|date:"d M Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4">
+            <div class="empty-state py-4">
+              <div class="empty-icon">📊</div>
+              <p class="mb-0">No visits recorded.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if is_paginated %}
+  <div class="card-footer d-flex justify-content-between align-items-center">
+    <div class="text-muted small">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </div>
+    <div class="btn-group">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-sm btn-outline-secondary">← Prev</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}" class="btn btn-sm btn-outline-secondary">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
