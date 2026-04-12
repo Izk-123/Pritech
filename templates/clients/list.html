@@ -1,0 +1,51 @@
+{% extends "generic/list.html" %}
+{% block title %}Clients{% endblock %}
+{% block breadcrumb %}<div class="page-breadcrumb">Clients</div>{% endblock %}
+
+{% block filters %}
+<div class="col-auto">
+  <input type="text" name="q" class="form-control" placeholder="Search clients..." value="{{ request.GET.q }}">
+</div>
+<div class="col-auto">
+  <button type="submit" class="btn btn-outline-primary">Search</button>
+  {% if request.GET.q %}
+  <a href="{% url 'client_list' %}" class="btn btn-outline-secondary ms-1">Clear</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block table_head %}
+<tr><th>Name</th><th>Industry</th><th>Contact</th><th>Open Tickets</th><th>Total Invoiced</th><th></th></tr>
+{% endblock %}
+
+{% block table_row %}
+<tr>
+  <td>
+    <a href="{% url 'client_detail' obj.pk %}" class="fw-semibold">{{ obj.name }}</a>
+    {% if not obj.is_active %}<span class="badge bg-secondary ms-2">Inactive</span>{% endif %}
+  </td>
+  <td>{{ obj.get_industry_display }}</td>
+  <td>
+    {% if obj.email %}<div class="small">{{ obj.email }}</div>{% endif %}
+    {% if obj.phone %}<div class="small text-muted">{{ obj.phone }}</div>{% endif %}
+  </td>
+  <td>{% if obj.open_tickets %}<span class="badge bg-warning">{{ obj.open_tickets }}</span>{% else %}—{% endif %}</td>
+  <td class="fw-semibold">{{ site_config.currency_symbol }}{{ obj.total_invoiced|floatformat:0 }}</td>
+  <td><a href="{% url 'client_update' obj.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+</tr>
+{% endblock %}
+
+{% block mobile_card %}
+<div class="list-card">
+  <div class="d-flex justify-content-between">
+    <a href="{% url 'client_detail' obj.pk %}" class="list-card-title">{{ obj.name }}</a>
+    <a href="{% url 'client_update' obj.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+  </div>
+  <div class="list-card-meta mt-2">
+    <span>{{ obj.get_industry_display }}</span>
+    {% if obj.email %}<span>{{ obj.email }}</span>{% endif %}
+    {% if obj.open_tickets %}<span class="badge bg-warning">{{ obj.open_tickets }} open</span>{% endif %}
+  </div>
+  <div class="mt-2 fw-semibold">{{ site_config.currency_symbol }}{{ obj.total_invoiced|floatformat:0 }}</div>
+</div>
+{% endblock %}

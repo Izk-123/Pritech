@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }}{% endblock %}
+{% block page_title %}{{ client.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb">
+      <a href="{% url 'client_list' %}">Clients</a> <span class="mx-1">/</span> {{ client.name }}
+    </div>
+    <h1 class="mb-0">{{ client.name }}</h1>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'ticket_create' %}?client={{ client.pk }}" class="btn btn-outline-primary">
+      <i class="bi bi-plus-circle me-1"></i> Ticket
+    </a>
+    <a href="{% url 'client_update' client.pk %}" class="btn btn-primary">
+      <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Left Column -->
+  <div class="col-lg-8">
+    <!-- Organisation Details Card -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">Organisation Details</h3>
+        <span class="badge {% if client.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+          {{ client.is_active|yesno:'Active,Inactive' }}
+        </span>
+      </div>
+      <div class="card-body">
+        <ul class="info-list">
+          <li><span class="label">Industry</span><span class="value">{{ client.get_industry_display }}</span></li>
+          {% if client.registration_number %}
+          <li><span class="label">Reg. Number</span><span class="value">{{ client.registration_number }}</span></li>
+          {% endif %}
+          {% if client.email %}
+          <li><span class="label">Email</span><span class="value">{{ client.email }}</span></li>
+          {% endif %}
+          {% if client.phone %}
+          <li><span class="label">Phone</span><span class="value">{{ client.phone }}</span></li>
+          {% endif %}
+          {% if client.address %}
+          <li><span class="label">Address</span><span class="value">{{ client.address }}</span></li>
+          {% endif %}
+          {% if client.website %}
+          <li><span class="label">Website</span><span class="value">
+            <a href="{{ client.website }}" target="_blank" rel="noopener">{{ client.website }}</a>
+          </span></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Tickets Card -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">Tickets</h3>
+        <a href="{% url 'ticket_create' %}?client={{ client.pk }}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-plus"></i> New
+        </a>
+      </div>
+      {% if tickets %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Status</th>
+              <th>Priority</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in tickets %}
+            <tr>
+              <td><a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a></td>
+              <td>{{ t.title|truncatechars:40 }}</td>
+              <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+              <td><span class="badge bg-{{ t.priority_color }}">{{ t.get_priority_display }}</span></td>
+              <td class="text-muted small">{{ t.created_at|date:"d M Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-center py-4 text-muted">
+        <i class="bi bi-ticket fs-1 opacity-50"></i>
+        <p class="mt-2">No tickets for this client yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div class="col-lg-4">
+    <!-- Stats Card -->
+    <div class="card">
+      <div class="card-body">
+        <div class="row text-center g-3">
+          <div class="col-6">
+            <div class="stat-value">{{ tickets|length }}</div>
+            <div class="stat-label">Total Tickets</div>
+          </div>
+          <div class="col-6">
+            <div class="stat-value text-success">{{ site_config.currency_symbol }}{{ client.total_invoiced|floatformat:0 }}</div>
+            <div class="stat-label">Invoiced</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contacts Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="mb-0">Contacts</h3>
+      </div>
+      {% if contacts %}
+      <div class="list-group list-group-flush">
+        {% for c in contacts %}
+        <div class="list-group-item">
+          <div class="d-flex align-items-start">
+            <div class="flex-grow-1">
+              <div class="fw-semibold">
+                {{ c.name }}
+                {% if c.is_primary %}
+                <span class="badge bg-primary ms-1">Primary</span>
+                {% endif %}
+              </div>
+              {% if c.role %}<div class="small text-muted">{{ c.role }}</div>{% endif %}
+              {% if c.email %}<div class="small">{{ c.email }}</div>{% endif %}
+              {% if c.phone %}<div class="small">{{ c.phone }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="card-body text-center py-4 text-muted">
+        <i class="bi bi-person fs-1 opacity-50"></i>
+        <p class="mt-2">No contacts added.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Invoices Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="mb-0">Recent Invoices</h3>
+      </div>
+      {% if invoices %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in invoices|slice:":5" %}
+            <tr>
+              <td>
+                <a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a>
+                <div class="small text-muted">{{ inv.issue_date }}</div>
+              </td>
+              <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</td>
+              <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if invoices|length > 5 %}
+      <div class="card-footer text-center">
+        <a href="{% url 'invoice_list' %}?client={{ client.pk }}" class="text-decoration-none">View all invoices →</a>
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="card-body text-center py-4 text-muted">
+        <i class="bi bi-receipt fs-1 opacity-50"></i>
+        <p class="mt-2">No invoices yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "generic/form.html" %}
+{% block title %}New Ticket{% endblock %}
+{% block form_title %}Ticket{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="page-header">
+      <h1>Create Ticket</h1>
+    </div>
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ field.label }}</label>
+            {% if field.field.widget.input_type == 'select' %}
+              <select name="{{ field.html_name }}" class="form-select">
+                {% for val, label in field.field.choices %}
+                <option value="{{ val }}" {% if field.value|stringformat:'s' == val|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            {% elif field.field.widget.input_type == 'textarea' %}
+              <textarea name="{{ field.html_name }}" class="form-control" rows="4" placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}">{{ field.value|default:'' }}</textarea>
+            {% else %}
+              <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" class="form-control" value="{{ field.value|default:'' }}" placeholder="{{ field.field.widget.attrs.placeholder|default:'' }}">
+            {% endif %}
+            {% if field.errors %}
+            <div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">Create Ticket</button>
+            <a href="{% url 'ticket_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

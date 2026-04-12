@@ -1,0 +1,8 @@
+{% extends "generic/form.html" %}
+{% block title %}{% if form.instance.pk %}Edit Client{% else %}New Client{% endif %}{% endblock %}
+{% block form_title %}Client{% endblock %}
+{% block breadcrumb %}
+<div class="page-breadcrumb">
+  <a href="{% url 'client_list' %}">Clients</a> / {% if form.instance.pk %}Edit{% else %}New{% endif %}
+</div>
+{% endblock %}

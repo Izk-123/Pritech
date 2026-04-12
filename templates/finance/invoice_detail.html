@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.invoice_number }}{% endblock %}
+{% block page_title %}{{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb"><a href="{% url 'invoice_list' %}">Invoices</a> / {{ invoice.invoice_number }}</div>
+    <h1 class="mb-1">{{ invoice.invoice_number }}</h1>
+    <span class="badge bg-{{ invoice.status_color }}">{{ invoice.get_status_display }}</span>
+  </div>
+  <div class="d-flex gap-2">
+    {% if invoice.status == 'draft' %}
+    <form method="post" action="{% url 'invoice_issue' invoice.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i> Issue</button>
+    </form>
+    {% endif %}
+    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card" id="invoice-doc">
+      <div class="card-body p-4 p-md-5">
+        <div class="row mb-4">
+          <div class="col-sm-6">
+            <h2 class="fw-bold text-primary">{{ site_config.company_name }}</h2>
+            {% if site_config.address %}<div class="small text-muted">{{ site_config.address|linebreaksbr }}</div>{% endif %}
+            {% if site_config.email %}<div class="small">{{ site_config.email }}</div>{% endif %}
+            {% if site_config.phone %}<div class="small">{{ site_config.phone }}</div>{% endif %}
+          </div>
+          <div class="col-sm-6 text-sm-end">
+            <div class="display-6 fw-bold text-primary">INVOICE</div>
+            <div class="fs-5 fw-semibold">{{ invoice.invoice_number }}</div>
+          </div>
+        </div>
+        <div class="row mb-4">
+          <div class="col-sm-6">
+            <div class="text-uppercase small fw-semibold text-muted mb-2">Bill To</div>
+            <h5 class="fw-bold">{{ invoice.client.name }}</h5>
+            {% if invoice.client.address %}<div class="small">{{ invoice.client.address|linebreaksbr }}</div>{% endif %}
+            {% if invoice.client.email %}<div class="small">{{ invoice.client.email }}</div>{% endif %}
+          </div>
+          <div class="col-sm-6 text-sm-end">
+            <div class="text-uppercase small fw-semibold text-muted mb-2">Details</div>
+            <div class="d-flex justify-content-sm-end gap-3 small">
+              <span class="text-muted">Issue Date:</span><span class="fw-semibold">{{ invoice.issue_date }}</span>
+            </div>
+            <div class="d-flex justify-content-sm-end gap-3 small">
+              <span class="text-muted">Due Date:</span><span class="fw-semibold">{{ invoice.due_date }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered">
+            <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+            <tbody>
+              {% for item in items %}
+              <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ site_config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ site_config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-end">
+          <div style="width: 300px;">
+            <div class="d-flex justify-content-between py-1"><span class="text-muted">Subtotal</span><span>{{ site_config.currency_symbol }}{{ invoice.subtotal|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">VAT</span><span>{{ site_config.currency_symbol }}{{ invoice.tax_amount|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-2 fs-5 fw-bold"><span>Total</span><span>{{ site_config.currency_symbol }}{{ invoice.total_amount|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-1"><span class="text-success">Paid</span><span class="text-success">{{ site_config.currency_symbol }}{{ invoice.amount_paid|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-1 fw-bold {% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}"><span>Balance</span><span>{{ site_config.currency_symbol }}{{ invoice.balance_due|floatformat:2 }}</span></div>
+          </div>
+        </div>
+        {% if invoice.notes %}<div class="mt-4 p-3 bg-light rounded small">{{ invoice.notes }}</div>{% endif %}
+      </div>
+    </div>
+    {% if invoice.status == 'draft' %}
+    <div class="card mt-4">
+      <div class="card-header"><h5 class="mb-0">Add Line Item</h5></div>
+      <div class="card-body">
+        <form method="post" action="{% url 'invoice_add_item' invoice.pk %}">
+          {% csrf_token %}
+          <div class="mb-3"><input type="text" name="description" class="form-control" placeholder="Description" required></div>
+          <div class="row g-3">
+            <div class="col-sm-6"><input type="number" name="quantity" class="form-control" value="1" step="0.5" required></div>
+            <div class="col-sm-6"><input type="number" name="unit_price" class="form-control" placeholder="0.00" step="0.01" required></div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-3">Add Item</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-header"><h5 class="mb-0">Payments</h5></div><div class="card-body">
+      {% if payments %}{% for p in payments %}<div class="d-flex justify-content-between border-bottom py-2"><div><strong>{{ site_config.currency_symbol }}{{ p.amount }}</strong><br><small>{{ p.get_method_display }} · {{ p.date }}</small></div><span class="badge bg-success">Paid</span></div>{% endfor %}
+      {% else %}<p class="text-muted text-center py-3">No payments</p>{% endif %}
+    </div></div>
+    {% if invoice.status != 'paid' and invoice.status != 'cancelled' and invoice.status != 'draft' %}
+    <div class="card"><div class="card-header"><h5 class="mb-0">Record Payment</h5></div><div class="card-body">
+      <form method="post" action="{% url 'invoice_payment' invoice.pk %}">
+        {% csrf_token %}
+        <div class="mb-3"><input type="number" name="amount" class="form-control" placeholder="Amount" step="0.01" required></div>
+        <div class="mb-3"><select name="method" class="form-select"><option>Cash</option><option>Bank Transfer</option><option>Mobile Money</option></select></div>
+        <div class="mb-3"><input type="date" name="date" class="form-control" required></div>
+        <div class="mb-3"><input type="text" name="reference" class="form-control" placeholder="Reference"></div>
+        <button type="submit" class="btn btn-success w-100">Record Payment</button>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+<style>@media print { .sidebar, .topbar, .bottom-nav, .page-header .btn, form, .card:not(#invoice-doc) { display: none !important; } }</style>
+{% endblock %}

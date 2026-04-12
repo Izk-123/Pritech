@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Services{% endblock %}
+{% block page_title %}Services{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Services</h1>
+  <a href="{% url 'service_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Add Service</a>
+</div>
+<div class="card">
+  {% if services %}
+  <div class="table-responsive">
+    <table class="modern-table">
+      <thead><tr><th>Name</th><th>Category</th><th>Base Price</th><th>Unit</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for s in services %}
+      <tr>
+        <td class="fw-semibold">{{ s.name }}</td>
+        <td>{% if s.category %}{{ s.category.icon }} {{ s.category.name }}{% else %}—{% endif %}</td>
+        <td class="fw-semibold">{{ site_config.currency_symbol }}{{ s.base_price|floatformat:0 }}</td>
+        <td class="text-muted">per {{ s.unit }}</td>
+        <td><span class="badge {% if s.is_active %}bg-success{% else %}bg-secondary{% endif %}">{{ s.is_active|yesno:'Active,Inactive' }}</span></td>
+        <td><a href="{% url 'service_update' s.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center py-5"><div class="empty-icon mb-3">🔧</div><h5 class="text-muted">No services yet.</h5><a href="{% url 'service_create' %}" class="btn btn-primary mt-2">Add your first service</a></div>
+  {% endif %}
+</div>
+{% endblock %}

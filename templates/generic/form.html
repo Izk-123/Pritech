@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} {{ model_name|default:"Record" }}{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit{% else %}New{% endif %} {{ model_name|default:"Record" }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-6">
+    <div class="page-header">
+      <div>
+        {% block breadcrumb %}{% endblock %}
+        <h1>{% if form.instance.pk %}Edit{% else %}Create New{% endif %} {% block form_title %}Record{% endblock %}</h1>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+            {% if field.field.widget.input_type == 'checkbox' %}
+              <div class="mb-4 form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              </div>
+            {% else %}
+              <div class="form-floating-custom">
+                {% if field.field.widget.input_type == 'select' %}
+                  <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-select">
+                    {% for val, label in field.field.choices %}
+                      <option value="{{ val }}" {% if field.value|stringformat:'s' == val|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                {% elif field.field.widget.input_type == 'textarea' %}
+                  <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control" rows="4" placeholder=" ">{{ field.value|default:'' }}</textarea>
+                {% else %}
+                  <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                         class="form-control" value="{{ field.value|default:'' }}" placeholder=" " {% if field.field.required %}required{% endif %}>
+                {% endif %}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">{% if form.instance.pk %}Save Changes{% else %}Create{% endif %}</button>
+            <a href="{{ cancel_url|default:'javascript:history.back()' }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
