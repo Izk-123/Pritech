@@ -1,23 +1,44 @@
 from django.db import models
+from django.conf import settings
+import uuid
 
 
 class ClientOrganization(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     INDUSTRY_CHOICES = [
         ('technology', 'Technology'), ('finance', 'Finance & Banking'),
         ('healthcare', 'Healthcare'), ('education', 'Education'),
         ('government', 'Government'), ('ngo', 'NGO / Non-Profit'),
         ('retail', 'Retail & Commerce'), ('other', 'Other'),
     ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('lead', 'Lead'),
+        ('former', 'Former Client'),
+    ]
+
     name = models.CharField(max_length=200)
     industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default='other')
     registration_number = models.CharField(max_length=100, blank=True)
+    tax_id = models.CharField(max_length=100, blank=True)  # new field
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     website = models.URLField(blank=True)
     notes = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')  # replace is_active
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Link to the primary user (one user = one organization for MVP)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='client_organization'
+    )
 
     class Meta:
         ordering = ['name']

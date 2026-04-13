@@ -4,6 +4,6 @@ from .views import ClientListView, ClientCreateView, ClientDetailView, ClientUpd
 urlpatterns = [
     path('', ClientListView.as_view(), name='client_list'),
     path('new/', ClientCreateView.as_view(), name='client_create'),
-    path('<int:pk>/', ClientDetailView.as_view(), name='client_detail'),
-    path('<int:pk>/edit/', ClientUpdateView.as_view(), name='client_update'),
+    path('<uuid:pk>/', ClientDetailView.as_view(), name='client_detail'),      # <-- changed
+    path('<uuid:pk>/edit/', ClientUpdateView.as_view(), name='client_update'), # <-- changed
 ]

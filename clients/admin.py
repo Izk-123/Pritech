@@ -7,7 +7,7 @@ class ContactInline(admin.TabularInline):
 
 @admin.register(ClientOrganization)
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('name', 'industry', 'email', 'phone', 'is_active', 'open_tickets')
-    list_filter = ('industry', 'is_active')
-    search_fields = ('name', 'email')
+    list_display = ('name', 'industry', 'email', 'phone', 'status', 'open_tickets', 'user')
+    list_filter = ('industry', 'status')
+    search_fields = ('name', 'email', 'tax_id')
     inlines = [ContactInline]

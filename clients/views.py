@@ -4,12 +4,15 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from .models import ClientOrganization, ClientContact
 from .forms import ClientOrganizationForm, ClientContactForm
+from core.mixins import RoleRequiredMixin
 
 
-class ClientListView(LoginRequiredMixin, ListView):
+class ClientListView(RoleRequiredMixin, ListView):
     model = ClientOrganization
     template_name = 'clients/list.html'
     context_object_name = 'clients'
+    required_roles = ['ADMIN', 'SALES', 'FINANCE']  # adjust as needed
+    paginate_by = 20
 
     def get_queryset(self):
         qs = ClientOrganization.objects.all()
@@ -19,11 +22,12 @@ class ClientListView(LoginRequiredMixin, ListView):
         return qs
 
 
-class ClientCreateView(LoginRequiredMixin, CreateView):
+class ClientCreateView(RoleRequiredMixin, CreateView):
     model = ClientOrganization
     form_class = ClientOrganizationForm
     template_name = 'clients/form.html'
     success_url = reverse_lazy('client_list')
+    required_roles = ['ADMIN', 'SALES']
 
     def form_valid(self, form):
         messages.success(self.request, 'Client created successfully.')
@@ -35,6 +39,20 @@ class ClientDetailView(LoginRequiredMixin, DetailView):
     template_name = 'clients/detail.html'
     context_object_name = 'client'
 
+    def get_queryset(self):
+        """
+        Staff users see all organizations.
+        Client users see only their own linked organization.
+        """
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.user_type == 'client':
+            # Client can only view their own organization
+            if hasattr(user, 'client_organization'):
+                return qs.filter(pk=user.client_organization.pk)
+            return qs.none()
+        return qs
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['tickets'] = self.object.tickets.order_by('-created_at')[:10]
@@ -43,10 +61,11 @@ class ClientDetailView(LoginRequiredMixin, DetailView):
         return ctx
 
 
-class ClientUpdateView(LoginRequiredMixin, UpdateView):
+class ClientUpdateView(RoleRequiredMixin, UpdateView):
     model = ClientOrganization
     form_class = ClientOrganizationForm
     template_name = 'clients/form.html'
+    required_roles = ['ADMIN', 'SALES']
 
     def get_success_url(self):
         return reverse_lazy('client_detail', kwargs={'pk': self.object.pk})

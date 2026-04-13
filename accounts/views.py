@@ -6,6 +6,7 @@ from django.shortcuts import redirect
 from django.contrib import messages
 from .models import User, Role, UserRole
 from .forms import ClientRegisterForm, CustomLoginForm
+from clients.models import ClientOrganization
 
 
 class ClientRegisterView(CreateView):
@@ -21,8 +22,21 @@ class ClientRegisterView(CreateView):
         user.username = form.cleaned_data['email']
         user.is_active = True
         user.save()
+        
+        # Create corresponding ClientOrganization
+        org_name = form.cleaned_data.get('company_name') or user.email.split('@')[0]
+        organization = ClientOrganization.objects.create(
+            name=org_name,
+            email=user.email,
+            phone=form.cleaned_data.get('phone_number', ''),
+            user=user,          # link to user
+            status='active'
+        )
+        
+        # Assign default CLIENT role
         role, _ = Role.objects.get_or_create(code='CLIENT', defaults={'name': 'Client'})
         UserRole.objects.create(user=user, role=role)
+        
         messages.success(self.request, 'Account created! Please log in.')
         return redirect(self.success_url)
 

@@ -28,26 +28,35 @@ class Command(BaseCommand):
         cfg.save()
         self.stdout.write('  ✓ Site config')
 
-        # ── Roles
+        # ── Roles & Permissions
         from accounts.models import Role, Permission, RolePermission
         roles = {}
         for code, name in [('ADMIN', 'Administrator'), ('TECHNICIAN', 'Technician'),
-                            ('FINANCE', 'Finance Officer'), ('CLIENT', 'Client')]:
+                           ('FINANCE', 'Finance Officer'), ('CLIENT', 'Client')]:
             r, _ = Role.objects.get_or_create(code=code, defaults={'name': name})
             roles[code] = r
 
         perms = {}
-        for code, desc in [('view_reports', 'View financial reports'),
-                            ('manage_users', 'Manage users'),
-                            ('manage_invoices', 'Manage invoices'),
-                            ('manage_tickets', 'Manage tickets')]:
+        for code, desc in [
+            ('view_reports', 'View financial reports'),
+            ('manage_users', 'Manage users'),
+            ('manage_invoices', 'Manage invoices'),
+            ('manage_tickets', 'Manage tickets'),
+            ('view_finance_dashboard', 'Access finance dashboard and menu'),
+        ]:
             p, _ = Permission.objects.get_or_create(code=code, defaults={'description': desc})
             perms[code] = p
 
+        # Assign all permissions to ADMIN
         for perm in perms.values():
             RolePermission.objects.get_or_create(role=roles['ADMIN'], permission=perm)
+
+        # Assign finance‑specific permissions to FINANCE role
         RolePermission.objects.get_or_create(role=roles['FINANCE'], permission=perms['manage_invoices'])
         RolePermission.objects.get_or_create(role=roles['FINANCE'], permission=perms['view_reports'])
+        RolePermission.objects.get_or_create(role=roles['FINANCE'], permission=perms['view_finance_dashboard'])
+
+        # Assign technician permissions
         RolePermission.objects.get_or_create(role=roles['TECHNICIAN'], permission=perms['manage_tickets'])
         self.stdout.write('  ✓ Roles & permissions')
 
@@ -60,39 +69,101 @@ class Command(BaseCommand):
         for user, role_code in [(admin_user, 'ADMIN'), (tech_user, 'TECHNICIAN'), (fin_user, 'FINANCE')]:
             UserRole.objects.get_or_create(user=user, role=roles[role_code])
 
+        # ── Client user + linked organization
         client_user = self._create_user('client@acme.mw', 'James', 'Kalinda', 'client123', 'client', False)
         UserRole.objects.get_or_create(user=client_user, role=roles['CLIENT'])
-        self.stdout.write('  ✓ Users created')
 
-        # ── Service categories + services
+        from clients.models import ClientOrganization, ClientContact
+        client_org, created = ClientOrganization.objects.get_or_create(
+            email='client@acme.mw',
+            defaults={
+                'name': 'Acme Corporation',
+                'industry': 'other',
+                'phone': '+265 999 888 777',
+                'address': 'Area 4, Lilongwe',
+                'status': 'active',
+                'user': client_user,
+            }
+        )
+        if not created:
+            client_org.user = client_user
+            client_org.status = 'active'
+            client_org.save()
+
+        ClientContact.objects.get_or_create(
+            client=client_org,
+            email='client@acme.mw',
+            defaults={
+                'name': 'James Kalinda',
+                'role': 'IT Manager',
+                'is_primary': True,
+                'phone': '+265 999 888 777',
+            }
+        )
+        self.stdout.write('  ✓ Users created (including client org)')
+
+        # ── Service categories + services (with billing_type)
         from services.models import ServiceCategory, Service
         cats = {}
         for name, icon in [('Networking', '🌐'), ('Hardware', '🖥'), ('Software', '💻'),
-                            ('Security', '🔒'), ('Training', '🎓')]:
+                           ('Security', '🔒'), ('Training', '🎓')]:
             c, _ = ServiceCategory.objects.get_or_create(name=name, defaults={'icon': icon})
             cats[name] = c
 
         services_data = [
-            ('Network Installation', 'Networking', 85000, 'job'),
-            ('Wireless Setup', 'Networking', 45000, 'job'),
-            ('IT Support – On-site', 'Hardware', 15000, 'visit'),
-            ('Computer Repair', 'Hardware', 20000, 'job'),
-            ('Website Development', 'Software', 250000, 'project'),
-            ('Software Installation', 'Software', 8000, 'job'),
-            ('CCTV Installation', 'Security', 120000, 'job'),
-            ('Firewall Setup', 'Security', 95000, 'job'),
-            ('Staff ICT Training', 'Training', 50000, 'day'),
+            ('Network Installation', 'Networking', 85000, 'job', 'one_time'),
+            ('Wireless Setup', 'Networking', 45000, 'job', 'one_time'),
+            ('IT Support – On-site', 'Hardware', 15000, 'visit', 'recurring'),
+            ('Computer Repair', 'Hardware', 20000, 'job', 'one_time'),
+            ('Website Development', 'Software', 250000, 'project', 'one_time'),
+            ('Software Installation', 'Software', 8000, 'job', 'one_time'),
+            ('CCTV Installation', 'Security', 120000, 'job', 'one_time'),
+            ('Firewall Setup', 'Security', 95000, 'job', 'one_time'),
+            ('Staff ICT Training', 'Training', 50000, 'day', 'recurring'),
         ]
         svcs = {}
-        for name, cat, price, unit in services_data:
-            s, _ = Service.objects.get_or_create(name=name, defaults={
-                'category': cats[cat], 'base_price': price, 'unit': unit
-            })
+        for name, cat, price, unit, billing_type in services_data:
+            s, _ = Service.objects.get_or_create(
+                name=name,
+                defaults={
+                    'category': cats[cat],
+                    'base_price': price,
+                    'unit': unit,
+                    'billing_type': billing_type,
+                }
+            )
             svcs[name] = s
         self.stdout.write('  ✓ Services created')
 
-        # ── Clients
-        from clients.models import ClientOrganization, ClientContact
+        # ── Service Packages
+        from services.models import ServicePackage
+        packages_data = [
+            ('Business Starter', [
+                svcs['Network Installation'],
+                svcs['IT Support – On-site'],
+            ], 95000),
+            ('Professional Suite', [
+                svcs['Website Development'],
+                svcs['CCTV Installation'],
+                svcs['Firewall Setup'],
+            ], 250000),
+            ('Training Bundle', [
+                svcs['Staff ICT Training'],
+                svcs['Software Installation'],
+            ], 60000),
+        ]
+
+        for name, svc_list, price in packages_data:
+            pkg, created = ServicePackage.objects.get_or_create(
+                name=name,
+                defaults={'monthly_price': price, 'is_active': True}
+            )
+            if created:
+                pkg.services.set(svc_list)
+                pkg.save()
+        self.stdout.write('  ✓ Service packages created')
+
+        # ── Additional demo clients (besides Acme)
         clients_data = [
             ('Malawi Revenue Authority', 'government', 'info@mra.mw', '+265 1 822 588'),
             ('Standard Bank Malawi', 'finance', 'it@standardbank.mw', '+265 1 820 144'),
@@ -100,11 +171,11 @@ class Command(BaseCommand):
             ('University of Malawi', 'education', 'ict@unima.mw', '+265 1 524 222'),
             ('Shoprite Malawi', 'retail', 'it@shoprite.mw', '+265 1 871 500'),
         ]
-        clients = []
+        clients = [client_org]  # include Acme first
         for name, industry, email, phone in clients_data:
             c, _ = ClientOrganization.objects.get_or_create(name=name, defaults={
                 'industry': industry, 'email': email, 'phone': phone,
-                'address': 'Lilongwe, Malawi'
+                'address': 'Lilongwe, Malawi', 'status': 'active'
             })
             clients.append(c)
             ClientContact.objects.get_or_create(
@@ -146,10 +217,54 @@ class Command(BaseCommand):
             tickets.append(t)
         self.stdout.write('  ✓ Tickets created')
 
+        # ── Quotations
+        from finance.models import Quotation, QuotationItem
+        from finance.services import QuotationService
+        today = date.today()
+        quote_data = [
+            (clients[0], [('Network Infrastructure Upgrade', 1, 250000), ('24/7 Monitoring Service', 12, 15000)], 'sent'),
+            (clients[1], [('CCTV System with 8 Cameras', 1, 380000), ('Installation & Configuration', 1, 80000)], 'approved'),
+            (clients[2], [('Laptop Purchase x10', 10, 450000), ('Extended Warranty', 10, 25000)], 'sent'),
+            (clients[3], [('University Website Redesign', 1, 1200000)], 'draft'),
+            (clients[4], [('POS System Implementation', 1, 520000)], 'converted'),
+        ]
+
+        for client, items, target_status in quote_data:
+            if Quotation.objects.filter(client=client, status=target_status).exists():
+                continue
+
+            quote = Quotation.objects.create(
+                client=client,
+                issue_date=today - timedelta(days=random.randint(5, 30)),
+                valid_until=today + timedelta(days=30),
+                status='draft',
+                created_by=fin_user,
+                notes='Please review and approve at your earliest convenience.'
+            )
+            subtotal = 0
+            for desc, qty, price in items:
+                total = qty * price
+                QuotationItem.objects.create(
+                    quotation=quote, description=desc,
+                    quantity=qty, unit_price=price, total=total
+                )
+                subtotal += total
+            quote.subtotal = subtotal
+            quote.tax_amount = subtotal * float(cfg.vat_rate)
+            quote.total_amount = subtotal + quote.tax_amount
+
+            if target_status == 'converted':
+                quote.status = 'approved'
+                quote.save()
+                QuotationService.convert_to_invoice(quote, created_by=fin_user)
+            else:
+                quote.status = target_status
+                quote.save()
+
+        self.stdout.write('  ✓ Quotations created')
+
         # ── Invoices
         from finance.models import Invoice, InvoiceItem, Payment
-        from finance.services import InvoiceService
-        today = date.today()
         invoice_data = [
             (clients[0], [('Network Installation & Configuration', 1, 85000), ('Monthly Support Contract', 3, 15000)], 'paid'),
             (clients[1], [('Server Room Maintenance', 1, 120000), ('UPS Battery Replacement', 2, 35000)], 'paid'),
@@ -159,7 +274,7 @@ class Command(BaseCommand):
             (clients[0], [('Firewall Configuration', 1, 95000)], 'draft'),
         ]
 
-        for i, (client, items, status) in enumerate(invoice_data):
+        for client, items, status in invoice_data:
             if Invoice.objects.filter(client=client, status=status).exists():
                 continue
             invoice = Invoice.objects.create(
