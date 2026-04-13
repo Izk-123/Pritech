@@ -1,0 +1,49 @@
+{% extends "generic/list.html" %}
+{% block title %}Quotations{% endblock %}
+{% block breadcrumb %}<div class="page-breadcrumb">Quotations</div>{% endblock %}
+{% block actions %}<a href="{% url 'quotation_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Quotation</a>{% endblock %}
+
+{% block filters %}
+<div class="col-auto">
+  <select name="status" class="form-select">
+    <option value="">All statuses</option>
+    {% for val, label in status_choices %}
+    <option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</div>
+<div class="col-auto">
+  <button type="submit" class="btn btn-outline-primary">Filter</button>
+  {% if current_status %}<a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary ms-1">Clear</a>{% endif %}
+</div>
+{% endblock %}
+
+{% block table_head %}
+<tr><th>Quotation #</th><th>Client</th><th>Issue Date</th><th>Valid Until</th><th>Total</th><th>Status</th><th></th></tr>
+{% endblock %}
+
+{% block table_row %}
+<tr>
+  <td><a href="{% url 'quotation_detail' obj.pk %}" class="fw-semibold">{{ obj.quotation_number }}</a></td>
+  <td>{{ obj.client.name }}</td>
+  <td class="small">{{ obj.issue_date }}</td>
+  <td class="small {% if obj.valid_until < today %}text-danger fw-semibold{% endif %}">{{ obj.valid_until }}</td>
+  <td class="fw-semibold">{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</td>
+  <td><span class="badge bg-{% if obj.status == 'approved' %}success{% elif obj.status == 'sent' %}primary{% elif obj.status == 'converted' %}secondary{% elif obj.status == 'rejected' %}danger{% elif obj.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ obj.get_status_display }}</span></td>
+  <td><a href="{% url 'quotation_detail' obj.pk %}" class="btn btn-sm btn-outline-secondary">View</a></td>
+</tr>
+{% endblock %}
+
+{% block mobile_card %}
+<div class="list-card">
+  <div class="d-flex justify-content-between">
+    <a href="{% url 'quotation_detail' obj.pk %}" class="list-card-title">{{ obj.quotation_number }}</a>
+    <span class="badge bg-{% if obj.status == 'approved' %}success{% elif obj.status == 'sent' %}primary{% elif obj.status == 'converted' %}secondary{% elif obj.status == 'rejected' %}danger{% elif obj.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ obj.get_status_display }}</span>
+  </div>
+  <div class="list-card-meta mt-2"><span>{{ obj.client.name }}</span><span>{{ obj.issue_date }}</span></div>
+  <div class="d-flex justify-content-between mt-2">
+    <span>Total: <strong>{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</strong></span>
+    <span>Valid until: {{ obj.valid_until }}</span>
+  </div>
+</div>
+{% endblock %}

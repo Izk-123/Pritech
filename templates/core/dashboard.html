@@ -1,106 +1,15 @@
 {% extends "base.html" %}
-{% load custom_filters %}
+{% load static %}
+
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-label">Total Clients</div>
-      <div class="stat-value">{{ total_clients }}</div>
-      <small style="color: var(--text-muted);">Active organizations</small>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-label">Open Tickets</div>
-      <div class="stat-value" style="color: var(--warning);">{{ open_tickets }}</div>
-      <small style="color: var(--text-muted);">Needs attention</small>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-label">Revenue</div>
-      <div class="stat-value" style="color: var(--success);">{{ site_config.currency_symbol }}{{ revenue|floatformat:0 }}</div>
-      <small style="color: var(--text-muted);">Paid invoices</small>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card">
-      <div class="stat-label">Pending</div>
-      <div class="stat-value" style="color: var(--danger);">{{ site_config.currency_symbol }}{{ pending_revenue|floatformat:0 }}</div>
-      <small style="color: var(--text-muted);">Awaiting payment</small>
-    </div>
-  </div>
-</div>
-
-<div class="d-flex flex-wrap gap-2 mb-4">
-  {% for status, count in ticket_stats.items %}
-  <a href="{% url 'ticket_list' %}?status={{ status }}" class="text-decoration-none">
-    <span class="badge bg-light text-dark p-3 shadow-sm">
-      <strong>{{ count }}</strong> {{ status|title|replace:"_: " }}
-    </span>
-  </a>
-  {% endfor %}
-</div>
-
-<div class="row">
-  <div class="col-md-6 mb-4">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Recent Tickets</h5>
-        <a href="{% url 'ticket_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
-      </div>
-      <div class="card-body p-0">
-        {% if recent_tickets %}
-        <div class="table-responsive">
-          <table class="modern-table">
-            <thead><tr><th>#</th><th>Title</th><th>Status</th></tr></thead>
-            <tbody>
-            {% for t in recent_tickets %}
-            <tr>
-              <td><a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a></td>
-              <td>{{ t.title|truncatechars:25 }}</td>
-              <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="text-center py-4 text-muted">No recent tickets</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6 mb-4">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Recent Invoices</h5>
-        <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
-      </div>
-      <div class="card-body p-0">
-        {% if recent_invoices %}
-        <div class="table-responsive">
-          <table class="modern-table">
-            <thead><tr><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead>
-            <tbody>
-            {% for inv in recent_invoices %}
-            <tr>
-              <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
-              <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</td>
-              <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="text-center py-4 text-muted">No recent invoices</div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
+{# ========== REAL‑TIME STATS CONTAINER ========== #}
+<div id="dashboard-stats-container"
+     hx-get="{% url 'dashboard_stats_partial' %}"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML">
+    {% include "core/partials/dashboard_stats.html" %}
 </div>
 {% endblock %}

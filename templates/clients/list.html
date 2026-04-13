@@ -22,7 +22,7 @@
 <tr>
   <td>
     <a href="{% url 'client_detail' obj.pk %}" class="fw-semibold">{{ obj.name }}</a>
-    {% if not obj.is_active %}<span class="badge bg-secondary ms-2">Inactive</span>{% endif %}
+    {% if obj.status != 'active' %}<span class="badge bg-secondary ms-2">{{ obj.get_status_display }}</span>{% endif %}
   </td>
   <td>{{ obj.get_industry_display }}</td>
   <td>

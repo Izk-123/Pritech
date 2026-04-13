@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ quotation.quotation_number }}{% endblock %}
+{% block page_title %}{{ quotation.quotation_number }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-breadcrumb"><a href="{% url 'client_quotation_list' %}">My Quotations</a> / {{ quotation.quotation_number }}</div>
+    <h1>{{ quotation.quotation_number }}</h1>
+    <span class="badge bg-{% if quotation.status == 'approved' %}success{% elif quotation.status == 'sent' %}primary{% elif quotation.status == 'converted' %}secondary{% elif quotation.status == 'rejected' %}danger{% elif quotation.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ quotation.get_status_display }}</span>
+  </div>
+  <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
+</div>
+
+<div class="card" id="quotation-doc">
+  <div class="card-body p-4 p-md-5">
+    <div class="row mb-4">
+      <div class="col-sm-6">
+        <h2 class="fw-bold text-primary">{{ config.company_name }}</h2>
+        {% if config.address %}<div class="small text-muted">{{ config.address|linebreaksbr }}</div>{% endif %}
+        {% if config.email %}<div class="small">{{ config.email }}</div>{% endif %}
+        {% if config.phone %}<div class="small">{{ config.phone }}</div>{% endif %}
+      </div>
+      <div class="col-sm-6 text-sm-end">
+        <div class="display-6 fw-bold text-primary">QUOTATION</div>
+        <div class="fs-5 fw-semibold">{{ quotation.quotation_number }}</div>
+      </div>
+    </div>
+    <div class="row mb-4">
+      <div class="col-sm-6">
+        <div class="text-uppercase small fw-semibold text-muted mb-2">Prepared For</div>
+        <h5 class="fw-bold">{{ quotation.client.name }}</h5>
+        {% if quotation.client.address %}<div class="small">{{ quotation.client.address|linebreaksbr }}</div>{% endif %}
+        {% if quotation.client.email %}<div class="small">{{ quotation.client.email }}</div>{% endif %}
+      </div>
+      <div class="col-sm-6 text-sm-end">
+        <div class="text-uppercase small fw-semibold text-muted mb-2">Details</div>
+        <div class="d-flex justify-content-sm-end gap-3 small"><span class="text-muted">Issue Date:</span><span>{{ quotation.issue_date }}</span></div>
+        <div class="d-flex justify-content-sm-end gap-3 small"><span class="text-muted">Valid Until:</span><span class="{% if quotation.valid_until < today %}text-danger{% endif %}">{{ quotation.valid_until }}</span></div>
+      </div>
+    </div>
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered">
+        <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+          {% for item in items %}
+          <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end">
+      <div style="width: 300px;">
+        <div class="d-flex justify-content-between py-1"><span>Subtotal</span><span>{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span></div>
+        <div class="d-flex justify-content-between py-1 border-bottom"><span>VAT</span><span>{{ config.currency_symbol }}{{ quotation.tax_amount|floatformat:2 }}</span></div>
+        <div class="d-flex justify-content-between py-2 fs-5 fw-bold"><span>Total</span><span>{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span></div>
+      </div>
+    </div>
+    {% if quotation.notes %}<div class="mt-4 p-3 bg-light rounded small">{{ quotation.notes }}</div>{% endif %}
+    <div class="mt-4 small text-muted">This quotation is valid until {{ quotation.valid_until }}. Prices and availability are subject to change after this date.</div>
+  </div>
+</div>
+<style>@media print { .sidebar, .topbar, .bottom-nav, .page-header .btn { display: none !important; } }</style>
+{% endblock %}

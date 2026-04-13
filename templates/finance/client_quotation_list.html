@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}My Quotations{% endblock %}
+{% block page_title %}My Quotations{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My Quotations</h1>
+</div>
+<div class="card">
+  {% if quotations %}
+  <div class="table-responsive d-none d-md-block">
+    <table class="modern-table">
+      <thead><tr><th>Quotation #</th><th>Issue Date</th><th>Valid Until</th><th>Total</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for q in quotations %}
+      <tr>
+        <td><a href="{% url 'client_quotation_detail' q.pk %}" class="fw-semibold">{{ q.quotation_number }}</a></td>
+        <td>{{ q.issue_date }}</td>
+        <td class="{% if q.valid_until < today %}text-danger fw-semibold{% endif %}">{{ q.valid_until }}</td>
+        <td>{{ site_config.currency_symbol }}{{ q.total_amount|floatformat:2 }}</td>
+        <td><span class="badge bg-{% if q.status == 'approved' %}success{% elif q.status == 'sent' %}primary{% elif q.status == 'converted' %}secondary{% elif q.status == 'rejected' %}danger{% elif q.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ q.get_status_display }}</span></td>
+        <td><a href="{% url 'client_quotation_detail' q.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="d-md-none">
+    {% for q in quotations %}
+    <div class="list-card">
+      <div class="d-flex justify-content-between">
+        <a href="{% url 'client_quotation_detail' q.pk %}" class="list-card-title">{{ q.quotation_number }}</a>
+        <span class="badge bg-{% if q.status == 'approved' %}success{% elif q.status == 'sent' %}primary{% elif q.status == 'converted' %}secondary{% elif q.status == 'rejected' %}danger{% elif q.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ q.get_status_display }}</span>
+      </div>
+      <div class="list-card-meta mt-2"><span>Issued: {{ q.issue_date }}</span><span>Valid: {{ q.valid_until }}</span></div>
+      <div class="d-flex justify-content-between mt-2">
+        <span>Total: <strong>{{ site_config.currency_symbol }}{{ q.total_amount|floatformat:2 }}</strong></span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card-body text-center py-5">
+    <div class="empty-icon mb-3">📄</div>
+    <h5 class="text-muted">No quotations found.</h5>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

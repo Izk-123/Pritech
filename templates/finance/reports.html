@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Financial Reports{% endblock %}
+{% block page_title %}Financial Reports{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js for revenue/expense trends -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  .report-card {
+    border-radius: 16px;
+    border: 1px solid var(--border-light);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-sm);
+  }
+  .report-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--border-light);
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+  }
+  .stat-badge {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+  .trend-indicator {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 30px;
+    background: var(--light);
+  }
+  .aging-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--gray-200);
+    margin-top: 8px;
+  }
+  .aging-fill {
+    height: 8px;
+    border-radius: 4px;
+  }
+  .table-aging td {
+    vertical-align: middle;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Financial Reports</h1>
+    <p class="text-muted">Overview of revenue, expenses, and outstanding invoices.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <form method="get" class="d-flex">
+      <select name="period" class="form-select" style="width: auto;" onchange="this.form.submit()">
+        {% for value, label in period_choices %}
+          <option value="{{ value }}" {% if period == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <button class="btn btn-outline-secondary" onclick="window.print()">
+      <i class="bi bi-printer"></i> Print
+    </button>
+  </div>
+</div>
+
+<!-- Period summary -->
+<div class="alert alert-light border mb-4">
+  <div class="d-flex align-items-center">
+    <i class="bi bi-calendar-range fs-4 me-3"></i>
+    <div>
+      <strong>{{ start|date:"M d, Y" }} – {{ end|date:"M d, Y" }}</strong>
+      <span class="text-muted ms-2">({{ period|title|default:"This Month" }})</span>
+    </div>
+  </div>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="report-card p-3">
+      <div class="text-muted small text-uppercase mb-1">Revenue</div>
+      <div class="stat-badge text-success">{{ config.currency_symbol }}{{ income.revenue|floatformat:0 }}</div>
+      <div class="small text-muted mt-2">Invoiced: {{ config.currency_symbol }}{{ income.invoiced|floatformat:0 }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="report-card p-3">
+      <div class="text-muted small text-uppercase mb-1">Expenses</div>
+      <div class="stat-badge text-danger">{{ config.currency_symbol }}{{ income.expenses|floatformat:0 }}</div>
+      <div class="small text-muted mt-2">{{ income.expense_breakdown|length }} categories</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="report-card p-3">
+      <div class="text-muted small text-uppercase mb-1">Net Profit</div>
+      <div class="stat-badge {% if income.net_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+        {{ config.currency_symbol }}{{ income.net_profit|floatformat:0 }}
+      </div>
+      <div class="small text-muted mt-2">Margin: {{ income.profit_margin|floatformat:1 }}%</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="report-card p-3">
+      <div class="text-muted small text-uppercase mb-1">Outstanding</div>
+      <div class="stat-badge text-warning">{{ config.currency_symbol }}{{ income.balance_due|floatformat:0 }}</div>
+      <div class="small text-muted mt-2">Accounts receivable</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="report-card">
+      <div class="card-header d-flex justify-content-between">
+        <span><i class="bi bi-graph-up me-2"></i>Monthly Revenue vs Expenses</span>
+        <span class="text-muted small">Last 6 months</span>
+      </div>
+      <div class="card-body">
+        <canvas id="monthlyChart" style="height: 250px;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="report-card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Expense Breakdown</div>
+      <div class="card-body">
+        {% if income.expense_breakdown %}
+          <canvas id="expensePieChart" style="height: 200px;"></canvas>
+        {% else %}
+          <div class="text-center text-muted py-5">No expenses in this period</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Accounts Receivable Aging -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="report-card">
+      <div class="card-header"><i class="bi bi-clock-history me-2"></i>Accounts Receivable Aging</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Aging Bucket</th>
+                <th class="text-end">Amount</th>
+                <th class="text-end">% of Total</th>
+                <th>Distribution</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% with total=aging.grand_total %}
+              <tr>
+                <td><span class="badge bg-success">Current</span></td>
+                <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ aging.totals.current|floatformat:0 }}</td>
+                <td class="text-end">{% if total %}{% widthratio aging.totals.current total 100 %}{% else %}0{% endif %}%</td>
+                <td>
+                  <div class="aging-bar">
+                    <div class="aging-fill bg-success" style="width: {% if total %}{% widthratio aging.totals.current total 100 %}{% else %}0{% endif %}%;"></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-info">1-30 Days</span></td>
+                <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ aging.totals.1_30|floatformat:0 }}</td>
+                <td class="text-end">{% if total %}{% widthratio aging.totals.1_30 total 100 %}{% else %}0{% endif %}%</td>
+                <td><div class="aging-bar"><div class="aging-fill bg-info" style="width: {% if total %}{% widthratio aging.totals.1_30 total 100 %}{% else %}0{% endif %}%;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-warning">31-60 Days</span></td>
+                <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ aging.totals.31_60|floatformat:0 }}</td>
+                <td class="text-end">{% if total %}{% widthratio aging.totals.31_60 total 100 %}{% else %}0{% endif %}%</td>
+                <td><div class="aging-bar"><div class="aging-fill bg-warning" style="width: {% if total %}{% widthratio aging.totals.31_60 total 100 %}{% else %}0{% endif %}%;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-danger">61-90 Days</span></td>
+                <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ aging.totals.61_90|floatformat:0 }}</td>
+                <td class="text-end">{% if total %}{% widthratio aging.totals.61_90 total 100 %}{% else %}0{% endif %}%</td>
+                <td><div class="aging-bar"><div class="aging-fill bg-danger" style="width: {% if total %}{% widthratio aging.totals.61_90 total 100 %}{% else %}0{% endif %}%;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-dark">90+ Days</span></td>
+                <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ aging.totals.over_90|floatformat:0 }}</td>
+                <td class="text-end">{% if total %}{% widthratio aging.totals.over_90 total 100 %}{% else %}0{% endif %}%</td>
+                <td><div class="aging-bar"><div class="aging-fill bg-dark" style="width: {% if total %}{% widthratio aging.totals.over_90 total 100 %}{% else %}0{% endif %}%;"></div></div></td>
+              </tr>
+              <tr class="table-light fw-bold">
+                <td>Total Outstanding</td>
+                <td class="text-end">{{ config.currency_symbol }}{{ aging.grand_total|floatformat:0 }}</td>
+                <td colspan="2"></td>
+              </tr>
+              {% endwith %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Top Clients -->
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="report-card">
+      <div class="card-header"><i class="bi bi-trophy me-2"></i>Top Clients by Revenue</div>
+      <div class="card-body p-0">
+        {% if top_clients %}
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Client</th><th class="text-end">Invoices</th><th class="text-end">Total</th><th class="text-end">Paid</th></tr></thead>
+          <tbody>
+            {% for c in top_clients %}
+            <tr>
+              <td>{{ c.client__name }}</td>
+              <td class="text-end">{{ c.count }}</td>
+              <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ c.total|floatformat:0 }}</td>
+              <td class="text-end text-success">{{ config.currency_symbol }}{{ c.paid|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4 text-muted">No client data</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="report-card">
+      <div class="card-header"><i class="bi bi-list-ul me-2"></i>Expense Categories</div>
+      <div class="card-body p-0">
+        {% if income.expense_breakdown %}
+        <table class="table table-hover mb-0">
+          <thead><tr><th>Category</th><th class="text-end">Amount</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+            {% for cat in income.expense_breakdown %}
+            <tr>
+              <td>{{ cat.category|title }}</td>
+              <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ cat.total|floatformat:0 }}</td>
+              <td class="text-end">{% widthratio cat.total income.expenses 100 %}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-4 text-muted">No expenses</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Monthly chart data
+    const monthlyData = {{ monthly_json|safe }};
+    const labels = monthlyData.map(d => d.label);
+    const revenueData = monthlyData.map(d => d.revenue);
+    const expenseData = monthlyData.map(d => d.expenses);
+    const profitData = monthlyData.map(d => d.profit);
+
+    const ctx = document.getElementById('monthlyChart')?.getContext('2d');
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Revenue',
+              data: revenueData,
+              backgroundColor: 'rgba(40, 167, 69, 0.7)',
+              borderColor: '#28a745',
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              label: 'Expenses',
+              data: expenseData,
+              backgroundColor: 'rgba(220, 53, 69, 0.7)',
+              borderColor: '#dc3545',
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              label: 'Net Profit',
+              data: profitData,
+              type: 'line',
+              borderColor: '#0d6efd',
+              borderWidth: 3,
+              tension: 0.3,
+              fill: false,
+              pointBackgroundColor: '#0d6efd',
+              pointRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) {
+                  return ctx.dataset.label + ': ' + '{{ config.currency_symbol }}' + ctx.raw.toFixed(2);
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => '{{ config.currency_symbol }}' + value }
+            }
+          }
+        }
+      });
+    }
+
+    // Expense pie chart
+    const pieCtx = document.getElementById('expensePieChart')?.getContext('2d');
+    if (pieCtx) {
+      const categories = [{% for cat in income.expense_breakdown %}'{{ cat.category|title }}',{% endfor %}];
+      const amounts = [{% for cat in income.expense_breakdown %}{{ cat.total }},{% endfor %}];
+      const bgColors = [
+        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+        '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+      ];
+      
+      new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+          labels: categories,
+          datasets: [{
+            data: amounts,
+            backgroundColor: bgColors.slice(0, categories.length),
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right' },
+            tooltip: {
+              callbacks: {
+                label: ctx => {
+                  const val = ctx.raw;
+                  const total = ctx.dataset.data.reduce((a,b) => a + b, 0);
+                  const pct = ((val / total) * 100).toFixed(1);
+                  return ctx.label + ': {{ config.currency_symbol }}' + val.toFixed(2) + ' (' + pct + '%)';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

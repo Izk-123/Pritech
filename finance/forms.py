@@ -1,5 +1,5 @@
 from django import forms
-from .models import Invoice, InvoiceItem, Payment, Expense
+from .models import Invoice, InvoiceItem, Payment, Expense, Quotation, QuotationItem
 
 
 class InvoiceForm(forms.ModelForm):
@@ -31,3 +31,24 @@ class ExpenseForm(forms.ModelForm):
         model = Expense
         fields = ['category', 'description', 'amount', 'date', 'receipt']
         widgets = {'date': forms.DateInput(attrs={'type': 'date'})}
+
+class QuotationForm(forms.ModelForm):
+    class Meta:
+        model = Quotation
+        fields = ['client', 'issue_date', 'valid_until', 'notes']
+        widgets = {
+            'issue_date': forms.DateInput(attrs={'type': 'date'}),
+            'valid_until': forms.DateInput(attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 2}),
+        }
+
+class QuotationItemForm(forms.ModelForm):
+    class Meta:
+        model = QuotationItem
+        fields = ['description', 'quantity', 'unit_price']
+
+# For handling multiple items in one form
+QuotationItemFormSet = forms.inlineformset_factory(
+    Quotation, QuotationItem, form=QuotationItemForm,
+    extra=1, can_delete=True
+)

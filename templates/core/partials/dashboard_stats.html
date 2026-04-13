@@ -1,0 +1,128 @@
+{% load custom_filters %}
+
+{# ========== STAT CARDS ========== #}
+<div class="row g-3 mb-4">
+  {% if show_finance_widgets %}
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Revenue</div>
+        <div class="stat-value text-success">{{ site_config.currency_symbol }}{{ revenue|floatformat:0 }}</div>
+        <small class="text-muted">Paid invoices</small>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value text-danger">{{ site_config.currency_symbol }}{{ pending_revenue|floatformat:0 }}</div>
+        <small class="text-muted">Awaiting payment</small>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if total_clients %}
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Total Clients</div>
+        <div class="stat-value">{{ total_clients }}</div>
+        <small class="text-muted">Active organizations</small>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if open_tickets %}
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Open Tickets</div>
+        <div class="stat-value text-warning">{{ open_tickets }}</div>
+        <small class="text-muted">Needs attention</small>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if assigned_tickets_count %}
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-label">Assigned to You</div>
+        <div class="stat-value">{{ assigned_tickets_count }}</div>
+        <small class="text-muted">Total tickets</small>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{# ========== TICKET STATUS BADGES (Admin only) ========== #}
+{% if ticket_stats %}
+<div class="d-flex flex-wrap gap-2 mb-4">
+  {% for status, count in ticket_stats.items %}
+  <a href="{% url 'ticket_list' %}?status={{ status }}" class="text-decoration-none">
+    <span class="badge bg-light text-dark p-3 shadow-sm">
+      <strong>{{ count }}</strong> {{ status|title|replace:"_: " }}
+    </span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ========== RECENT TICKETS & INVOICES ========== #}
+<div class="row">
+  {% if recent_tickets %}
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Recent Tickets</h5>
+          <a href="{% url 'ticket_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead><tr><th>#</th><th>Title</th><th>Status</th></tr></thead>
+              <tbody>
+              {% for t in recent_tickets %}
+              <tr>
+                <td><a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a></td>
+                <td>{{ t.title|truncatechars:25 }}</td>
+                <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {% if recent_invoices %}
+    <div class="col-md-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Recent Invoices</h5>
+          <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="modern-table">
+              <thead><tr><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead>
+              <tbody>
+              {% for inv in recent_invoices %}
+              <tr>
+                <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
+                <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</td>
+                <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
+              </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{# ========== CLIENT‑SPECIFIC MESSAGE ========== #}
+{% if client_org %}
+  <div class="alert alert-info mt-3">
+    <i class="bi bi-building me-2"></i> Welcome back, {{ client_org.name }}!
+  </div>
+{% endif %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}My Invoices{% endblock %}
+{% block page_title %}My Invoices{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>My Invoices</h1>
+</div>
+<div class="card">
+  {% if invoices %}
+  <div class="table-responsive d-none d-md-block">
+    <table class="modern-table">
+      <thead><tr><th>Invoice #</th><th>Issue Date</th><th>Due Date</th><th>Total</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td><a href="{% url 'client_invoice_detail' inv.pk %}" class="fw-semibold">{{ inv.invoice_number }}</a></td>
+        <td>{{ inv.issue_date }}</td>
+        <td class="{% if inv.status == 'overdue' %}text-danger fw-semibold{% endif %}">{{ inv.due_date }}</td>
+        <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:2 }}</td>
+        <td class="{% if inv.balance_due > 0 %}text-danger{% endif %}">{{ site_config.currency_symbol }}{{ inv.balance_due|floatformat:2 }}</td>
+        <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
+        <td><a href="{% url 'client_invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary">View</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="d-md-none">
+    {% for inv in invoices %}
+    <div class="list-card">
+      <div class="d-flex justify-content-between">
+        <a href="{% url 'client_invoice_detail' inv.pk %}" class="list-card-title">{{ inv.invoice_number }}</a>
+        <span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span>
+      </div>
+      <div class="list-card-meta mt-2"><span>Issued: {{ inv.issue_date }}</span><span>Due: {{ inv.due_date }}</span></div>
+      <div class="d-flex justify-content-between mt-2">
+        <span>Total: <strong>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:2 }}</strong></span>
+        <span class="{% if inv.balance_due > 0 %}text-danger{% endif %}">Balance: {{ site_config.currency_symbol }}{{ inv.balance_due|floatformat:2 }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card-body text-center py-5">
+    <div class="empty-icon mb-3">🧾</div>
+    <h5 class="text-muted">No invoices found.</h5>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

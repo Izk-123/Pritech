@@ -92,3 +92,50 @@ class Expense(models.Model):
 
     class Meta:
         ordering = ['-date']
+
+class Quotation(models.Model):
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('expired', 'Expired'),
+        ('converted', 'Converted'),
+    ]
+
+    quotation_number = models.CharField(max_length=30, unique=True, blank=True)
+    client = models.ForeignKey('clients.ClientOrganization', on_delete=models.PROTECT, related_name='quotations')
+    issue_date = models.DateField()
+    valid_until = models.DateField()
+    subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.quotation_number or f"Quotation #{self.pk}"
+
+    def save(self, *args, **kwargs):
+        if not self.quotation_number:
+            last = Quotation.objects.order_by('-pk').first()
+            num = (last.pk + 1) if last else 1
+            self.quotation_number = f"QUO-{num:04d}"
+        super().save(*args, **kwargs)
+
+
+class QuotationItem(models.Model):
+    quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name='items')
+    description = models.CharField(max_length=300)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+
+    def save(self, *args, **kwargs):
+        self.total = self.quantity * self.unit_price
+        super().save(*args, **kwargs)

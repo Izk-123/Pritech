@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{% if form.instance.pk %}Edit Package{% else %}New Package{% endif %}{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Package{% else %}New Package{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-6">
+    <div class="page-header">
+      <h1>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Service Package</h1>
+    </div>
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+            {% if field.name == 'services' %}
+              <div class="mb-4">
+                <label class="form-label fw-semibold">{{ field.label }}</label>
+                <div class="card bg-light p-3" style="max-height: 300px; overflow-y: auto;">
+                  {% for checkbox in field %}
+                    <div class="form-check">
+                      {{ checkbox.tag }}
+                      <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                        {{ checkbox.choice_label }}
+                      </label>
+                    </div>
+                  {% endfor %}
+                </div>
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+              </div>
+            {% else %}
+              <div class="form-floating-custom">
+                {{ field }}
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
+                {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">
+              {% if form.instance.pk %}Save Changes{% else %}Create Package{% endif %}
+            </button>
+            <a href="{% url 'service_package_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
