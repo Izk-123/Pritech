@@ -1,0 +1,25 @@
+{% load custom_filters %}
+
+<div class="d-flex gap-2 mt-2">
+  <span class="badge bg-{{ ticket.status_color }}">{{ ticket.get_status_display }}</span>
+  <span class="badge bg-{{ ticket.priority_color }}">{{ ticket.get_priority_display }}</span>
+</div>
+
+{% if next_statuses %}
+<div class="card mt-3">
+  <div class="card-header"><h5 class="mb-0">Update Status</h5></div>
+  <div class="card-body">
+    <form method="post" action="{% url 'ticket_transition' ticket.pk %}">
+      {% csrf_token %}
+      <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for s in next_statuses %}
+          <button type="submit" name="status" value="{{ s }}" class="btn btn-outline-primary">
+            → {{ s|title|replace:"_: " }}
+          </button>
+        {% endfor %}
+      </div>
+      <textarea name="note" class="form-control" rows="2" placeholder="Optional note..."></textarea>
+    </form>
+  </div>
+</div>
+{% endif %}

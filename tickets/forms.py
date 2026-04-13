@@ -1,5 +1,5 @@
 from django import forms
-from .models import Ticket, TicketComment, TicketWorkLog
+from .models import Ticket, TicketComment, TicketWorkLog, TicketAttachment
 
 
 class TicketForm(forms.ModelForm):
@@ -24,3 +24,9 @@ class WorkLogForm(forms.ModelForm):
         model = TicketWorkLog
         fields = ['hours', 'description']
         widgets = {'description': forms.Textarea(attrs={'rows': 2})}
+
+
+class AttachmentForm(forms.ModelForm):
+    class Meta:
+        model = TicketAttachment
+        fields = ['file', 'description']

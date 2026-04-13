@@ -1,0 +1,13 @@
+<div class="d-flex gap-3 mb-3 {% if comment.is_internal %}bg-warning bg-opacity-10 p-3 rounded{% endif %}">
+  <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+    {{ comment.author.first_name|first|upper }}{{ comment.author.last_name|first|upper }}
+  </div>
+  <div class="flex-grow-1">
+    <div class="d-flex gap-2 mb-1">
+      <span class="fw-semibold">{{ comment.author.get_full_name|default:comment.author.email }}</span>
+      {% if comment.is_internal %}<span class="badge bg-warning">Internal</span>{% endif %}
+      <span class="text-muted small">{{ comment.created_at|date:"d M H:i" }}</span>
+    </div>
+    <div>{{ comment.content|linebreaksbr }}</div>
+  </div>
+</div>

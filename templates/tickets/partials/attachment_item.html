@@ -1,0 +1,10 @@
+<li class="list-group-item d-flex justify-content-between align-items-center">
+  <div>
+    <i class="bi bi-paperclip me-2"></i>
+    <a href="{{ attachment.file.url }}" target="_blank">{{ attachment.file.name|slice:"20:" }}</a>
+    {% if attachment.description %}<br><small class="text-muted">{{ attachment.description }}</small>{% endif %}
+  </div>
+  <small class="text-muted">
+    {{ attachment.uploaded_at|date:"d M H:i" }} by {{ attachment.uploaded_by.get_full_name|default:attachment.uploaded_by.email }}
+  </small>
+</li>

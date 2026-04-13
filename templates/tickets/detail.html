@@ -1,70 +1,186 @@
 {% extends "base.html" %}
 {% load custom_filters %}
-{% block title %}Ticket #{{ ticket.pk }}{% endblock %}
-{% block page_title %}Ticket #{{ ticket.pk }}{% endblock %}
+{% block title %}Ticket {{ ticket.ticket_number }}{% endblock %}
+{% block page_title %}Ticket {{ ticket.ticket_number }}{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <div>
-    <div class="page-breadcrumb"><a href="{% url 'ticket_list' %}">Tickets</a> / #{{ ticket.pk }}</div>
+    <div class="page-breadcrumb"><a href="{% url 'ticket_list' %}">Tickets</a> / {{ ticket.ticket_number }}</div>
     <h1 class="mb-1">{{ ticket.title }}</h1>
-    <div class="d-flex gap-2 mt-2"><span class="badge bg-{{ ticket.status_color }}">{{ ticket.get_status_display }}</span><span class="badge bg-{{ ticket.priority_color }}">{{ ticket.get_priority_display }}</span></div>
+    <div id="status-panel">
+      {% include "tickets/partials/status_panel.html" %}
+    </div>
   </div>
 </div>
 
 <div class="row g-4">
   <div class="col-lg-8">
-    <div class="card"><div class="card-header"><h5 class="mb-0">Description</h5></div><div class="card-body"><p class="mb-0" style="white-space: pre-wrap;">{{ ticket.description }}</p></div></div>
-    {% if next_statuses %}
-    <div class="card"><div class="card-header"><h5 class="mb-0">Update Status</h5></div><div class="card-body">
-      <form method="post" action="{% url 'ticket_transition' ticket.pk %}">
-        {% csrf_token %}
-        <div class="d-flex flex-wrap gap-2 mb-3">{% for s in next_statuses %}<button type="submit" name="status" value="{{ s }}" class="btn btn-outline-primary">→ {{ s|title|replace:"_: " }}</button>{% endfor %}</div>
-        <textarea name="note" class="form-control" rows="2" placeholder="Optional note..."></textarea>
-      </form>
-    </div></div>
+    <!-- Description -->
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Description</h5></div>
+      <div class="card-body">
+        <p class="mb-0" style="white-space: pre-wrap;">{{ ticket.description }}</p>
+      </div>
+    </div>
+
+    <!-- SLA Panel -->
+    {% if sla %}
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">SLA Deadlines</h5></div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0">
+          <li class="mb-2">
+            <span class="fw-semibold">Response due:</span>
+            <span class="{% if sla.response_due < now %}text-danger{% endif %}">
+              {{ sla.response_due|date:"d M Y H:i" }}
+              {% if sla.response_due < now %}<i class="bi bi-exclamation-triangle-fill ms-1"></i>{% endif %}
+            </span>
+          </li>
+          <li>
+            <span class="fw-semibold">Resolution due:</span>
+            <span class="{% if sla.resolution_due < now %}text-danger{% endif %}">
+              {{ sla.resolution_due|date:"d M Y H:i" }}
+              {% if sla.resolution_due < now %}<i class="bi bi-exclamation-triangle-fill ms-1"></i>{% endif %}
+            </span>
+          </li>
+        </ul>
+        {% if sla.breached %}<span class="badge bg-danger mt-2">SLA Breached</span>{% endif %}
+      </div>
+    </div>
     {% endif %}
-    <div class="card"><div class="card-header"><h5 class="mb-0">Comments</h5></div><div class="card-body">
-      {% if comments %}
-      <div class="mb-4">
-        {% for c in comments %}
-        <div class="d-flex gap-3 mb-3 {% if c.is_internal %}bg-warning bg-opacity-10 p-3 rounded{% endif %}">
-          <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;">{{ c.author.first_name|first|upper }}{{ c.author.last_name|first|upper }}</div>
-          <div class="flex-grow-1"><div class="d-flex gap-2 mb-1"><span class="fw-semibold">{{ c.author.get_full_name|default:c.author.email }}</span>{% if c.is_internal %}<span class="badge bg-warning">Internal</span>{% endif %}<span class="text-muted small">{{ c.created_at|date:"d M H:i" }}</span></div><div>{{ c.content|linebreaksbr }}</div></div>
+
+    <!-- Comments Section -->
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Comments</h5></div>
+      <div class="card-body">
+        <div id="comments-list">
+          {% for c in comments %}
+            {% include "tickets/partials/comment.html" with comment=c %}
+          {% empty %}
+            <p class="text-muted small">No comments yet.</p>
+          {% endfor %}
         </div>
-        {% endfor %}
+
+        <form method="post"
+              action="{% url 'ticket_comment' ticket.pk %}"
+              hx-post="{% url 'ticket_comment' ticket.pk %}"
+              hx-target="#comments-list"
+              hx-swap="beforeend">
+          {% csrf_token %}
+          <textarea name="content" class="form-control mb-3" rows="3" placeholder="Add a comment..." required></textarea>
+          <div class="d-flex align-items-center gap-3">
+            <button type="submit" class="btn btn-primary">Post</button>
+            {% if request.user.user_type == 'staff' %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_internal" id="internalNote">
+              <label class="form-check-label" for="internalNote">Internal</label>
+            </div>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Attachments Section -->
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Attachments</h5></div>
+      <div class="card-body">
+        <ul id="attachments-list" class="list-group mb-3">
+          {% for a in attachments %}
+            {% include "tickets/partials/attachment_item.html" with attachment=a %}
+          {% empty %}
+            <li class="list-group-item text-muted">No attachments.</li>
+          {% endfor %}
+        </ul>
+
+        <form method="post"
+              action="{% url 'ticket_attachment' ticket.pk %}"
+              enctype="multipart/form-data"
+              hx-post="{% url 'ticket_attachment' ticket.pk %}"
+              hx-target="#attachments-list"
+              hx-swap="beforeend">
+          {% csrf_token %}
+          <div class="mb-2">
+            {{ attachment_form.file }}
+          </div>
+          <div class="mb-2">
+            {{ attachment_form.description }}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <!-- Ticket Info Card -->
+    <div class="card">
+      <div class="card-body">
+        <ul class="info-list">
+          <li><span class="label">Ticket #</span><span class="value">{{ ticket.ticket_number }}</span></li>
+          <li><span class="label">Client</span><span class="value"><a href="{% url 'client_detail' ticket.client.pk %}">{{ ticket.client.name }}</a></span></li>
+          {% if ticket.service %}<li><span class="label">Service</span><span class="value">{{ ticket.service.name }}</span></li>{% endif %}
+          <li><span class="label">Created</span><span class="value">{{ ticket.created_at|date:"d M Y" }}</span></li>
+          <li><span class="label">Updated</span><span class="value">{{ ticket.updated_at|date:"d M H:i" }}</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Assignment Panel (Staff Only) -->
+    {% if request.user.user_type == 'staff' %}
+    <div id="assignment-panel">
+      {% include "tickets/partials/assignment_panel.html" %}
+    </div>
+    {% endif %}
+
+    <!-- Work Log Section -->
+    {% if request.user.user_type == 'staff' %}
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Work Log</h5></div>
+      <div class="card-body">
+        <div id="worklogs-list" class="list-group list-group-flush mb-3">
+          {% for w in worklogs %}
+            {% include "tickets/partials/worklog_item.html" with worklog=w %}
+          {% empty %}
+            <div class="text-muted small">No work logged.</div>
+          {% endfor %}
+        </div>
+
+        <form method="post"
+              action="{% url 'ticket_worklog' ticket.pk %}"
+              hx-post="{% url 'ticket_worklog' ticket.pk %}"
+              hx-target="#worklogs-list"
+              hx-swap="beforeend">
+          {% csrf_token %}
+          <div class="mb-2">
+            <input type="number" name="hours" class="form-control form-control-sm" step="0.5" min="0.5" placeholder="Hours" required>
+          </div>
+          <div class="mb-2">
+            <textarea name="description" class="form-control form-control-sm" rows="2" placeholder="Description" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">Log Work</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+      {# Clients see read-only work log summary #}
+      {% if worklogs %}
+      <div class="card">
+        <div class="card-header"><h5 class="mb-0">Work Performed</h5></div>
+        <div class="card-body">
+          <div class="list-group list-group-flush">
+            {% for w in worklogs %}
+              {% include "tickets/partials/worklog_item.html" with worklog=w %}
+            {% endfor %}
+          </div>
+        </div>
       </div>
       {% endif %}
-      <form method="post" action="{% url 'ticket_comment' ticket.pk %}">
-        {% csrf_token %}
-        <textarea name="content" class="form-control mb-3" rows="3" placeholder="Add a comment..." required></textarea>
-        <div class="d-flex align-items-center gap-3"><button type="submit" class="btn btn-primary">Post</button><div class="form-check"><input class="form-check-input" type="checkbox" name="is_internal" id="internalNote"><label class="form-check-label" for="internalNote">Internal</label></div></div>
-      </form>
-    </div></div>
-  </div>
-  <div class="col-lg-4">
-    <div class="card"><div class="card-body"><ul class="info-list">
-      <li><span class="label">Client</span><span class="value"><a href="{% url 'client_detail' ticket.client.pk %}">{{ ticket.client.name }}</a></span></li>
-      {% if ticket.service %}<li><span class="label">Service</span><span class="value">{{ ticket.service.name }}</span></li>{% endif %}
-      <li><span class="label">Assigned</span><span class="value">{{ ticket.assigned_to.get_full_name|default:'Unassigned' }}</span></li>
-      <li><span class="label">Created</span><span class="value">{{ ticket.created_at|date:"d M Y" }}</span></li>
-      <li><span class="label">Updated</span><span class="value">{{ ticket.updated_at|date:"d M H:i" }}</span></li>
-    </ul></div></div>
-    <div class="card"><div class="card-header"><h5 class="mb-0">Work Log</h5></div><div class="card-body">
-      {% if worklogs %}
-      <div class="list-group list-group-flush mb-3">
-        {% for w in worklogs %}
-        <div class="list-group-item px-0"><div class="d-flex justify-content-between"><span class="fw-semibold">{{ w.technician.get_full_name|default:'—' }}</span><span class="badge bg-primary">{{ w.hours }}h</span></div><div class="small">{{ w.description }}</div><div class="small text-muted">{{ w.logged_at|date:"d M Y" }}</div></div>
-        {% endfor %}
-      </div>
-      {% else %}<p class="text-muted small">No work logged.</p>{% endif %}
-      <form method="post" action="{% url 'ticket_worklog' ticket.pk %}">
-        {% csrf_token %}
-        <div class="mb-2"><input type="number" name="hours" class="form-control form-control-sm" step="0.5" min="0.5" placeholder="Hours" required></div>
-        <div class="mb-2"><textarea name="description" class="form-control form-control-sm" rows="2" placeholder="Description" required></textarea></div>
-        <button type="submit" class="btn btn-primary btn-sm w-100">Log Work</button>
-      </form>
-    </div></div>
+    {% endif %}
   </div>
 </div>
+
+<!-- Hidden form for status transition (used by buttons in status_panel) -->
+{# The buttons in status_panel submit via standard POST; they can be enhanced with HTMX if desired #}
 {% endblock %}

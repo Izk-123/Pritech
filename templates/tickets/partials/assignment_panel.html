@@ -1,0 +1,25 @@
+<div class="card">
+  <div class="card-header"><h5 class="mb-0">Assignment</h5></div>
+  <div class="card-body">
+    <p class="mb-2">
+      <span class="fw-semibold">Assigned to:</span>
+      {% if ticket.assigned_to %}
+        {{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.email }}
+      {% else %}
+        Unassigned
+      {% endif %}
+    </p>
+    <form method="post" action="{% url 'ticket_assign' ticket.pk %}">
+      {% csrf_token %}
+      <select name="technician_id" class="form-select mb-2">
+        <option value="">Select technician...</option>
+        {% for tech in all_technicians %}
+        <option value="{{ tech.pk }}" {% if ticket.assigned_to == tech %}selected{% endif %}>
+          {{ tech.get_full_name|default:tech.email }}
+        </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm w-100">Reassign</button>
+    </form>
+  </div>
+</div>

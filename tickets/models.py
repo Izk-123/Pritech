@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Ticket(models.Model):
@@ -21,6 +22,7 @@ class Ticket(models.Model):
         'closed': ['open'],
     }
 
+    ticket_number = models.CharField(max_length=20, unique=True, blank=True)  # NEW
     title = models.CharField(max_length=300)
     description = models.TextField()
     client = models.ForeignKey('clients.ClientOrganization', on_delete=models.CASCADE, related_name='tickets')
@@ -39,7 +41,22 @@ class Ticket(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"#{self.pk} – {self.title}"
+        return f"{self.ticket_number} – {self.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.ticket_number:
+            today = timezone.now().strftime('%Y%m%d')
+            prefix = f'TKT-{today}-'
+            last_today = Ticket.objects.filter(
+                ticket_number__startswith=prefix
+            ).order_by('-ticket_number').first()
+            if last_today:
+                last_seq = int(last_today.ticket_number.split('-')[-1])
+                seq = f'{last_seq + 1:04d}'
+            else:
+                seq = '0001'
+            self.ticket_number = f'{prefix}{seq}'
+        super().save(*args, **kwargs)
 
     def can_transition_to(self, new_status):
         return new_status in self.VALID_TRANSITIONS.get(self.status, [])
@@ -73,3 +90,29 @@ class TicketWorkLog(models.Model):
     hours = models.DecimalField(max_digits=5, decimal_places=2)
     description = models.TextField()
     logged_at = models.DateTimeField(auto_now_add=True)
+
+
+# ─── NEW MODELS ───────────────────────────────────────────────────────────────
+
+class TicketAttachment(models.Model):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to='tickets/%Y/%m/')
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"Attachment for {self.ticket.ticket_number}"
+
+
+class TicketSLA(models.Model):
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='sla')
+    response_due = models.DateTimeField(null=True, blank=True)
+    resolution_due = models.DateTimeField(null=True, blank=True)
+    breached = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"SLA for {self.ticket.ticket_number}"

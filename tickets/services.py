@@ -1,14 +1,42 @@
 from django.utils import timezone
-from .models import Ticket, TicketComment, TicketWorkLog
+from datetime import timedelta
+from .models import Ticket, TicketComment, TicketWorkLog, TicketSLA
 from infrastructure.notifications import notify_ticket_created, notify_ticket_status_changed
 
 
 class TicketService:
     @staticmethod
     def create_ticket(title, description, client, service=None, priority='medium', created_by=None):
-        return Ticket.objects.create(
+        ticket = Ticket.objects.create(
             title=title, description=description, client=client,
             service=service, priority=priority, created_by=created_by, status='open'
+        )
+        # Create SLA record
+        TicketService.create_sla(ticket)
+        return ticket
+
+    @staticmethod
+    def create_sla(ticket):
+        """Calculate SLA deadlines based on priority."""
+        # Hours mapping: response time = resolution time / 4 (example)
+        hours_map = {
+            'low': 48,
+            'medium': 24,
+            'high': 8,
+            'critical': 4,
+        }
+        now = timezone.now()
+        response_hours = hours_map.get(ticket.priority, 24)
+        resolution_hours = response_hours * 4   # e.g., critical: 4h response, 16h resolution
+
+        response_due = now + timedelta(hours=response_hours)
+        resolution_due = now + timedelta(hours=resolution_hours)
+
+        return TicketSLA.objects.create(
+            ticket=ticket,
+            response_due=response_due,
+            resolution_due=resolution_due,
+            breached=False
         )
 
     @staticmethod
@@ -47,3 +75,4 @@ class TicketService:
             ticket=ticket, technician=technician,
             hours=hours, description=description
         )
+        
