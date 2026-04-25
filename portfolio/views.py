@@ -1,7 +1,10 @@
 from django.views.generic import TemplateView, CreateView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from .models import PortfolioProject, Inquiry
+from django.shortcuts import redirect
+from django.contrib import messages
+from django.views.decorators.http import require_POST
+from .models import NewsletterSubscriber, PortfolioProject, Inquiry
 from .forms import InquiryForm
 from services.models import Service, ServiceCategory
 
@@ -27,3 +30,19 @@ class InquiryCreateView(CreateView):
         form.save()
         messages.success(self.request, 'Thank you! We will be in touch shortly.')
         return super().form_valid(form)
+
+
+@require_POST
+def newsletter_subscribe(request):
+    email = request.POST.get('email', '').strip().lower()
+    if email:
+        subscriber, created = NewsletterSubscriber.objects.get_or_create(email=email)
+        if created:
+            messages.success(request, 'You have been subscribed to our newsletter.')
+        else:
+            messages.info(request, 'You are already subscribed.')
+    else:
+        messages.error(request, 'Please provide a valid email address.')
+
+    # Redirect back to the previous page (or home)
+    return redirect(request.META.get('HTTP_REFERER', 'home'))
