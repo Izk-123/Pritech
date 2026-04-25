@@ -104,12 +104,12 @@ h6,
 }
 
 .navbar-light .navbar-brand img {
-    max-height: 60px;
+    max-height: 100px;
     transition: .5s;
 }
 
 .sticky-top.navbar-light .navbar-brand img {
-    max-height: 45px;
+    max-height: 70px;
 }
 
 @media (max-width: 991.98px) {
@@ -135,7 +135,7 @@ h6,
     }
 
     .navbar-light .navbar-brand img {
-        max-height: 45px;
+        max-height: 60px;
     }
 }
 
@@ -179,6 +179,53 @@ h6,
         color: var(--primary);
     }
 }
+
+
+/*** Navbar Logo Switch (Desktop) ***/
+/* Top of page (non‑sticky): dark logo over hero */
+.navbar:not(.sticky-top) .logo-dark {
+    display: inline-block !important;
+}
+.navbar:not(.sticky-top) .logo-light {
+    display: none !important;
+}
+
+/* Sticky navbar: light logo over white background */
+.navbar.sticky-top .logo-dark {
+    display: none !important;
+}
+.navbar.sticky-top .logo-light {
+    display: inline-block !important;
+}
+
+
+/* ----- MOBILE LOGO OVERRIDE (placed after desktop rules) ----- */
+@media (max-width: 991.98px) {
+    /* Override desktop selectors with higher specificity */
+    .navbar:not(.sticky-top) .logo-dark,
+    .navbar.sticky-top .logo-dark {
+        display: none !important;
+    }
+
+    .navbar:not(.sticky-top) .logo-light,
+    .navbar.sticky-top .logo-light {
+        display: inline-block !important;
+    }
+
+     .navbar-light .navbar-brand img {
+        max-height: 70px;     /* Larger mobile logo */
+    }
+}
+
+/* Optional: extra visibility boost */
+/*
+.navbar:not(.sticky-top) .logo-dark {
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.7));
+}
+.navbar.sticky-top .logo-light {
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.15));
+}
+*/
 
 
 /*** Hero Header ***/
