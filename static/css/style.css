@@ -6,6 +6,9 @@
     --dark: #1D1D27;
 }
 
+html {
+    scroll-behavior: smooth;
+}
 
 /*** Spinner ***/
 #spinner {
@@ -29,22 +32,20 @@
     z-index: 99;
 }
 
-
 /*** Heading ***/
 h1,
 h2,
 h3,
 .fw-bold {
-    font-weight: 700 !important;
+    font-weight: 700;
 }
 
 h4,
 h5,
 h6,
 .fw-medium {
-    font-weight: 500 !important;
+    font-weight: 500;
 }
-
 
 /*** Button ***/
 .btn {
@@ -78,25 +79,24 @@ h6,
     border-radius: 50px;
 }
 
-
 /*** Navbar ***/
 .navbar-light .navbar-nav .nav-link {
     position: relative;
     margin-left: 25px;
     padding: 35px 0;
-    color: var(--light) !important;
+    color: var(--light);
     outline: none;
     transition: .5s;
 }
 
 .sticky-top.navbar-light .navbar-nav .nav-link {
     padding: 20px 0;
-    color: var(--dark) !important;
+    color: var(--dark);
 }
 
 .navbar-light .navbar-nav .nav-link:hover,
 .navbar-light .navbar-nav .nav-link.active {
-    color: var(--secondary) !important;
+    color: var(--secondary);
 }
 
 .navbar-light .navbar-brand h1 {
@@ -127,7 +127,7 @@ h6,
     .sticky-top.navbar-light .navbar-nav .nav-link {
         padding: 10px 0;
         margin-left: 0;
-        color: var(--dark) !important;
+        color: var(--dark);
     }
 
     .navbar-light .navbar-brand h1 {
@@ -148,7 +148,7 @@ h6,
         border-bottom: 1px solid rgba(256, 256, 256, .1);
         z-index: 999;
     }
-    
+
     .sticky-top.navbar-light {
         position: fixed;
         background: #FFFFFF;
@@ -180,53 +180,41 @@ h6,
     }
 }
 
-
-/*** Navbar Logo Switch (Desktop) ***/
+/*** Navbar Logo Switch (Desktop) – No !important – using specificity ***/
 /* Top of page (non‑sticky): dark logo over hero */
 .navbar:not(.sticky-top) .logo-dark {
-    display: inline-block !important;
+    display: inline-block;
 }
+
 .navbar:not(.sticky-top) .logo-light {
-    display: none !important;
+    display: none;
 }
 
 /* Sticky navbar: light logo over white background */
 .navbar.sticky-top .logo-dark {
-    display: none !important;
+    display: none;
 }
+
 .navbar.sticky-top .logo-light {
-    display: inline-block !important;
+    display: inline-block;
 }
 
-
-/* ----- MOBILE LOGO OVERRIDE (placed after desktop rules) ----- */
+/* MOBILE LOGO OVERRIDE (placed after desktop rules to cascade properly) */
 @media (max-width: 991.98px) {
-    /* Override desktop selectors with higher specificity */
     .navbar:not(.sticky-top) .logo-dark,
     .navbar.sticky-top .logo-dark {
-        display: none !important;
+        display: none;
     }
 
     .navbar:not(.sticky-top) .logo-light,
     .navbar.sticky-top .logo-light {
-        display: inline-block !important;
+        display: inline-block;
     }
 
-     .navbar-light .navbar-brand img {
-        max-height: 70px;     /* Larger mobile logo */
+    .navbar-light .navbar-brand img {
+        max-height: 70px;
     }
 }
-
-/* Optional: extra visibility boost */
-/*
-.navbar:not(.sticky-top) .logo-dark {
-    filter: drop-shadow(0 0 4px rgba(255,255,255,0.7));
-}
-.navbar.sticky-top .logo-light {
-    filter: drop-shadow(0 0 3px rgba(0,0,0,0.15));
-}
-*/
-
 
 /*** Hero Header ***/
 .hero-header {
@@ -250,7 +238,6 @@ h6,
         auto,
         100% auto;
 }
-
 
 /*** Section Title ***/
 .section-title::before {
@@ -298,7 +285,6 @@ h6,
     top: 5px;
     left: 3px;
 }
-
 
 /*** Service ***/
 .service-item {
@@ -371,7 +357,6 @@ h6,
     background: var(--light);
 }
 
-
 /*** Project Portfolio ***/
 .portfolio-overlay {
     position: absolute;
@@ -413,7 +398,6 @@ h6,
     opacity: 1;
     transition-delay: .15s;
 }
-
 
 /*** Footer ***/
 .footer {
