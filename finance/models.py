@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django_quill.fields import QuillField
 
 
 class Invoice(models.Model):
@@ -18,7 +19,7 @@ class Invoice(models.Model):
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     amount_paid = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    notes = models.TextField(blank=True)
+    notes = QuillField(blank=True)                 # ⬅️ rich text now
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -69,7 +70,7 @@ class Payment(models.Model):
     method = models.CharField(max_length=20, choices=METHOD_CHOICES)
     reference = models.CharField(max_length=100, blank=True)
     date = models.DateField()
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True)             # keep as plain text (short)
     recorded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -83,7 +84,7 @@ class Expense(models.Model):
         ('utilities', 'Utilities'), ('marketing', 'Marketing'), ('other', 'Other'),
     ]
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    description = models.CharField(max_length=300)
+    description = models.CharField(max_length=300)   # short description, stays plain
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     date = models.DateField()
     receipt = models.FileField(upload_to='receipts/', null=True, blank=True)
@@ -92,6 +93,7 @@ class Expense(models.Model):
 
     class Meta:
         ordering = ['-date']
+
 
 class Quotation(models.Model):
     STATUS_CHOICES = [
@@ -111,7 +113,8 @@ class Quotation(models.Model):
     tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    notes = models.TextField(blank=True)
+    notes = QuillField(blank=True)                  # ⬅️ rich text now
+    client_feedback = models.TextField(blank=True, help_text="Client's rejection reason or change request")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

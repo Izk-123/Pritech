@@ -1,3 +1,5 @@
+import base64
+
 from django.views.generic import ListView, CreateView, DetailView, View, TemplateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
@@ -8,6 +10,8 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 import json
+from django.core.mail import send_mail
+from pritech import settings
 
 from .models import Invoice, Expense, InvoiceItem, Quotation, QuotationItem
 from .forms import (
@@ -139,6 +143,37 @@ class QuotationConvertView(RoleRequiredMixin, View):
         except ValueError as e:
             messages.error(request, str(e))
             return redirect('quotation_detail', pk=pk)
+        
+class QuotationPDFView(RoleRequiredMixin, View):
+    required_roles = ['FINANCE', 'ADMIN']
+
+    def get(self, request, pk):
+        quotation = get_object_or_404(Quotation, pk=pk)
+        config = SiteConfig.get()
+        vat_percent = float(config.vat_rate) * 100
+
+        # Load static logo and encode as base64
+        logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo.png'
+        logo_data_uri = ""
+        if logo_path.exists():
+            with open(logo_path, "rb") as f:
+                logo_bytes = f.read()
+                b64 = base64.b64encode(logo_bytes).decode('utf-8')
+                logo_data_uri = f"data:image/png;base64,{b64}"
+
+        pdf_bytes = render_pdf('finance/quotation_pdf.html', {
+            'quotation': quotation,
+            'items': quotation.items.all(),
+            'config': config,
+            'vat_percent': f'{vat_percent:.1f}',
+            'static_logo_data_uri': logo_data_uri,
+        })
+
+        filename = f'{quotation.quotation_number}.pdf'
+        action = request.GET.get('action', 'download')
+        if action == 'view':
+            return pdf_inline_response(pdf_bytes, filename)
+        return pdf_response(pdf_bytes, filename)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -249,12 +284,23 @@ class InvoicePDFView(RoleRequiredMixin, View):
         invoice = get_object_or_404(Invoice, pk=pk)
         config = SiteConfig.get()
         vat_percent = float(config.vat_rate) * 100
+        
+        # ----- NEW: load static logo and encode as base64 -----
+        logo_path = settings.BASE_DIR / 'static' / 'images' / 'logo.png'
+        logo_data_uri = ""
+        if logo_path.exists():
+            with open(logo_path, "rb") as f:
+                logo_bytes = f.read()
+                b64 = base64.b64encode(logo_bytes).decode('utf-8')
+                logo_data_uri = f"data:image/png;base64,{b64}"
+        # ------------------------------------------------------
 
         pdf_bytes = render_pdf('finance/invoice_pdf.html', {
             'invoice': invoice,
             'items': invoice.items.all(),
             'config': config,
             'vat_percent': f'{vat_percent:.1f}',
+            'static_logo_data_uri': logo_data_uri,
         })
 
         filename = f'{invoice.invoice_number}.pdf'
@@ -383,6 +429,80 @@ class ClientQuotationDetailView(LoginRequiredMixin, DetailView):
         ctx['config'] = SiteConfig.get()
         ctx['items'] = self.object.items.all()
         return ctx
+
+
+class ClientQuotationApproveView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        quotation = get_object_or_404(Quotation, pk=pk, client=request.user.client_organization)
+        
+        if quotation.status != 'sent':
+            messages.error(request, f"This quotation cannot be approved (current status: {quotation.status}).")
+            return redirect('client_quotation_detail', pk=pk)
+        
+        # Mark as approved first
+        quotation.status = 'approved'
+        quotation.save(update_fields=['status'])
+        
+        try:
+            invoice = QuotationService.convert_to_invoice(quotation, created_by=request.user)
+            messages.success(
+                request, 
+                f"Quotation {quotation.quotation_number} approved and converted to invoice {invoice.invoice_number}."
+            )
+            return redirect('client_invoice_detail', pk=invoice.pk)
+        except ValueError as e:
+            messages.error(request, f"Conversion failed: {e}")
+            # Revert status if conversion fails? Optional
+            quotation.status = 'sent'
+            quotation.save(update_fields=['status'])
+            return redirect('client_quotation_detail', pk=pk)
+
+
+class ClientQuotationRejectView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        quotation = get_object_or_404(Quotation, pk=pk, client=request.user.client_organization)
+        
+        if quotation.status != 'sent':
+            messages.error(request, "This quotation cannot be rejected.")
+            return redirect('client_quotation_detail', pk=pk)
+        
+        reason = request.POST.get('reason', '').strip()
+        if not reason:
+            messages.error(request, "Please provide a reason for rejection or change request.")
+            return redirect('client_quotation_detail', pk=pk)
+        
+        # Update quotation
+        quotation.status = 'rejected'
+        quotation.client_feedback = reason
+        quotation.save(update_fields=['status', 'client_feedback'])
+        
+        # --- Email notification to finance ---
+        try:
+            config = SiteConfig.get()
+            finance_emails = ['finance@pritech.mw']  # Replace with dynamic list if needed
+            send_mail(
+                subject=f"Quotation {quotation.quotation_number} rejected by {quotation.client.name}",
+                message=f"""
+Client: {quotation.client.name}
+Quotation: {quotation.quotation_number}
+Total Amount: {config.currency_symbol}{quotation.total_amount}
+
+Reason provided by client:
+{reason}
+
+Please review and contact the client for revision.
+                """.strip(),
+                from_email=config.email or settings.DEFAULT_FROM_EMAIL,
+                recipient_list=finance_emails,
+                fail_silently=True,  # Prevents breaking the flow if email fails
+            )
+        except Exception as e:
+            # Log the error but don't stop the user
+            print(f"Email notification failed: {e}")
+        
+        messages.success(request, "Quotation rejected. We'll review your feedback and get back to you.")
+        return redirect('client_quotation_detail', pk=pk)
+
 
 # class ClientInvoiceListView(LoginRequiredMixin, ListView):
 #     template_name = 'finance/client_invoice_list.html'

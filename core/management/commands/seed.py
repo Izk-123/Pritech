@@ -1,8 +1,13 @@
+# core/management/commands/seed.py
+import json
+import random
+from datetime import date, timedelta
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import date, timedelta
-import random
+
+from tickets.models import Ticket  # <-- ADDED MISSING IMPORT
 
 User = get_user_model()
 
@@ -47,24 +52,20 @@ class Command(BaseCommand):
             p, _ = Permission.objects.get_or_create(code=code, defaults={'description': desc})
             perms[code] = p
 
-        # Assign all permissions to ADMIN
         for perm in perms.values():
             RolePermission.objects.get_or_create(role=roles['ADMIN'], permission=perm)
 
-        # Assign finance‑specific permissions to FINANCE role
         RolePermission.objects.get_or_create(role=roles['FINANCE'], permission=perms['manage_invoices'])
         RolePermission.objects.get_or_create(role=roles['FINANCE'], permission=perms['view_reports'])
         RolePermission.objects.get_or_create(role=roles['FINANCE'], permission=perms['view_finance_dashboard'])
-
-        # Assign technician permissions
         RolePermission.objects.get_or_create(role=roles['TECHNICIAN'], permission=perms['manage_tickets'])
         self.stdout.write('  ✓ Roles & permissions')
 
         # ── Staff users
         from accounts.models import UserRole
         admin_user = self._create_user('admin@pritech.mw', 'Admin', 'User', 'admin123', 'staff', True)
-        tech_user  = self._create_user('tech@pritech.mw', 'John', 'Phiri', 'tech123', 'staff', False)
-        fin_user   = self._create_user('finance@pritech.mw', 'Mary', 'Banda', 'fin123', 'staff', False)
+        tech_user = self._create_user('tech@pritech.mw', 'John', 'Phiri', 'tech123', 'staff', False)
+        fin_user = self._create_user('finance@pritech.mw', 'Mary', 'Banda', 'fin123', 'staff', False)
 
         for user, role_code in [(admin_user, 'ADMIN'), (tech_user, 'TECHNICIAN'), (fin_user, 'FINANCE')]:
             UserRole.objects.get_or_create(user=user, role=roles[role_code])
@@ -102,7 +103,7 @@ class Command(BaseCommand):
         )
         self.stdout.write('  ✓ Users created (including client org)')
 
-        # ── Service categories + services (with billing_type)
+        # ── Service categories + services
         from services.models import ServiceCategory, Service
         cats = {}
         for name, icon in [('Networking', '🌐'), ('Hardware', '🖥'), ('Software', '💻'),
@@ -138,21 +139,10 @@ class Command(BaseCommand):
         # ── Service Packages
         from services.models import ServicePackage
         packages_data = [
-            ('Business Starter', [
-                svcs['Network Installation'],
-                svcs['IT Support – On-site'],
-            ], 95000),
-            ('Professional Suite', [
-                svcs['Website Development'],
-                svcs['CCTV Installation'],
-                svcs['Firewall Setup'],
-            ], 250000),
-            ('Training Bundle', [
-                svcs['Staff ICT Training'],
-                svcs['Software Installation'],
-            ], 60000),
+            ('Business Starter', [svcs['Network Installation'], svcs['IT Support – On-site']], 95000),
+            ('Professional Suite', [svcs['Website Development'], svcs['CCTV Installation'], svcs['Firewall Setup']], 250000),
+            ('Training Bundle', [svcs['Staff ICT Training'], svcs['Software Installation']], 60000),
         ]
-
         for name, svc_list, price in packages_data:
             pkg, created = ServicePackage.objects.get_or_create(
                 name=name,
@@ -163,7 +153,7 @@ class Command(BaseCommand):
                 pkg.save()
         self.stdout.write('  ✓ Service packages created')
 
-        # ── Additional demo clients (besides Acme)
+        # ── Additional demo clients
         clients_data = [
             ('Malawi Revenue Authority', 'government', 'info@mra.mw', '+265 1 822 588'),
             ('Standard Bank Malawi', 'finance', 'it@standardbank.mw', '+265 1 820 144'),
@@ -171,7 +161,7 @@ class Command(BaseCommand):
             ('University of Malawi', 'education', 'ict@unima.mw', '+265 1 524 222'),
             ('Shoprite Malawi', 'retail', 'it@shoprite.mw', '+265 1 871 500'),
         ]
-        clients = [client_org]  # include Acme first
+        clients = [client_org]
         for name, industry, email, phone in clients_data:
             c, _ = ClientOrganization.objects.get_or_create(name=name, defaults={
                 'industry': industry, 'email': email, 'phone': phone,
@@ -179,14 +169,15 @@ class Command(BaseCommand):
             })
             clients.append(c)
             ClientContact.objects.get_or_create(
-                client=c, name=f'IT Manager', defaults={
+                client=c, name='IT Manager', defaults={
                     'role': 'IT Manager', 'email': email, 'is_primary': True
                 }
             )
         self.stdout.write('  ✓ Clients created')
 
-        # ── Tickets
-        from tickets.models import Ticket, TicketComment
+        # ── Tickets (using service layer, which expects JSON for description)
+        from tickets.services import TicketService
+
         ticket_data = [
             ('Internet connection dropping', clients[0], 'Network Installation', 'high', 'in_progress'),
             ('Server room cooling failure', clients[1], 'IT Support – On-site', 'critical', 'assigned'),
@@ -196,28 +187,52 @@ class Command(BaseCommand):
             ('VPN access for remote staff', clients[0], 'Firewall Setup', 'medium', 'closed'),
             ('Staff training – MS Office', clients[3], 'Staff ICT Training', 'low', 'open'),
         ]
+
         tickets = []
         for title, client, svc_name, priority, status in ticket_data:
-            t, created = Ticket.objects.get_or_create(
-                title=title, client=client,
-                defaults={
-                    'description': f'Client reported: {title}. Requires immediate attention.',
-                    'service': svcs.get(svc_name),
-                    'priority': priority, 'status': status,
-                    'created_by': admin_user,
-                    'assigned_to': tech_user if status != 'open' else None,
-                }
-            )
-            if created:
-                TicketComment.objects.create(
-                    ticket=t, author=admin_user,
-                    content='Ticket logged and reviewed. Assigned to technical team.',
+            if Ticket.objects.filter(title=title, client=client).exists():
+                t = Ticket.objects.get(title=title, client=client)
+            else:
+                desc_text = f'Client reported: {title}. Requires immediate attention.'
+                desc_json = json.dumps({"html": f"<p>{desc_text}</p>", "delta": ""})
+                t = TicketService.create_ticket(
+                    title=title,
+                    description=desc_json,
+                    client=client,
+                    service=svcs.get(svc_name),
+                    priority=priority,
+                    created_by=admin_user
+                )
+                if status != 'open':
+                    t.status = status
+                    if status == 'assigned':
+                        t.assigned_to = tech_user
+                    elif status in ['in_progress', 'resolved', 'closed']:
+                        t.assigned_to = tech_user
+                        if status == 'resolved':
+                            t.resolved_at = timezone.now()
+                        elif status == 'closed':
+                            t.resolved_at = timezone.now()
+                    t.save()
+
+                comment_json = json.dumps({
+                    "html": "<p>Ticket logged and reviewed. Assigned to technical team.</p>",
+                    "delta": ""
+                })
+                Ticket.objects.get(pk=t.pk).comments.create(
+                    author=admin_user,
+                    content=comment_json,
                     is_internal=True
                 )
             tickets.append(t)
-        self.stdout.write('  ✓ Tickets created')
 
-        # ── Quotations
+        for t in tickets:
+            if not hasattr(t, 'sla') and t.status not in ['closed', 'resolved']:
+                TicketService.create_sla(t)
+
+        self.stdout.write('  ✓ Tickets created with SLAs')
+
+        # ── Quotations (notes are Quill JSON)
         from finance.models import Quotation, QuotationItem
         from finance.services import QuotationService
         today = date.today()
@@ -232,14 +247,17 @@ class Command(BaseCommand):
         for client, items, target_status in quote_data:
             if Quotation.objects.filter(client=client, status=target_status).exists():
                 continue
-
+            notes_json = json.dumps({
+                "html": "<p>Please review and approve at your earliest convenience.</p>",
+                "delta": ""
+            })
             quote = Quotation.objects.create(
                 client=client,
                 issue_date=today - timedelta(days=random.randint(5, 30)),
                 valid_until=today + timedelta(days=30),
                 status='draft',
                 created_by=fin_user,
-                notes='Please review and approve at your earliest convenience.'
+                notes=notes_json
             )
             subtotal = 0
             for desc, qty, price in items:
@@ -252,7 +270,6 @@ class Command(BaseCommand):
             quote.subtotal = subtotal
             quote.tax_amount = subtotal * float(cfg.vat_rate)
             quote.total_amount = subtotal + quote.tax_amount
-
             if target_status == 'converted':
                 quote.status = 'approved'
                 quote.save()
@@ -260,10 +277,9 @@ class Command(BaseCommand):
             else:
                 quote.status = target_status
                 quote.save()
-
         self.stdout.write('  ✓ Quotations created')
 
-        # ── Invoices
+        # ── Invoices (notes are Quill JSON)
         from finance.models import Invoice, InvoiceItem, Payment
         invoice_data = [
             (clients[0], [('Network Installation & Configuration', 1, 85000), ('Monthly Support Contract', 3, 15000)], 'paid'),
@@ -277,11 +293,14 @@ class Command(BaseCommand):
         for client, items, status in invoice_data:
             if Invoice.objects.filter(client=client, status=status).exists():
                 continue
+            notes_json = json.dumps({"html": "<p>Standard payment terms apply.</p>", "delta": ""})
             invoice = Invoice.objects.create(
                 client=client,
                 issue_date=today - timedelta(days=random.randint(5, 60)),
                 due_date=today + timedelta(days=random.randint(-10, 30)),
-                status='draft', created_by=fin_user
+                status='draft',
+                created_by=fin_user,
+                notes=notes_json
             )
             subtotal = 0
             for desc, qty, price in items:
@@ -313,7 +332,6 @@ class Command(BaseCommand):
                     method='mobile_money', date=today - timedelta(days=10),
                     recorded_by=fin_user
                 )
-
         self.stdout.write('  ✓ Invoices & payments created')
 
         # ── Expenses

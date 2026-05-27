@@ -2,13 +2,14 @@ from datetime import date, timedelta
 from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
+import json
 from .models import Invoice, InvoiceItem, Payment, Quotation, QuotationItem
 from infrastructure.notifications import notify_invoice_issued, notify_payment_received
 
 
 def get_vat_rate():
     """Return VAT rate as Decimal."""
-    rate = getattr(settings, 'VAT_RATE', 0.165)
+    rate = getattr(settings, 'VAT_RATE', 0.175)
     return Decimal(str(rate))
 
 
@@ -73,11 +74,23 @@ class InvoiceService:
 
 class QuotationService:
     @staticmethod
+    def _ensure_quill_json(value):
+        """Convert plain text to Quill JSON if needed."""
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip().startswith('{'):
+            return json.dumps({"html": f"<p>{value}</p>", "delta": ""})
+        return value
+
+    @staticmethod
     @transaction.atomic
     def create_quotation(client, items_data, issue_date, valid_until, notes='', created_by=None):
+        # Convert notes to Quill JSON automatically
+        notes_json = QuotationService._ensure_quill_json(notes)
+
         quotation = Quotation.objects.create(
             client=client, issue_date=issue_date, valid_until=valid_until,
-            notes=notes, created_by=created_by, status='draft'
+            notes=notes_json, created_by=created_by, status='draft'
         )
         subtotal = Decimal('0')
         for item in items_data:
@@ -112,7 +125,6 @@ class QuotationService:
             raise ValueError('Only draft quotations can be sent.')
         quotation.status = 'sent'
         quotation.save(update_fields=['status'])
-        # Optionally add email notification here
 
     @staticmethod
     def approve(quotation):
@@ -123,18 +135,17 @@ class QuotationService:
 
     @staticmethod
     def convert_to_invoice(quotation, created_by=None):
-        if quotation.status not in ['approved', 'sent']:  # allow conversion from sent as well
-            raise ValueError('Quotation must be approved before conversion.')
-        # Create invoice
+        # Only approved quotations can be converted
+        if quotation.status != 'approved':
+            raise ValueError('Quotation must be approved by client before conversion to invoice.')
         invoice = Invoice.objects.create(
             client=quotation.client,
             issue_date=date.today(),
-            due_date=date.today() + timedelta(days=30),  # default 30 days
+            due_date=date.today() + timedelta(days=30),
             notes=quotation.notes,
             created_by=created_by,
             status='draft'
         )
-        # Copy items
         for q_item in quotation.items.all():
             InvoiceItem.objects.create(
                 invoice=invoice,
@@ -143,12 +154,10 @@ class QuotationService:
                 unit_price=q_item.unit_price,
                 total=q_item.total
             )
-        # Copy totals
         invoice.subtotal = quotation.subtotal
         invoice.tax_amount = quotation.tax_amount
         invoice.total_amount = quotation.total_amount
         invoice.save()
-        # Mark quotation as converted
         quotation.status = 'converted'
         quotation.save(update_fields=['status'])
         return invoice

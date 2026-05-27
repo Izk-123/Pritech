@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django_quill.fields import QuillField
 import uuid
 
 
@@ -22,16 +23,15 @@ class ClientOrganization(models.Model):
     name = models.CharField(max_length=200)
     industry = models.CharField(max_length=50, choices=INDUSTRY_CHOICES, default='other')
     registration_number = models.CharField(max_length=100, blank=True)
-    tax_id = models.CharField(max_length=100, blank=True)  # new field
+    tax_id = models.CharField(max_length=100, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     website = models.URLField(blank=True)
-    notes = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')  # replace is_active
+    notes = QuillField(blank=True)          # ⬅️ rich text now
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
     
-    # Link to the primary user (one user = one organization for MVP)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

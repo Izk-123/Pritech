@@ -37,6 +37,48 @@ from .services import (
 #             for s in Ticket.STATUS_CHOICES
 #         }
 #         return ctx
+from django.shortcuts import render
+from django.contrib.admin.views.decorators import staff_member_required
+from tickets.models import Ticket
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import render_to_string
+from django.db.models import Q
+
+@staff_member_required
+def htmx_dashboard(request):
+    tickets = Ticket.objects.all().order_by('-created_at')[:20]
+    return render(request, 'core/htmx_dashboard.html', {'tickets': tickets})
+
+@staff_member_required
+def live_ticket_search(request):
+    query = request.GET.get('q', '')
+    tickets = Ticket.objects.filter(
+        Q(ticket_number__icontains=query) | Q(title__icontains=query)
+    )[:20]
+    html = render_to_string('core/ticket_rows.html', {'tickets': tickets})
+    return HttpResponse(html)
+
+@staff_member_required
+def inline_ticket_status(request, ticket_id):
+    ticket = Ticket.objects.get(id=ticket_id)
+    new_status = request.POST.get('status')
+    if ticket.can_transition_to(new_status):
+        ticket.status = new_status
+        ticket.save()
+    return HttpResponse(f'<span class="status-badge">{ticket.get_status_display()}</span>')
+
+# core/views.py
+from django.shortcuts import render
+from django.contrib.admin.views.decorators import staff_member_required
+from .dashboard import dashboard_callback   # reuse your callback to inject data
+
+@staff_member_required
+def admin_dashboard_view(request, extra_context=None):
+    context = {}
+    # Call your existing callback to populate data
+    dashboard_callback(request, context)
+    # Render your custom template (NOT unfold/index.html)
+    return render(request, 'admin/custom_dashboard.html', context)
 
 
 

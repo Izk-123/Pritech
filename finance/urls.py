@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import (ClientInvoiceDetailView, ClientInvoiceListView, ClientQuotationDetailView, ClientQuotationListView, InvoiceListView, InvoiceCreateView, InvoiceDetailView,
-                    AddInvoiceItemView, QuotationConvertView, QuotationCreateView, QuotationDetailView, QuotationListView, QuotationSendView, QuotationUpdateView, RecordPaymentView, IssueInvoiceView,
+from .views import (ClientInvoiceDetailView, ClientInvoiceListView, ClientQuotationApproveView, ClientQuotationDetailView, ClientQuotationListView, ClientQuotationRejectView, InvoiceListView, InvoiceCreateView, InvoiceDetailView,
+                    AddInvoiceItemView, QuotationConvertView, QuotationCreateView, QuotationDetailView, QuotationListView, QuotationPDFView, QuotationSendView, QuotationUpdateView, RecordPaymentView, IssueInvoiceView,
                     ExpenseListView, ExpenseCreateView, InvoicePDFView,
                     ReportView)
 
@@ -12,6 +12,7 @@ urlpatterns = [
     path('quotations/<int:pk>/edit/', QuotationUpdateView.as_view(), name='quotation_update'),
     path('quotations/<int:pk>/send/', QuotationSendView.as_view(), name='quotation_send'),
     path('quotations/<int:pk>/convert/', QuotationConvertView.as_view(), name='quotation_convert'),
+    path('quotations/<int:pk>/pdf/', QuotationPDFView.as_view(), name='quotation_pdf'),
 
     # Invoices (existing)
     path('invoices/', InvoiceListView.as_view(), name='invoice_list'),
@@ -34,4 +35,8 @@ urlpatterns = [
     path('client/invoices/<int:pk>/', ClientInvoiceDetailView.as_view(), name='client_invoice_detail'),
     path('client/quotations/', ClientQuotationListView.as_view(), name='client_quotation_list'),
     path('client/quotations/<int:pk>/', ClientQuotationDetailView.as_view(), name='client_quotation_detail'),
+    path('client/quotations/<int:pk>/approve/', ClientQuotationApproveView.as_view(), name='client_quotation_approve'),
+    path('client/quotations/<int:pk>/reject/', ClientQuotationRejectView.as_view(), name='client_quotation_reject'),
+    
+    
 ]
