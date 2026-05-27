@@ -1,0 +1,172 @@
+/* ==============================
+   UNFOLD OVERRIDES – DEEPSEEK STYLE
+   ============================== */
+
+/* ---------- DESIGN TOKENS ---------- */
+:root {
+  --primary: #4154f1;
+  --primary-dark: #2f45c5;
+  --sidebar-bg-start: #0b0f19;
+  --sidebar-bg-end: #1a1e2b;
+  --topbar-bg: rgba(255, 255, 255, 0.85);
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --input-bg: #ffffff;
+  --input-border: #ced4da;
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.1);
+  --border-radius: 16px;
+}
+
+/* ---------- DARK MODE ---------- */
+.dark {
+  --primary: #5b7cfa;
+  --primary-dark: #4154f1;
+  --sidebar-bg-start: #0b0f19;
+  --sidebar-bg-end: #1a1e2b;
+  --topbar-bg: rgba(15, 23, 42, 0.9);
+  --card-bg: #1e293b;
+  --card-border: #334155;
+  --input-bg: #1e293b;
+  --input-border: #475569;
+  --text-primary: #f1f5f9;
+  --text-muted: #94a3b8;
+}
+
+/* ---------- SIDEBAR (DeepSeek Dark Gradient) ---------- */
+.unfold-sidebar {
+  background: linear-gradient(180deg, var(--sidebar-bg-start), var(--sidebar-bg-end)) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+  border-right: 1px solid rgba(255,255,255,0.08);
+  color: #e0e4ee;
+}
+
+/* Sidebar text colors */
+.unfold-sidebar .nav-link,
+.unfold-sidebar .nav-label,
+.unfold-sidebar .sidebar-header {
+  color: #b4bcc4 !important;
+}
+.unfold-sidebar .nav-link.active {
+  background: rgba(65, 84, 241, 0.25) !important;
+  color: #ffffff !important;
+  border-left: 3px solid var(--primary);
+}
+
+/* Scrollbar for sidebar */
+.unfold-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.unfold-sidebar::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 6px;
+}
+.unfold-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ---------- TOPBAR ---------- */
+.unfold-topbar {
+  background: var(--topbar-bg) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* ---------- CARDS ---------- */
+.unfold-card,
+.module,
+.inline-group,
+.form-row {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+.unfold-card:hover,
+.module:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+
+/* ---------- FORMS ---------- */
+input[type="text"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="number"],
+textarea,
+select,
+.form-control,
+.vTextField,
+.vEmailField {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: 10px !important;
+  padding: 0.7rem 1rem !important;
+  color: var(--text-primary) !important;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(65, 84, 241, 0.2) !important;
+}
+label {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Buttons */
+.button,
+.btn-primary {
+  background: var(--primary) !important;
+  border: none !important;
+  color: #fff !important;
+  border-radius: 12px;
+  padding: 0.6rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.button:hover {
+  background: var(--primary-dark) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(65, 84, 241, 0.3);
+}
+
+/* ---------- PAGE ANIMATIONS ---------- */
+.unfold-content {
+  animation: fadeSlideIn 0.5s ease-out;
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- QUILL EDITOR DARK MODE ---------- */
+.dark .ql-toolbar {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+.dark .ql-toolbar button {
+  color: #cbd5e1 !important;
+}
+.dark .ql-container {
+  background: var(--card-bg) !important;
+  border-color: #334155 !important;
+  color: #f1f5f9;
+}
+.dark .ql-editor.ql-blank::before {
+  color: #94a3b8;
+}
