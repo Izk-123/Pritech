@@ -9,8 +9,8 @@
   <!-- SEO Meta Tags -->
   <meta name="description" content="{{ portfolio_settings.meta_description|default:'All-in-one SEO tool to grow your business rapidly. Expert ICT solutions with 10 years of experience.' }}">
   <meta name="keywords" content="{{ portfolio_settings.meta_keywords|default:'SEO, ICT solutions, digital marketing, web development, Malawi' }}">
-  <meta name="author" content="{{ portfolio_settings.company_name|default:'PRITECH' }}">
-  <meta name="copyright" content="{{ portfolio_settings.company_name|default:'PRITECH' }}">
+  <meta name="author" content="{{ site_config.company_name|default:'PRITECH' }}">
+  <meta name="copyright" content="{{ site_config.company_name|default:'PRITECH' }}">
   <meta name="robots" content="index, follow">
   <meta name="language" content="English">
   
@@ -24,7 +24,7 @@
   <meta property="og:description" content="{{ portfolio_settings.meta_description|default:'All-in-one SEO tool to grow your business rapidly.' }}">
   <meta property="og:image" content="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}">
   <meta property="og:image:alt" content="{{ portfolio_settings.hero_title|default:'ICT Solutions Hero Image' }}">
-  <meta property="og:site_name" content="{{ portfolio_settings.company_name|default:'SEO Master' }}">
+  <meta property="og:site_name" content="{{ site_config.company_name|default:'SEO Master' }}">
   <meta property="og:locale" content="en_US">
   
   <!-- Twitter Card -->
@@ -62,7 +62,7 @@
       {
         "@type": "Organization",
         "@id": "{{ request.build_absolute_uri }}#organization",
-        "name": "{{ portfolio_settings.company_name|default:'SEO Master' }}",
+        "name": "{{ site_config.company_name|default:'SEO Master' }}",
         "url": "{{ request.build_absolute_uri }}",
         "logo": "{% static 'images/logo.png' %}",
         "sameAs": [
@@ -73,7 +73,7 @@
         ],
         "contactPoint": {
           "@type": "ContactPoint",
-          "telephone": "{{ portfolio_settings.phone|default:'+265888888888' }}",
+          "telephone": "{{ site_config.phone|default:'+265888888888' }}",
           "contactType": "customer service",
           "availableLanguage": ["English"]
         }
@@ -81,16 +81,16 @@
       {
         "@type": "LocalBusiness",
         "parentOrganization": { "@id": "{{ request.build_absolute_uri }}#organization" },
-        "name": "{{ portfolio_settings.company_name|default:'SEO Master' }}",
+        "name": "{{ site_config.company_name|default:'SEO Master' }}",
         "image": "{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}",
         "description": "{{ portfolio_settings.meta_description|default:'ICT solutions provider in Malawi.' }}",
         "address": {
           "@type": "PostalAddress",
-          "streetAddress": "{{ portfolio_settings.address|default:'123 ICT Street' }}",
+          "streetAddress": "{{ site_config.address|default:'123 ICT Street' }}",
           "addressLocality": "Lilongwe",
           "addressCountry": "MW"
         },
-        "telephone": "{{ portfolio_settings.phone|default:'+265888888888' }}",
+        "telephone": "{{ site_config.phone|default:'+265888888888' }}",
         "priceRange": "$$"
       },
       {
@@ -249,13 +249,69 @@
   <div class="container-fluid bg-primary text-light footer mt-5 pt-5 wow fadeIn">
     <div class="container py-5 px-lg-5">
       <div class="row g-5">
-        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Get In Touch</h5><p><i class="fa fa-map-marker-alt me-3"></i>{{ portfolio_settings.address|default:"123 Street, New York, USA" }}</p><p><i class="fa fa-phone-alt me-3"></i>{{ portfolio_settings.phone|default:"+012 345 67890" }}</p><p><i class="fa fa-envelope me-3"></i>{{ portfolio_settings.email|default:"info@example.com" }}</p><div class="d-flex pt-2">{% if portfolio_settings.twitter_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.twitter_url }}"><i class="fab fa-twitter"></i></a>{% endif %}{% if portfolio_settings.facebook_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.facebook_url }}"><i class="fab fa-facebook-f"></i></a>{% endif %}<a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-youtube"></i></a>{% if portfolio_settings.instagram_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.instagram_url }}"><i class="fab fa-instagram"></i></a>{% endif %}{% if portfolio_settings.linkedin_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.linkedin_url }}"><i class="fab fa-linkedin-in"></i></a>{% endif %}</div></div>
-        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Popular Link</h5><a class="btn btn-link" href="#about">About Us</a><a class="btn btn-link" href="#contact">Contact Us</a><a class="btn btn-link" href="#">Privacy Policy</a><a class="btn btn-link" href="#">Terms & Condition</a><a class="btn btn-link" href="#">Career</a></div>
-        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Project Gallery</h5><div class="row g-2">{% for project in projects|slice:":6" %}<div class="col-4"><img class="img-fluid" src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}" alt="{{ project.title }}" loading="lazy"></div>{% empty %}<div class="col-12">No projects yet</div>{% endfor %}</div></div>
-        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Newsletter</h5><p>Stay updated with our latest news and offers.</p><form method="post" action="{% url 'newsletter_subscribe' %}" class="position-relative w-100 mt-3">{% csrf_token %}<input class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="email" name="email" placeholder="Your Email" style="height: 48px;" required><button type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2"><i class="fa fa-paper-plane text-primary fs-4"></i></button></form></div>
+        <div class="col-md-6 col-lg-3">
+          <h5 class="text-white mb-4">Get In Touch</h5>
+          <p><i class="fa fa-map-marker-alt me-3"></i>{{ site_config.address|default:"123 Street, New York, USA" }}</p>
+          <p><i class="fa fa-phone-alt me-3"></i>{{ site_config.phone|default:"+012 345 67890" }}</p>
+          <p><i class="fa fa-envelope me-3"></i>{{ site_config.email|default:"info@example.com" }}</p>
+          <div class="d-flex pt-2">
+            {% if portfolio_settings.twitter_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.twitter_url }}"><i class="fab fa-twitter"></i></a>{% endif %}
+            {% if portfolio_settings.facebook_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.facebook_url }}"><i class="fab fa-facebook-f"></i></a>{% endif %}
+            <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-youtube"></i></a>
+            {% if portfolio_settings.instagram_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.instagram_url }}"><i class="fab fa-instagram"></i></a>{% endif %}
+            {% if portfolio_settings.linkedin_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.linkedin_url }}"><i class="fab fa-linkedin-in"></i></a>{% endif %}
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <h5 class="text-white mb-4">Popular Link</h5>
+          <a class="btn btn-link" href="#about">About Us</a>
+          <a class="btn btn-link" href="#contact">Contact Us</a>
+          <a class="btn btn-link" href="#">Privacy Policy</a>
+          <a class="btn btn-link" href="#">Terms & Condition</a>
+          <a class="btn btn-link" href="#">Career</a>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <h5 class="text-white mb-4">Project Gallery</h5>
+          <div class="row g-2">
+            {% for project in projects|slice:":6" %}
+            <div class="col-4">
+              <img class="img-fluid" src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}" alt="{{ project.title }}" loading="lazy">
+            </div>
+            {% empty %}
+            <div class="col-12">No projects yet</div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+          <h5 class="text-white mb-4">Newsletter</h5>
+          <p>Stay updated with our latest news and offers.</p>
+          <form method="post" action="{% url 'newsletter_subscribe' %}" class="position-relative w-100 mt-3">
+            {% csrf_token %}
+            <input class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="email" name="email" placeholder="Your Email" style="height: 48px;" required>
+            <button type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2"><i class="fa fa-paper-plane text-primary fs-4"></i></button>
+          </form>
+        </div>
       </div>
     </div>
-    <div class="container px-lg-5"><div class="copyright"><div class="row"><div class="col-md-6 text-center text-md-start mb-3 mb-md-0">&copy; <a class="border-bottom" href="#">{{ portfolio_settings.hero_title|default:"SEO Master" }}</a>, {{ portfolio_settings.footer_copyright|default:"All Right Reserved." }} Designed By <a class="border-bottom" href="https://pritechmw.com">PRITECH</a></div><div class="col-md-6 text-center text-md-end"><div class="footer-menu"><a href="#home">Home</a> <a href="#">Cookies</a> <a href="#">Help</a> <a href="#">FQAs</a></div></div></div></div></div>
+    <div class="container px-lg-5">
+      <div class="copyright">
+        <div class="row">
+          <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+            &copy; <a class="border-bottom" href="#">{{ site_config.company_name|default:"SEO Master" }}</a>,
+            {{ portfolio_settings.footer_copyright|default:"All Right Reserved." }}
+            Designed By <a class="border-bottom" href="https://pritechmw.com">PRITECH</a>
+          </div>
+          <div class="col-md-6 text-center text-md-end">
+            <div class="footer-menu">
+              <a href="#home">Home</a>
+              <a href="#">Cookies</a>
+              <a href="#">Help</a>
+              <a href="#">FQAs</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Dynamic WhatsApp Floating Button -->
