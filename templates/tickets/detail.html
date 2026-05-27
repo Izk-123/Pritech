@@ -20,7 +20,7 @@
     <div class="card">
       <div class="card-header"><h5 class="mb-0">Description</h5></div>
       <div class="card-body">
-        <p class="mb-0" style="white-space: pre-wrap;">{{ ticket.description }}</p>
+        <div class="mb-0 quill-content">{{ ticket.description.html|safe }}</div>
       </div>
     </div>
 
@@ -180,7 +180,4 @@
     {% endif %}
   </div>
 </div>
-
-<!-- Hidden form for status transition (used by buttons in status_panel) -->
-{# The buttons in status_panel submit via standard POST; they can be enhanced with HTMX if desired #}
 {% endblock %}

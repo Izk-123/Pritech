@@ -1,0 +1,26 @@
+{% extends "unfold/layouts/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Live Ticket Search (HTMX)</h1>
+
+    <!-- Search input -->
+    <div class="mb-4">
+        <input type="text"
+               name="q"
+               placeholder="Search by ticket number or title..."
+               class="w-full p-2 border rounded"
+               hx-get="{% url 'live_ticket_search' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#ticket-results"
+               hx-indicator="#spinner">
+        <div id="spinner" class="htmx-indicator">Loading...</div>
+    </div>
+
+    <!-- Results table -->
+    <div id="ticket-results">
+        {% include "core/ticket_rows.html" with tickets=tickets %}
+    </div>
+</div>
+{% endblock %}

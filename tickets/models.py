@@ -1,6 +1,9 @@
+# tickets/models.py
+import json
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django_quill.fields import QuillField
 
 
 class Ticket(models.Model):
@@ -22,9 +25,9 @@ class Ticket(models.Model):
         'closed': ['open'],
     }
 
-    ticket_number = models.CharField(max_length=20, unique=True, blank=True)  # NEW
+    ticket_number = models.CharField(max_length=20, unique=True, blank=True)
     title = models.CharField(max_length=300)
-    description = models.TextField()
+    description = QuillField()
     client = models.ForeignKey('clients.ClientOrganization', on_delete=models.CASCADE, related_name='tickets')
     service = models.ForeignKey('services.Service', on_delete=models.SET_NULL, null=True, blank=True)
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -44,6 +47,13 @@ class Ticket(models.Model):
         return f"{self.ticket_number} – {self.title}"
 
     def save(self, *args, **kwargs):
+        # Auto-convert plain text description to Quill JSON if needed
+        if self.description and isinstance(self.description, str) and not self.description.strip().startswith('{'):
+            self.description = json.dumps({
+                "html": f"<p>{self.description}</p>",
+                "delta": ""
+            })
+        # Generate ticket number if not set
         if not self.ticket_number:
             today = timezone.now().strftime('%Y%m%d')
             prefix = f'TKT-{today}-'
@@ -76,23 +86,39 @@ class Ticket(models.Model):
 class TicketComment(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
-    content = models.TextField()
+    content = QuillField()
     is_internal = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['created_at']
 
+    def save(self, *args, **kwargs):
+        # Auto-convert plain text comment to Quill JSON if needed
+        if self.content and isinstance(self.content, str) and not self.content.strip().startswith('{'):
+            self.content = json.dumps({
+                "html": f"<p>{self.content}</p>",
+                "delta": ""
+            })
+        super().save(*args, **kwargs)
+
 
 class TicketWorkLog(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='worklogs')
     technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     hours = models.DecimalField(max_digits=5, decimal_places=2)
-    description = models.TextField()
+    description = QuillField()
     logged_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        # Auto-convert plain text work log description to Quill JSON if needed
+        if self.description and isinstance(self.description, str) and not self.description.strip().startswith('{'):
+            self.description = json.dumps({
+                "html": f"<p>{self.description}</p>",
+                "delta": ""
+            })
+        super().save(*args, **kwargs)
 
-# ─── NEW MODELS ───────────────────────────────────────────────────────────────
 
 class TicketAttachment(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments')

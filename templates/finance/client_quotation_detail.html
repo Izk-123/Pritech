@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ quotation.quotation_number }}{% endblock %}
 {% block page_title %}{{ quotation.quotation_number }}{% endblock %}
 
@@ -7,16 +8,38 @@
   <div>
     <div class="page-breadcrumb"><a href="{% url 'client_quotation_list' %}">My Quotations</a> / {{ quotation.quotation_number }}</div>
     <h1>{{ quotation.quotation_number }}</h1>
-    <span class="badge bg-{% if quotation.status == 'approved' %}success{% elif quotation.status == 'sent' %}primary{% elif quotation.status == 'converted' %}secondary{% elif quotation.status == 'rejected' %}danger{% elif quotation.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ quotation.get_status_display }}</span>
+    <span class="badge bg-{% if quotation.status == 'approved' %}success{% elif quotation.status == 'sent' %}primary{% elif quotation.status == 'converted' %}secondary{% elif quotation.status == 'rejected' %}danger{% elif quotation.status == 'expired' %}warning{% else %}secondary{% endif %}">
+      {{ quotation.get_status_display }}
+    </span>
   </div>
-  <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
+
+    {% if quotation.status == 'sent' %}
+      <!-- Approve button -->
+      <form method="post" action="{% url 'client_quotation_approve' quotation.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success" onclick="return confirm('Approve this quotation? We will issue an invoice.')">
+          <i class="bi bi-check-lg"></i> Approve
+        </button>
+      </form>
+
+      <!-- Reject / Request Changes button (opens modal) -->
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+        <i class="bi bi-x-lg"></i> Reject / Request Changes
+      </button>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card" id="quotation-doc">
   <div class="card-body p-4 p-md-5">
     <div class="row mb-4">
       <div class="col-sm-6">
-        <h2 class="fw-bold text-primary">{{ config.company_name }}</h2>
+        <img src="{% static 'images/logo.png' %}" alt="{{ config.company_name }}"
+             style="max-height: 70px; width: auto; margin-bottom: 10px; display: block;"
+             onerror="this.style.display='none'; this.nextSibling.style.display='block';">
+        <h2 class="fw-bold text-primary" style="display: inline-block;">{{ config.company_name }}</h2>
         {% if config.address %}<div class="small text-muted">{{ config.address|linebreaksbr }}</div>{% endif %}
         {% if config.email %}<div class="small">{{ config.email }}</div>{% endif %}
         {% if config.phone %}<div class="small">{{ config.phone }}</div>{% endif %}
@@ -26,6 +49,7 @@
         <div class="fs-5 fw-semibold">{{ quotation.quotation_number }}</div>
       </div>
     </div>
+
     <div class="row mb-4">
       <div class="col-sm-6">
         <div class="text-uppercase small fw-semibold text-muted mb-2">Prepared For</div>
@@ -39,16 +63,27 @@
         <div class="d-flex justify-content-sm-end gap-3 small"><span class="text-muted">Valid Until:</span><span class="{% if quotation.valid_until < today %}text-danger{% endif %}">{{ quotation.valid_until }}</span></div>
       </div>
     </div>
+
     <div class="table-responsive mb-4">
       <table class="table table-bordered">
-        <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <thead class="table-dark">
+          <tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr>
+        </thead>
         <tbody>
           {% for item in items %}
-          <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
+          <tr>
+            <td>{{ item.description }}</td>
+            <td class="text-end">{{ item.quantity }}</td>
+            <td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+            <td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
     <div class="d-flex justify-content-end">
       <div style="width: 300px;">
         <div class="d-flex justify-content-between py-1"><span>Subtotal</span><span>{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span></div>
@@ -56,9 +91,43 @@
         <div class="d-flex justify-content-between py-2 fs-5 fw-bold"><span>Total</span><span>{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span></div>
       </div>
     </div>
-    {% if quotation.notes %}<div class="mt-4 p-3 bg-light rounded small">{{ quotation.notes }}</div>{% endif %}
+
+    {% if quotation.notes %}<div class="mt-4 p-3 bg-body-tertiary rounded small">{{ quotation.notes }}</div>{% endif %}
     <div class="mt-4 small text-muted">This quotation is valid until {{ quotation.valid_until }}. Prices and availability are subject to change after this date.</div>
   </div>
 </div>
-<style>@media print { .sidebar, .topbar, .bottom-nav, .page-header .btn { display: none !important; } }</style>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'client_quotation_reject' quotation.pk %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="rejectModalLabel">Reject or Request Changes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>Please tell us why you cannot approve this quotation or what changes you need:</p>
+          <textarea name="reason" class="form-control" rows="4" required placeholder="e.g., Prices are too high, wrong quantity, need different service..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Submit Rejection</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media print {
+    .sidebar, .topbar, .bottom-nav, .page-header .btn, .page-header form, .btn, .modal { display: none !important; }
+    .main-content, .container-fluid, .card, #quotation-doc, .card-body { display: block !important; visibility: visible !important; margin: 0 !important; padding: 0.5cm !important; width: 100% !important; }
+    .table-bordered, .table-bordered th, .table-bordered td { border: 1px solid #ccc !important; }
+    img { max-height: 50px !important; }
+    #quotation-doc { page-break-inside: avoid; }
+    .text-primary, .fw-bold, h1, h2, h3 { color: black !important; }
+  }
+</style>
 {% endblock %}

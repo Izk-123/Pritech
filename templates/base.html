@@ -1,5 +1,6 @@
 {% load static %}
 {% load account_tags %}
+{% load core_tags %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 
@@ -7,6 +8,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}Dashboard{% endblock %} — {{ site_config.company_name|default:"Pritech" }}</title>
+
+  <!-- Favicon -->
+  <link href="{% static 'img/favicon.ico' %}" rel="icon">
 
   <!-- Bootstrap 5 + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -52,13 +56,27 @@
       <a href="{% url 'client_list' %}" class="ai-nav-link"><i class="bi bi-people"></i> Clients</a>
       <a href="{% url 'ticket_list' %}" class="ai-nav-link"><i class="bi bi-chat-text"></i> Tickets</a>
 
-      {# ---------- SERVICES SECTION ---------- #}
-      <div class="nav-label mt-3">Services</div>
-      <a href="{% url 'service_list' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> All Services</a>
-      <a href="{% url 'service_category_list' %}" class="ai-nav-link"><i class="bi bi-tags"></i> Categories</a>
-      <a href="{% url 'service_package_list' %}" class="ai-nav-link"><i class="bi bi-box"></i> Packages</a>
+      {# ---------- CLIENT SERVICE CATALOG ---------- #}
+      {% if request.user.user_type == 'client' %}
+        <a href="{% url 'client_service_catalog' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> Service Catalog</a>
+      {% endif %}
 
-      {# ---------- FINANCE SECTION (role‑aware) ---------- #}
+      {# ---------- CLIENT FINANCE SECTION ---------- #}
+      {% if request.user.user_type == 'client' and request.user.client_organization %}
+        <div class="nav-label mt-3">My Finance</div>
+        <a href="{% url 'client_invoice_list' %}" class="ai-nav-link"><i class="bi bi-receipt"></i> My Invoices</a>
+        <a href="{% url 'client_quotation_list' %}" class="ai-nav-link"><i class="bi bi-file-earmark-text"></i> My Quotations</a>
+      {% endif %}
+
+      {# ---------- SERVICES SECTION (Staff only) ---------- #}
+      {% if request.user.is_staff %}
+        <div class="nav-label mt-3">Services</div>
+        <a href="{% url 'service_list' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> All Services</a>
+        <a href="{% url 'service_category_list' %}" class="ai-nav-link"><i class="bi bi-tags"></i> Categories</a>
+        <a href="{% url 'service_package_list' %}" class="ai-nav-link"><i class="bi bi-box"></i> Packages</a>
+      {% endif %}
+
+      {# ---------- FINANCE SECTION (role‑aware for staff) ---------- #}
       {% if request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
         <div class="nav-label mt-3">Finance</div>
         <a href="{% url 'quotation_list' %}" class="ai-nav-link"><i class="bi bi-file-earmark-text"></i> Quotations</a>
@@ -165,10 +183,25 @@
         <a href="{% url 'client_list' %}" class="nav-link"><i class="bi bi-building me-2"></i>Clients</a>
         <a href="{% url 'ticket_list' %}" class="nav-link"><i class="bi bi-ticket me-2"></i>Tickets</a>
 
-        <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">SERVICES</div>
-        <a href="{% url 'service_list' %}" class="nav-link"><i class="bi bi-grid-3x3 me-2"></i>All Services</a>
-        <a href="{% url 'service_category_list' %}" class="nav-link"><i class="bi bi-tags me-2"></i>Categories</a>
-        <a href="{% url 'service_package_list' %}" class="nav-link"><i class="bi bi-box me-2"></i>Packages</a>
+        {# Client service catalog in mobile menu #}
+        {% if request.user.user_type == 'client' %}
+          <a href="{% url 'client_service_catalog' %}" class="nav-link"><i class="bi bi-grid-3x3 me-2"></i>Service Catalog</a>
+        {% endif %}
+
+        {# Client finance links in mobile menu #}
+        {% if request.user.user_type == 'client' and request.user.client_organization %}
+          <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">MY FINANCE</div>
+          <a href="{% url 'client_invoice_list' %}" class="nav-link"><i class="bi bi-receipt me-2"></i>My Invoices</a>
+          <a href="{% url 'client_quotation_list' %}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>My Quotations</a>
+        {% endif %}
+
+        {# Services for staff only in mobile #}
+        {% if request.user.is_staff %}
+          <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">SERVICES</div>
+          <a href="{% url 'service_list' %}" class="nav-link"><i class="bi bi-grid-3x3 me-2"></i>All Services</a>
+          <a href="{% url 'service_category_list' %}" class="nav-link"><i class="bi bi-tags me-2"></i>Categories</a>
+          <a href="{% url 'service_package_list' %}" class="nav-link"><i class="bi bi-box me-2"></i>Packages</a>
+        {% endif %}
 
         {% if request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
           <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">FINANCE</div>
@@ -206,7 +239,9 @@
           </div>
         {% endfor %}
       {% endif %}
-      {% block content %}{% endblock %}
+      {% block content %}
+        <div class="alert alert-warning">Content block is empty. Please check view or template inheritance.</div>
+      {% endblock %}
     </div>
   </main>
 
@@ -216,11 +251,16 @@
       <a href="{% url 'dashboard' %}" class="bottom-link"><i class="bi bi-grid"></i><span>Home</span></a>
       <a href="{% url 'client_list' %}" class="bottom-link"><i class="bi bi-building"></i><span>Clients</span></a>
       <a href="{% url 'ticket_list' %}" class="bottom-link"><i class="bi bi-ticket"></i><span>Tickets</span></a>
-      {% if request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
+
+      {# For clients: add Service Catalog to bottom nav #}
+      {% if request.user.user_type == 'client' %}
+        <a href="{% url 'client_service_catalog' %}" class="bottom-link"><i class="bi bi-grid-3x3"></i><span>Services</span></a>
+      {% elif request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
         <a href="{% url 'invoice_list' %}" class="bottom-link"><i class="bi bi-receipt"></i><span>Finance</span></a>
       {% else %}
         <a href="{% url 'ticket_list' %}" class="bottom-link"><i class="bi bi-receipt"></i><span>Finance</span></a>
       {% endif %}
+
       <button class="bottom-link" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
         <i class="bi bi-list"></i><span>Menu</span>
       </button>
@@ -228,6 +268,7 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script>
     (function () {
       const body = document.body;
@@ -237,7 +278,6 @@
       const themeToggle = document.getElementById('themeToggle');
       const topbar = document.querySelector('.topbar');
 
-      // Topbar scroll effect
       window.addEventListener('scroll', () => {
         if (window.scrollY > 10) {
           topbar?.classList.add('scrolled');
@@ -329,8 +369,7 @@
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
 
-      // Add stagger-item class to list items dynamically (optional)
-      document.querySelectorAll('.modern-table tbody tr, .list-card').forEach((el, index) => {
+      document.querySelectorAll('.modern-table tbody tr').forEach((el, index) => {
         el.classList.add('stagger-item');
         el.style.animationDelay = `${index * 0.05}s`;
       });

@@ -3,6 +3,6 @@
     <span class="fw-semibold">{{ worklog.technician.get_full_name|default:'—' }}</span>
     <span class="badge bg-primary">{{ worklog.hours }}h</span>
   </div>
-  <div class="small">{{ worklog.description }}</div>
+  <div class="quill-content small">{{ worklog.description.html|safe }}</div>
   <div class="small text-muted">{{ worklog.logged_at|date:"d M Y" }}</div>
 </div>

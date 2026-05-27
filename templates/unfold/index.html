@@ -1,0 +1,108 @@
+{% extends "unfold/layouts/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div style="background: red; color: white; padding: 20px; font-weight: bold;">
+    ✅ CUSTOM DASHBOARD TEMPLATE LOADED ✅
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                <i class="material-icons text-blue-600 dark:text-blue-300">business</i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Total Clients</h3>
+                <p class="text-2xl font-semibold">{{ dash_stats.total_clients }}</p>
+                <p class="text-xs text-green-600">Active: {{ dash_stats.active_clients }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-red-100 dark:bg-red-900">
+                <i class="material-icons text-red-600 dark:text-red-300">support_agent</i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Open Tickets</h3>
+                <p class="text-2xl font-semibold">{{ dash_stats.open_tickets }}</p>
+                {% if dash_stats.overdue_tickets %}
+                    <p class="text-xs text-red-600">{{ dash_stats.overdue_tickets }} overdue</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                <i class="material-icons text-green-600 dark:text-green-300">paid</i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Revenue (this month)</h3>
+                <p class="text-2xl font-semibold">K{{ dash_stats.revenue_month|floatformat:0 }}</p>
+                <p class="text-xs text-gray-500">Invoiced: K{{ dash_stats.invoiced_month|floatformat:0 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Quick Actions</h3>
+                <div class="mt-2 space-y-2">
+                    <a href="{% url 'admin:tickets_ticket_add' %}" class="block text-sm text-blue-600 hover:underline">+ New Ticket</a>
+                    <a href="{% url 'admin:clients_clientorganization_add' %}" class="block text-sm text-blue-600 hover:underline">+ New Client</a>
+                    <a href="{% url 'admin:finance_invoice_add' %}" class="block text-sm text-blue-600 hover:underline">+ New Invoice</a>
+                </div>
+            </div>
+            <i class="material-icons text-gray-400">bolt</i>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-medium mb-4">Tickets by Priority</h3>
+        <canvas id="priorityChart" height="200"></canvas>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-medium mb-4">Daily Activity (Last 7 days)</h3>
+        <canvas id="trendChart" height="200"></canvas>
+    </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <h3 class="text-lg font-medium mb-4">Recent Page Visits</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead>...</thead>
+            <tbody>...</tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const priorityData = {{ priority_stats|safe }};
+    new Chart(document.getElementById('priorityChart'), {
+        type: 'bar',
+        data: {
+            labels: priorityData.map(p => p.priority.charAt(0).toUpperCase() + p.priority.slice(1)),
+            datasets: [{ label: 'Tickets', data: priorityData.map(p => p.count), backgroundColor: '#4154f1' }]
+        }
+    });
+    const chartData = {{ chart_data|safe }};
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: chartData.weekdays,
+            datasets: [
+                { label: 'Tickets created', data: chartData.tickets_per_day, borderColor: '#2eca6a', tension: 0.3, fill: false },
+                { label: 'Page visits', data: chartData.visitors_per_day, borderColor: '#4154f1', tension: 0.3, fill: false }
+            ]
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+<table class="min-w-full bg-white dark:bg-gray-800 rounded shadow">
+    <thead>
+        <tr><th>ID</th><th>Title</th><th>Status</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+        {% for ticket in tickets %}
+        <tr id="ticket-{{ ticket.id }}">
+            <td>{{ ticket.ticket_number }}</td>
+            <td>{{ ticket.title }}</td>
+            <td class="status-cell">
+                <span id="status-{{ ticket.id }}">{{ ticket.get_status_display }}</span>
+            </td>
+            <td>
+                <select hx-post="{% url 'inline_ticket_status' ticket.id %}"
+                        hx-target="#status-{{ ticket.id }}"
+                        hx-swap="outerHTML"
+                        class="border rounded p-1">
+                    <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>Open</option>
+                    <option value="assigned" {% if ticket.status == 'assigned' %}selected{% endif %}>Assigned</option>
+                    <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                    <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>Closed</option>
+                </select>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">No tickets found.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

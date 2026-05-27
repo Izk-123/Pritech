@@ -8,6 +8,6 @@
       {% if comment.is_internal %}<span class="badge bg-warning">Internal</span>{% endif %}
       <span class="text-muted small">{{ comment.created_at|date:"d M H:i" }}</span>
     </div>
-    <div>{{ comment.content|linebreaksbr }}</div>
+    <div class="quill-content">{{ comment.content.html|safe }}</div>
   </div>
 </div>

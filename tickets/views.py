@@ -1,3 +1,5 @@
+# tickets/views.py
+import json
 from django.views.generic import ListView, CreateView, DetailView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
@@ -23,20 +25,17 @@ class TicketListView(LoginRequiredMixin, HtmxMixin, ListView):
         qs = Ticket.objects.select_related('client', 'assigned_to', 'service')
         user = self.request.user
 
-        # Clients see only tickets belonging to their own organization
         if user.user_type == 'client':
             if hasattr(user, 'client_organization'):
                 qs = qs.filter(client=user.client_organization)
             else:
                 return Ticket.objects.none()
-        # Technicians (non‑admin) see assigned tickets + unassigned open tickets
         elif user.has_role('TECHNICIAN') and not user.has_role('ADMIN'):
             qs = qs.filter(
                 db_models.Q(assigned_to=user) |
                 db_models.Q(assigned_to__isnull=True, status='open')
             )
 
-        # Apply filters from GET parameters
         status = self.request.GET.get('status')
         priority = self.request.GET.get('priority')
         q = self.request.GET.get('q')
@@ -50,7 +49,6 @@ class TicketListView(LoginRequiredMixin, HtmxMixin, ListView):
                 db_models.Q(title__icontains=q) |
                 db_models.Q(ticket_number__icontains=q)
             )
-
         return qs
 
     def get_context_data(self, **kwargs):
@@ -61,21 +59,16 @@ class TicketListView(LoginRequiredMixin, HtmxMixin, ListView):
         ctx['current_priority'] = self.request.GET.get('priority', '')
         ctx['current_q'] = self.request.GET.get('q', '')
 
-        # Calculate counts for all statuses (staff see all, clients see only their org's tickets)
         user = self.request.user
         base_qs = Ticket.objects.all()
         if user.user_type == 'client' and hasattr(user, 'client_organization'):
             base_qs = base_qs.filter(client=user.client_organization)
 
-        ctx['counts'] = {
-            s[0]: base_qs.filter(status=s[0]).count()
-            for s in Ticket.STATUS_CHOICES
-        }
+        ctx['counts'] = {s[0]: base_qs.filter(status=s[0]).count() for s in Ticket.STATUS_CHOICES}
         return ctx
 
     def get(self, request, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
-        # HTMX partial: return only the table body
         if self.is_htmx():
             html = render_to_string(
                 'tickets/partials/ticket_rows.html',
@@ -94,17 +87,18 @@ class TicketCreateView(LoginRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         user = self.request.user
-        # For clients, pre‑fill and hide the client field
         if user.user_type == 'client' and hasattr(user, 'client_organization'):
             form.fields['client'].initial = user.client_organization
             form.fields['client'].widget = forms.HiddenInput()
         return form
 
     def form_valid(self, form):
-        # Use service layer to create ticket (and SLA)
+        # Description from form is plain text; convert to JSON before passing to service
+        description_raw = form.cleaned_data['description']
+        description_json = json.dumps({"html": f"<p>{description_raw}</p>", "delta": ""})
         ticket = TicketService.create_ticket(
             title=form.cleaned_data['title'],
-            description=form.cleaned_data['description'],
+            description=description_json,
             client=form.cleaned_data['client'],
             service=form.cleaned_data.get('service'),
             priority=form.cleaned_data['priority'],
@@ -122,7 +116,6 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
     def get_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
-        # Clients can only view their own organization's tickets
         if user.user_type == 'client':
             if hasattr(user, 'client_organization'):
                 return qs.filter(client=user.client_organization)
@@ -139,7 +132,8 @@ class TicketDetailView(LoginRequiredMixin, DetailView):
         ctx['attachments'] = self.object.attachments.select_related('uploaded_by')
         ctx['sla'] = getattr(self.object, 'sla', None)
         ctx['next_statuses'] = self.object.VALID_TRANSITIONS.get(self.object.status, [])
-        ctx['all_technicians'] = __import__('accounts.models', fromlist=['User']).User.objects.filter(user_type='staff')
+        from accounts.models import User
+        ctx['all_technicians'] = User.objects.filter(user_type='staff')
         return ctx
 
 
@@ -178,11 +172,8 @@ class AssignTicketView(RoleRequiredMixin, HtmxMixin, View):
             if self.is_htmx():
                 html = render_to_string(
                     'tickets/partials/assignment_panel.html',
-                    {
-                        'ticket': ticket,
-                        'all_technicians': User.objects.filter(user_type='staff'),  # ← ADD THIS
-                        'request': request
-                    }
+                    {'ticket': ticket, 'all_technicians': User.objects.filter(user_type='staff'),
+                     'request': request}
                 )
                 return HttpResponse(html)
             messages.success(request, f'Assigned to {technician.get_full_name()}.')
@@ -194,18 +185,32 @@ class AssignTicketView(RoleRequiredMixin, HtmxMixin, View):
 class AddCommentView(LoginRequiredMixin, HtmxMixin, View):
     def post(self, request, pk):
         ticket = get_object_or_404(Ticket, pk=pk)
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            c = form.save(commit=False)
-            c.ticket = ticket
-            c.author = request.user
-            c.save()
-            if self.is_htmx():
-                html = render_to_string(
-                    'tickets/partials/comment.html',
-                    {'comment': c, 'request': request}
-                )
-                return HttpResponse(html)
+        content_raw = request.POST.get('content')
+        is_internal = request.POST.get('is_internal') == 'on'
+
+        if not content_raw:
+            messages.error(request, "Comment cannot be empty.")
+            return redirect('ticket_detail', pk=pk)
+
+        # Convert plain text to Quill JSON
+        content_json = json.dumps({
+            "html": f"<p>{content_raw.replace('<', '&lt;').replace('>', '&gt;')}</p>",
+            "delta": ""
+        })
+
+        comment = TicketComment.objects.create(
+            ticket=ticket,
+            author=request.user,
+            content=content_json,
+            is_internal=is_internal
+        )
+
+        if self.is_htmx():
+            html = render_to_string(
+                'tickets/partials/comment.html',
+                {'comment': comment, 'request': request}
+            )
+            return HttpResponse(html)
         return redirect('ticket_detail', pk=pk)
 
 
@@ -214,20 +219,32 @@ class AddWorkLogView(RoleRequiredMixin, HtmxMixin, View):
 
     def post(self, request, pk):
         ticket = get_object_or_404(Ticket, pk=pk)
-        form = WorkLogForm(request.POST)
-        if form.is_valid():
-            worklog = TicketService.log_work(
-                ticket=ticket,
-                technician=request.user,
-                hours=form.cleaned_data['hours'],
-                description=form.cleaned_data['description'],
+        hours = request.POST.get('hours')
+        description_raw = request.POST.get('description')
+
+        if not hours or not description_raw:
+            messages.error(request, "Hours and description are required.")
+            return redirect('ticket_detail', pk=pk)
+
+        # Convert plain text to Quill JSON
+        description_json = json.dumps({
+            "html": f"<p>{description_raw.replace('<', '&lt;').replace('>', '&gt;')}</p>",
+            "delta": ""
+        })
+
+        worklog = TicketService.log_work(
+            ticket=ticket,
+            technician=request.user,
+            hours=hours,
+            description=description_json
+        )
+
+        if self.is_htmx():
+            html = render_to_string(
+                'tickets/partials/worklog_item.html',
+                {'worklog': worklog}
             )
-            if self.is_htmx():
-                html = render_to_string(
-                    'tickets/partials/worklog_item.html',
-                    {'worklog': worklog}
-                )
-                return HttpResponse(html)
+            return HttpResponse(html)
         return redirect('ticket_detail', pk=pk)
 
 

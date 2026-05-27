@@ -1,0 +1,94 @@
+{% extends "generic/list.html" %}
+{% block title %}Tickets{% endblock %}
+{% block breadcrumb %}<div class="page-breadcrumb">Tickets</div>{% endblock %}
+{% block actions %}<a href="{% url 'ticket_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Ticket</a>{% endblock %}
+
+{% block filters %}
+<div class="col-auto">
+  <select name="status" class="form-select">
+    <option value="">All statuses</option>
+    {% for val, label in status_choices %}<option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+</div>
+<div class="col-auto">
+  <select name="priority" class="form-select">
+    <option value="">All priorities</option>
+    {% for val, label in priority_choices %}<option value="{{ val }}" {% if current_priority == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+</div>
+<div class="col-auto">
+  <button type="submit" class="btn btn-outline-primary">Filter</button>
+  {% if current_status or current_priority %}<a href="{% url 'ticket_list' %}" class="btn btn-outline-secondary ms-1">Clear</a>{% endif %}
+</div>
+{% endblock %}
+
+{% block table_head %}
+<tr><th>#</th><th>Ticket #</th><th>Title</th><th>Client</th><th>Assigned</th><th>Status</th><th>Priority</th><th>Date</th></tr>
+{% endblock %}
+
+{% block table_row %}
+<tr>
+  <td class="text-muted">{{ forloop.counter }}</td>
+  <td><code>{{ obj.ticket_number }}</code></td>
+  <td><a href="{% url 'ticket_detail' obj.pk %}" class="fw-semibold">{{ obj.title|truncatechars:50 }}</a></td>
+  <td>{{ obj.client.name }}</td>
+  <td>
+    {% if obj.assigned_to %}
+      <div class="d-flex align-items-center gap-2">
+        <span class="avatar-sm bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:26px;height:26px;font-size:0.7rem;">
+          {{ obj.assigned_to.first_name|first|upper }}{{ obj.assigned_to.last_name|first|upper }}
+        </span>
+        <span class="small">{{ obj.assigned_to.get_full_name|default:obj.assigned_to.email }}</span>
+      </div>
+    {% else %}
+      <span class="text-muted small">Unassigned</span>
+    {% endif %}
+  </td>
+  <td><span class="badge bg-{{ obj.status_color }}">{{ obj.get_status_display }}</span></td>
+  <td><span class="badge bg-{{ obj.priority_color }}">{{ obj.get_priority_display }}</span></td>
+  <td class="small text-muted">{{ obj.created_at|date:"d M Y" }}</td>
+</tr>
+{% endblock %}
+
+{% block mobile_list %}
+<div class="row row-cols-1 g-3">
+  {% for obj in object_list %}
+  <div class="col">
+    <div class="list-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1 me-2">
+          <a href="{% url 'ticket_detail' obj.pk %}" class="list-card-title">
+            {{ obj.ticket_number }} — {{ obj.title|truncatechars:40 }}
+          </a>
+          <div class="list-card-meta mt-1">
+            <span>{{ obj.client.name }}</span>
+            <span>{{ obj.created_at|date:"d M Y" }}</span>
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <span class="badge bg-{{ obj.status_color }}">{{ obj.get_status_display }}</span>
+            <span class="badge bg-{{ obj.priority_color }}">{{ obj.get_priority_display }}</span>
+          </div>
+        </div>
+        {% if obj.assigned_to %}
+          <span class="avatar-sm bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;font-size:0.75rem;" title="{{ obj.assigned_to.get_full_name }}">
+            {{ obj.assigned_to.first_name|first|upper }}{{ obj.assigned_to.last_name|first|upper }}
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock mobile_list %}
+
+{% block pagination %}
+{% if is_paginated %}
+<div class="card-footer d-flex justify-content-between align-items-center">
+  <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+  <div class="btn-group">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}&priority={{ current_priority }}" class="btn btn-sm btn-outline-secondary">← Prev</a>{% endif %}
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&status={{ current_status }}&priority={{ current_priority }}" class="btn btn-sm btn-outline-secondary">Next →</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

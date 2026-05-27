@@ -1,391 +1,276 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
-  <title>{{ site_config.company_name|default:"SEO Master" }} - ICT Solutions</title>
+  <title>{{ portfolio_settings.hero_title|default:"SEO Master" }} | ICT Solutions</title>
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
+  
   <!-- SEO Meta Tags -->
-  <meta name="description" content="{{ site_config.meta_description|default:'All-in-one SEO tool to grow your business rapidly. Expert ICT solutions with 10 years of experience.' }}">
-  <meta name="keywords" content="{{ site_config.meta_keywords|default:'SEO, ICT solutions, digital marketing, web development' }}">
-
-  <!-- Open Graph / Social -->
-  <meta property="og:title" content="{{ site_config.company_name|default:'SEO Master' }}">
-  <meta property="og:description" content="{{ site_config.hero_text|default:'Tempor rebum no at dolore lorem clita rebum rebum ipsum rebum stet dolor sed justo kasd.' }}">
-  <meta property="og:image" content="{% static 'img/hero.png' %}">
-  <meta property="og:url" content="{{ request.build_absolute_uri }}">
-  <meta name="twitter:card" content="summary_large_image">
-
-  <!-- Canonical -->
+  <meta name="description" content="{{ portfolio_settings.meta_description|default:'All-in-one SEO tool to grow your business rapidly. Expert ICT solutions with 10 years of experience.' }}">
+  <meta name="keywords" content="{{ portfolio_settings.meta_keywords|default:'SEO, ICT solutions, digital marketing, web development, Malawi' }}">
+  <meta name="author" content="{{ portfolio_settings.company_name|default:'PRITECH' }}">
+  <meta name="copyright" content="{{ portfolio_settings.company_name|default:'PRITECH' }}">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+  
+  <!-- Canonical URL -->
   <link rel="canonical" href="{{ request.build_absolute_uri }}">
-
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ request.build_absolute_uri }}">
+  <meta property="og:title" content="{{ portfolio_settings.hero_title|default:'SEO Master - ICT Solutions' }}">
+  <meta property="og:description" content="{{ portfolio_settings.meta_description|default:'All-in-one SEO tool to grow your business rapidly.' }}">
+  <meta property="og:image" content="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}">
+  <meta property="og:image:alt" content="{{ portfolio_settings.hero_title|default:'ICT Solutions Hero Image' }}">
+  <meta property="og:site_name" content="{{ portfolio_settings.company_name|default:'SEO Master' }}">
+  <meta property="og:locale" content="en_US">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="{{ request.build_absolute_uri }}">
+  <meta name="twitter:title" content="{{ portfolio_settings.hero_title|default:'SEO Master - ICT Solutions' }}">
+  <meta name="twitter:description" content="{{ portfolio_settings.meta_description|default:'Expert ICT solutions to grow your business.' }}">
+  <meta name="twitter:image" content="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}">
+  
   <!-- Favicon -->
   <link href="{% static 'images/logo.png' %}" rel="icon">
-
-  <!-- Google Web Fonts -->
+  
+  <!-- Preconnect for faster external resources -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-
-  <!-- Icon Font Stylesheet -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-
-  <!-- Libraries Stylesheet -->
+  
+  <!-- Libraries & Custom CSS -->
   <link href="{% static 'lib/animate/animate.min.css' %}" rel="stylesheet">
-
-  <!-- Customized Bootstrap Stylesheet -->
   <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-
-  <!-- Template Stylesheet -->
   <link href="{% static 'css/style.css' %}" rel="stylesheet">
-
-  <!-- Structured Data (JSON-LD) -->
+  
+  <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.27/bundled/lenis.min.js"></script>
+  
+  <!-- Structured Data (JSON-LD) - Organization + LocalBusiness + BreadcrumbList -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "{{ site_config.company_name|default:'SEO Master' }}",
-    "url": "{{ request.build_absolute_uri }}",
-    "logo": "{% static 'images/logo.png' %}",
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "telephone": "{{ site_config.phone|default:'+012 345 67890' }}",
-      "contactType": "customer service"
-    }
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "{{ request.build_absolute_uri }}#organization",
+        "name": "{{ portfolio_settings.company_name|default:'SEO Master' }}",
+        "url": "{{ request.build_absolute_uri }}",
+        "logo": "{% static 'images/logo.png' %}",
+        "sameAs": [
+          "{% if portfolio_settings.facebook_url %}{{ portfolio_settings.facebook_url }}{% endif %}",
+          "{% if portfolio_settings.twitter_url %}{{ portfolio_settings.twitter_url }}{% endif %}",
+          "{% if portfolio_settings.instagram_url %}{{ portfolio_settings.instagram_url }}{% endif %}",
+          "{% if portfolio_settings.linkedin_url %}{{ portfolio_settings.linkedin_url }}{% endif %}"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "{{ portfolio_settings.phone|default:'+265888888888' }}",
+          "contactType": "customer service",
+          "availableLanguage": ["English"]
+        }
+      },
+      {
+        "@type": "LocalBusiness",
+        "parentOrganization": { "@id": "{{ request.build_absolute_uri }}#organization" },
+        "name": "{{ portfolio_settings.company_name|default:'SEO Master' }}",
+        "image": "{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}",
+        "description": "{{ portfolio_settings.meta_description|default:'ICT solutions provider in Malawi.' }}",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "{{ portfolio_settings.address|default:'123 ICT Street' }}",
+          "addressLocality": "Lilongwe",
+          "addressCountry": "MW"
+        },
+        "telephone": "{{ portfolio_settings.phone|default:'+265888888888' }}",
+        "priceRange": "$$"
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ request.build_absolute_uri }}" },
+          { "@type": "ListItem", "position": 2, "name": "Services", "item": "{{ request.build_absolute_uri }}#services" },
+          { "@type": "ListItem", "position": 3, "name": "Contact", "item": "{{ request.build_absolute_uri }}#contact" }
+        ]
+      }
+    ]
   }
   </script>
 </head>
-
 <body>
-  <!-- Skip to content -->
-  <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
-
-  <div class="container-fluid bg-white p-0">
-    <!-- Spinner Start -->
-    <div id="spinner"
-      class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
-      <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status">
-        <span class="sr-only">Loading...</span>
-      </div>
-    </div>
-    <!-- Spinner End -->
-
-    <!-- Navbar & Hero Start -->
-    <div class="container-fluid position-relative p-0">
-      <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
-        <a href="{% url 'home' %}" class="navbar-brand p-0">
-          <!-- Dark logo (shown when navbar is at the top) -->
-          <img src="{% static 'images/logoDark.png' %}" alt="{{ site_settings.company_name }} Logo" class="logo-dark">
-          <!-- Light logo (shown when navbar is sticky) -->
-          <img src="{% static 'images/logo.png' %}" alt="{{ site_settings.company_name }} Logo" class="logo-light">
-        </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-label="Toggle navigation">
-          <span class="fa fa-bars"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarCollapse">
-          <div class="navbar-nav ms-auto py-0">
-            <a href="#home" class="nav-item nav-link active">Home</a>
-            <a href="#about" class="nav-item nav-link">About</a>
-            <a href="#services" class="nav-item nav-link">Service</a>
-            <a href="#projects" class="nav-item nav-link">Project</a>
-            <a href="#contact" class="nav-item nav-link">Contact</a>
-          </div>
-          {% if request.user.is_authenticated %}
-          <a href="{% url 'dashboard' %}" class="btn btn-secondary text-light rounded-pill py-2 px-4 ms-3">Dashboard</a>
-          {% else %}
-          <a href="{% url 'login' %}" class="btn btn-secondary text-light rounded-pill py-2 px-4 ms-3">Login</a>
-          {% endif %}
-        </div>
-      </nav>
-
-      <div class="container-fluid py-5 bg-primary hero-header mb-5" id="home">
-        <div class="container my-5 py-5 px-lg-5">
-          <div class="row g-5 py-5">
-            <div class="col-lg-6 text-center text-lg-start">
-              <h1 class="text-white mb-4 animated zoomIn">
-                {{ site_config.tagline|default:"All in one SEO tool need to grow your business rapidly" }}
-              </h1>
-              <p class="text-white pb-3 animated zoomIn">
-                {{ site_config.hero_text|default:"Tempor rebum no at dolore lorem clita rebum rebum ipsum rebum stet dolor sed justo kasd. Ut dolor sed magna dolor sea diam. Sit diam sit justo amet ipsum vero ipsum clita lorem" }}
-              </p>
-              <a href="#contact" class="btn btn-light py-sm-3 px-sm-5 rounded-pill me-3 animated slideInLeft">Free Quote</a>
-              <a href="#contact" class="btn btn-outline-light py-sm-3 px-sm-5 rounded-pill animated slideInRight">Contact Us</a>
-            </div>
-            <div class="col-lg-6 text-center text-lg-start">
-              <img class="img-fluid" src="{% static 'img/hero.png' %}" alt="Hero" width="600" height="450">
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Navbar & Hero End -->
-
-    <!-- Main Content Section -->
-    <main id="main-content">
-      <!-- About Start -->
-      <div class="container-fluid py-5" id="about">
-        <div class="container px-lg-5">
-          <div class="row g-5">
-            <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
-              <div class="section-title position-relative mb-4 pb-2">
-                <h6 class="position-relative text-primary ps-4">About Us</h6>
-                <h2 class="mt-2">{{ site_config.about_title|default:"The best SEO solution with 10 years of experience" }}</h2>
-              </div>
-              <p class="mb-4">
-                {{ site_config.about_text|default:"Tempor erat elitr rebum at clita. Diam dolor diam ipsum et tempor sit. Aliqu diam amet diam et eos labore. Clita erat ipsum et lorem et sit, sed stet no labore lorem sit. Sanctus clita duo justo et tempor eirmod magna dolore erat amet" }}
-              </p>
-              <div class="row g-3">
-                <div class="col-sm-6">
-                  <h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>Award Winning</h6>
-                  <h6 class="mb-0"><i class="fa fa-check text-primary me-2"></i>Professional Staff</h6>
-                </div>
-                <div class="col-sm-6">
-                  <h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>24/7 Support</h6>
-                  <h6 class="mb-0"><i class="fa fa-check text-primary me-2"></i>Fair Prices</h6>
-                </div>
-              </div>
-              <div class="d-flex align-items-center mt-4">
-                <a class="btn btn-primary rounded-pill px-4 me-3" href="#contact">Contact Us</a>
-                <a class="btn btn-outline-primary btn-square me-3" href="#"><i class="fab fa-facebook-f"></i></a>
-                <a class="btn btn-outline-primary btn-square me-3" href="#"><i class="fab fa-twitter"></i></a>
-                <a class="btn btn-outline-primary btn-square me-3" href="#"><i class="fab fa-instagram"></i></a>
-                <a class="btn btn-outline-primary btn-square" href="#"><i class="fab fa-linkedin-in"></i></a>
-              </div>
-            </div>
-            <div class="col-lg-6">
-              <img class="img-fluid wow zoomIn" data-wow-delay="0.5s" src="{% static 'img/about.jpg' %}" alt="About us" loading="lazy" width="600" height="400">
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- About End -->
-
-      <!-- Service Start -->
-      <div class="container-fluid py-5" id="services">
-        <div class="container px-lg-5">
-          <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s">
-            <h6 class="position-relative d-inline text-primary ps-4">Our Services</h6>
-            <h2 class="mt-2">What Solutions We Provide</h2>
-          </div>
-
-          {% if all_services %}
-          <div class="row g-4 row-cols-1 row-cols-md-2 row-cols-lg-3">
-            {% for service in all_services|slice:":9" %}
-            <div class="col wow zoomIn" data-wow-delay="0.{{ forloop.counter }}s">
-              <div class="service-item d-flex flex-column justify-content-center text-center rounded h-100">
-                <div class="service-icon flex-shrink-0">
-                  <i class="fa fa-{{ service.icon|default:'laptop-code' }} fa-2x"></i>
-                </div>
-                <h5 class="mb-3">{{ service.name }}</h5>
-                <p>{{ service.description|truncatechars:100 }}</p>
-                {% if service.base_price > 0 %}
-                <div class="mt-2">
-                  <span class="badge bg-primary text-white rounded-pill px-3 py-2">
-                    From {{ site_config.currency_symbol|default:"K" }}{{ service.base_price|floatformat:0 }}/{{ service.unit }}
-                  </span>
-                </div>
-                {% endif %}
-                <a class="btn px-3 mt-3 mx-auto" href="#contact">Read More</a>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <div class="row">
-            <div class="col-12 text-center">
-              <p>No services added yet. Please check back later.</p>
-            </div>
-          </div>
-          {% endif %}
-        </div>
-      </div>
-      <!-- Service End -->
-
-      <!-- Portfolio Start -->
-      <div class="container-fluid py-5" id="projects">
-        <div class="container px-lg-5">
-          <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s">
-            <h6 class="position-relative d-inline text-primary ps-4">Our Projects</h6>
-            <h2 class="mt-2">Recently Launched Projects</h2>
-          </div>
-          <div class="row g-4">
-            {% for project in projects %}
-            <div class="col-lg-4 col-md-6 portfolio-item wow zoomIn" data-wow-delay="0.{{ forloop.counter }}s">
-              <div class="position-relative rounded overflow-hidden">
-                <img class="img-fluid w-100"
-                  src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}"
-                  alt="{{ project.title }}"
-                  loading="lazy"
-                  width="400" height="300">
-                <div class="portfolio-overlay">
-                  <a class="btn btn-light" href="{% if project.image %}{{ project.image.url }}{% else %}#{% endif %}"><i class="fa fa-plus fa-2x text-primary"></i></a>
-                  <div class="mt-auto">
-                    <small class="text-white"><i class="fa fa-folder me-2"></i>{{ project.client_name|default:"Project" }}</small>
-                    <a class="h5 d-block text-white mt-1 mb-0" href="#">{{ project.title }}</a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            {% empty %}
-            <div class="col-12 text-center">
-              <p>No featured projects yet.</p>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-      <!-- Portfolio End -->
-
-      <!-- Contact Start -->
-      <div class="container-fluid py-5" id="contact">
-        <div class="container px-lg-5">
-          <div class="row justify-content-center">
-            <div class="col-lg-7">
-              <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s">
-                <h6 class="position-relative d-inline text-primary ps-4">Contact Us</h6>
-                <h2 class="mt-2">Contact For Any Query</h2>
-              </div>
-              <div class="wow fadeInUp" data-wow-delay="0.3s">
-                {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                  {{ message }}
-                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-                {% endif %}
-                <form method="post" action="{% url 'inquiry' %}">
-                  {% csrf_token %}
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <div class="form-floating">
-                        <input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required>
-                        <label for="name">Your Name</label>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="form-floating">
-                        <input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required>
-                        <label for="email">Your Email</label>
-                      </div>
-                    </div>
-                    <div class="col-12">
-                      <div class="form-floating">
-                        <input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required>
-                        <label for="subject">Subject</label>
-                      </div>
-                    </div>
-                    <div class="col-12">
-                      <div class="form-floating">
-                        <textarea class="form-control" placeholder="Leave a message here" id="message" name="message" style="height: 150px" required></textarea>
-                        <label for="message">Message</label>
-                      </div>
-                    </div>
-                    <div class="col-12">
-                      <button class="btn btn-primary w-100 py-3" type="submit">Send Message</button>
-                    </div>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- Contact End -->
-    </main>
-
-    <!-- Footer Start -->
-    <div class="container-fluid bg-primary text-light footer mt-5 pt-5 wow fadeIn" data-wow-delay="0.1s">
-      <div class="container py-5 px-lg-5">
-        <div class="row g-5">
-          <div class="col-md-6 col-lg-3">
-            <h5 class="text-white mb-4">Get In Touch</h5>
-            <p><i class="fa fa-map-marker-alt me-3"></i>{{ site_config.address|default:"123 Street, New York, USA" }}</p>
-            <p><i class="fa fa-phone-alt me-3"></i>{{ site_config.phone|default:"+012 345 67890" }}</p>
-            <p><i class="fa fa-envelope me-3"></i>{{ site_config.email|default:"info@example.com" }}</p>
-            <div class="d-flex pt-2">
-              <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-twitter"></i></a>
-              <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-facebook-f"></i></a>
-              <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-youtube"></i></a>
-              <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-instagram"></i></a>
-              <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-linkedin-in"></i></a>
-            </div>
-          </div>
-          <div class="col-md-6 col-lg-3">
-            <h5 class="text-white mb-4">Popular Link</h5>
-            <a class="btn btn-link" href="#about">About Us</a>
-            <a class="btn btn-link" href="#contact">Contact Us</a>
-            <a class="btn btn-link" href="#">Privacy Policy</a>
-            <a class="btn btn-link" href="#">Terms & Condition</a>
-            <a class="btn btn-link" href="#">Career</a>
-          </div>
-          <div class="col-md-6 col-lg-3">
-            <h5 class="text-white mb-4">Project Gallery</h5>
-            <div class="row g-2">
-              {% for project in projects|slice:":6" %}
-              <div class="col-4">
-                <img class="img-fluid"
-                  src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}"
-                  alt="{{ project.title }}"
-                  loading="lazy"
-                  width="100" height="100">
-              </div>
-              {% empty %}
-              <div class="col-12">No projects yet</div>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="col-md-6 col-lg-3">
-            <h5 class="text-white mb-4">Newsletter</h5>
-            <p>Stay updated with our latest news and offers.</p>
-            <form method="post" action="{% url 'newsletter_subscribe' %}" class="position-relative w-100 mt-3">
-              {% csrf_token %}
-              <input class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="email" name="email" placeholder="Your Email" style="height: 48px;" required>
-              <button type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2">
-                <i class="fa fa-paper-plane text-primary fs-4"></i>
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-      <div class="container px-lg-5">
-        <div class="copyright">
-          <div class="row">
-            <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-              &copy; <a class="border-bottom" href="#">{{ site_config.company_name|default:"SEO Master" }}</a>, All Right Reserved.
-              Designed By <a class="border-bottom" href="https://pritechmw.com">PRITECH</a>
-            </div>
-            <div class="col-md-6 text-center text-md-end">
-              <div class="footer-menu">
-                <a href="#home">Home</a>
-                <a href="#">Cookies</a>
-                <a href="#">Help</a>
-                <a href="#">FQAs</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- Footer End -->
-
-    <!-- Back to Top -->
-    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top pt-2" aria-label="Back to top"><i class="bi bi-arrow-up"></i></a>
+<div class="reading-progress-bar"></div>
+<a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+<div class="container-fluid bg-white p-0">
+  <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+    <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status"><span class="sr-only">Loading...</span></div>
   </div>
 
-  <!-- JavaScript Libraries -->
-  <script src="https://code.jquery.com/jquery-3.4.1.min.js"
-          integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"
-          integrity="sha384-p34f1UUtsS3wqzfto5wAAmdvj+osOnFyQFpp4Ua3gs/ZVWx6oOypYoCJhGGScy+8"
-          crossorigin="anonymous"></script> <!-- Update integrity hash if different -->
-  <script src="{% static 'lib/wow/wow.min.js' %}" defer></script>
-  <script src="{% static 'lib/waypoints/waypoints.min.js' %}" defer></script>
-  <script src="{% static 'js/main1.js' %}" defer></script>
-</body>
+  <div class="container-fluid position-relative p-0">
+    <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
+      <a href="{% url 'home' %}" class="navbar-brand p-0">
+        <img src="{% static 'images/logoDark.png' %}" alt="Logo" class="logo-dark" style="max-height: 70px;">
+        <img src="{% static 'images/logo.png' %}" alt="Logo" class="logo-light" style="max-height: 70px;">
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-label="Toggle navigation">
+        <span class="fa fa-bars"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarCollapse">
+        <div class="navbar-nav ms-auto py-0">
+          <a href="#home" class="nav-item nav-link active">Home</a>
+          <a href="#about" class="nav-item nav-link">About</a>
+          <a href="#services" class="nav-item nav-link">Service</a>
+          <a href="#projects" class="nav-item nav-link">Project</a>
+          <a href="#contact" class="nav-item nav-link">Contact</a>
+        </div>
+        <div class="dark-mode-toggle ms-3"><i class="fas fa-moon"></i></div>
+        {% if request.user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary text-light rounded-pill py-2 px-4 ms-3">Dashboard</a>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-secondary text-light rounded-pill py-2 px-4 ms-3">Login</a>
+        {% endif %}
+      </div>
+    </nav>
 
+    <div class="container-fluid py-5 bg-primary hero-header mb-5" id="home">
+      <div class="bg-glow-orb" style="position: absolute; top: -20%; left: -10%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(71,119,245,0.4) 0%, rgba(33,36,177,0) 70%); filter: blur(60px); z-index: 0;"></div>
+      <div class="bg-glow-orb" style="position: absolute; bottom: -20%; right: -10%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(33,36,177,0.3) 0%, rgba(0,0,0,0) 70%); filter: blur(70px); z-index: 0;"></div>
+      <div class="container my-5 py-5 px-lg-5 position-relative" style="z-index: 2;">
+        <div class="row g-5 align-items-center">
+          <div class="col-lg-6 text-center text-lg-start">
+            <div class="d-inline-flex align-items-center glass-card px-3 py-1 rounded-pill mb-4"><span class="text-warning me-2">✨</span><span class="text-white small">AI‑Powered ICT Solutions</span></div>
+            <h1 class="text-white mb-4 display-4 fw-bold">{{ portfolio_settings.hero_title|default:"All in one SEO tool to grow your business rapidly" }}</h1>
+            <p class="text-white-50 pb-3 fs-5">{{ portfolio_settings.hero_subtitle|default:"Expert ICT solutions tailored to your needs." }}</p>
+            <div class="d-flex flex-wrap gap-3 mb-5">
+              <a href="#contact" class="btn btn-light rounded-pill py-3 px-5 fw-semibold shadow-lg">Free Quote →</a>
+              <a href="#contact" class="btn btn-outline-light rounded-pill py-3 px-5">Contact Us</a>
+            </div>
+            <div class="row g-4 mt-3">
+              <div class="col-4"><div class="counter-box"><h3 class="text-white mb-0 counter" data-target="{{ portfolio_settings.projects_count|default:150 }}">0</h3><p class="text-white-50 small">Projects</p></div></div>
+              <div class="col-4"><div class="counter-box"><h3 class="text-white mb-0 counter" data-target="{{ portfolio_settings.satisfaction_percent|default:98 }}">0%</h3><p class="text-white-50 small">Satisfaction</p></div></div>
+              <div class="col-4"><div class="counter-box"><h3 class="text-white mb-0 counter" data-target="{{ portfolio_settings.support_hours|default:24 }}">0/7</h3><p class="text-white-50 small">Support</p></div></div>
+            </div>
+          </div>
+          <div class="col-lg-6 text-center"><div class="position-relative"><img class="img-fluid floating" src="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}" alt="Hero" style="filter: drop-shadow(0 20px 25px rgba(0,0,0,0.2));"><div class="glass-card position-absolute bottom-0 start-0 p-3 rounded-4" style="width: 150px;"><small class="text-white">⭐ 4.9/5</small><div class="text-warning small">★★★★★</div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main id="main-content">
+    <div class="container-fluid py-5" id="about">
+      <div class="container px-lg-5">
+        <div class="row g-5">
+          <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
+            <div class="section-title position-relative mb-4 pb-2"><h6 class="position-relative text-primary ps-4">About Us</h6><h2 class="mt-2">{{ portfolio_settings.about_title|default:"The best SEO solution with 10 years of experience" }}</h2></div>
+            <p class="mb-4">{{ portfolio_settings.about_text|default:"We are a team of passionate engineers delivering reliable ICT solutions." }}</p>
+            <div class="row g-3"><div class="col-sm-6"><h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>Award Winning</h6><h6 class="mb-0"><i class="fa fa-check text-primary me-2"></i>Professional Staff</h6></div><div class="col-sm-6"><h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>24/7 Support</h6><h6 class="mb-0"><i class="fa fa-check text-primary me-2"></i>Fair Prices</h6></div></div>
+            <div class="d-flex align-items-center mt-4">
+              <a class="btn btn-primary rounded-pill px-4 me-3" href="#contact">Contact Us</a>
+              {% if portfolio_settings.facebook_url %}<a class="btn btn-outline-primary btn-square me-3" href="{{ portfolio_settings.facebook_url }}"><i class="fab fa-facebook-f"></i></a>{% endif %}
+              {% if portfolio_settings.twitter_url %}<a class="btn btn-outline-primary btn-square me-3" href="{{ portfolio_settings.twitter_url }}"><i class="fab fa-twitter"></i></a>{% endif %}
+              {% if portfolio_settings.instagram_url %}<a class="btn btn-outline-primary btn-square me-3" href="{{ portfolio_settings.instagram_url }}"><i class="fab fa-instagram"></i></a>{% endif %}
+              {% if portfolio_settings.linkedin_url %}<a class="btn btn-outline-primary btn-square" href="{{ portfolio_settings.linkedin_url }}"><i class="fab fa-linkedin-in"></i></a>{% endif %}
+            </div>
+          </div>
+          <div class="col-lg-6"><img class="img-fluid wow zoomIn" data-wow-delay="0.5s" src="{% if portfolio_settings.about_image %}{{ portfolio_settings.about_image.url }}{% else %}{% static 'img/about.jpg' %}{% endif %}" alt="About us" loading="lazy"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid py-5" id="services">
+      <div class="container px-lg-5">
+        <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s"><h6 class="position-relative d-inline text-primary ps-4">Our Services</h6><h2 class="mt-2">What Solutions We Provide</h2></div>
+        {% if services %}
+        <div class="row g-4 bento-grid">
+          {% for service in services|slice:":6" %}
+          <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
+            <div class="service-item p-4 h-100 d-flex flex-column">
+              <div class="service-icon mb-4"><i class="fa fa-{{ service.icon|default:service.category.icon|default:'laptop-code' }} fa-3x text-primary"></i></div>
+              <h5 class="mb-3">{{ service.name }}</h5>
+              <p class="flex-grow-1">{{ service.description|truncatechars:80|safe }}</p>
+              <a href="#contact" class="btn btn-link text-primary p-0 mt-3">Learn more →</a>
+            </div>
+          </div>
+          {% endfor %}
+          <div class="col-lg-6 wow fadeInUp"><div class="service-item bg-gradient p-5 h-100 d-flex flex-column justify-content-between" style="background: linear-gradient(135deg, #2124B1 0%, #4777F5 100%);"><div><i class="fa fa-brain fa-3x text-white mb-4"></i><h5 class="text-white">AI SEO Analyzer</h5><p class="text-white-50">Get real‑time insights and automated recommendations.</p></div><a href="#contact" class="btn btn-light mt-4 align-self-start">Try Demo →</a></div></div>
+        </div>
+        {% else %}<div class="text-center"><p>No services added yet.</p></div>{% endif %}
+      </div>
+    </div>
+
+    <div class="container-fluid py-5" id="projects">
+      <div class="container px-lg-5">
+        <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s"><h6 class="position-relative d-inline text-primary ps-4">Our Projects</h6><h2 class="mt-2">Recently Launched Projects</h2></div>
+        <div class="row g-4">
+          {% for project in projects %}
+          <div class="col-lg-4 col-md-6 portfolio-item wow zoomIn" data-wow-delay="0.{{ forloop.counter }}s">
+            <div class="position-relative rounded overflow-hidden">
+              <img class="img-fluid w-100" src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}" alt="{{ project.title }}" loading="lazy">
+              <div class="portfolio-overlay"><a class="btn btn-light" href="{% if project.image %}{{ project.image.url }}{% else %}#{% endif %}"><i class="fa fa-plus fa-2x text-primary"></i></a><div class="mt-auto"><small class="text-white"><i class="fa fa-folder me-2"></i>{{ project.client_name|default:"Project" }}</small><a class="h5 d-block text-white mt-1 mb-0" href="#">{{ project.title }}</a></div></div>
+            </div>
+          </div>
+          {% empty %}<div class="col-12 text-center"><p>No featured projects yet.</p></div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="container-fluid py-5" id="contact">
+      <div class="container px-lg-5">
+        <div class="row justify-content-center">
+          <div class="col-lg-7">
+            <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s"><h6 class="position-relative d-inline text-primary ps-4">Contact Us</h6><h2 class="mt-2">Contact For Any Query</h2></div>
+            <div class="wow fadeInUp" data-wow-delay="0.3s">
+              {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
+              <form method="post" action="{% url 'inquiry' %}" novalidate>
+                {% csrf_token %}
+                <div class="row g-3">
+                  <div class="col-md-6"><div class="form-floating"><input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required><label for="name">Your Name</label><div class="invalid-feedback">Please enter your name.</div></div></div>
+                  <div class="col-md-6"><div class="form-floating"><input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required><label for="email">Your Email</label><div class="invalid-feedback">Valid email required.</div></div></div>
+                  <div class="col-12"><div class="form-floating"><input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required><label for="subject">Subject</label><div class="invalid-feedback">Subject required.</div></div></div>
+                  <div class="col-12"><div class="form-floating"><textarea class="form-control" id="message" name="message" style="height: 150px" required></textarea><label for="message">Message</label><div class="invalid-feedback">Message required.</div></div></div>
+                  <div class="col-12"><button class="btn btn-primary w-100 py-3" type="submit">Send Message</button></div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="container-fluid bg-primary text-light footer mt-5 pt-5 wow fadeIn">
+    <div class="container py-5 px-lg-5">
+      <div class="row g-5">
+        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Get In Touch</h5><p><i class="fa fa-map-marker-alt me-3"></i>{{ portfolio_settings.address|default:"123 Street, New York, USA" }}</p><p><i class="fa fa-phone-alt me-3"></i>{{ portfolio_settings.phone|default:"+012 345 67890" }}</p><p><i class="fa fa-envelope me-3"></i>{{ portfolio_settings.email|default:"info@example.com" }}</p><div class="d-flex pt-2">{% if portfolio_settings.twitter_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.twitter_url }}"><i class="fab fa-twitter"></i></a>{% endif %}{% if portfolio_settings.facebook_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.facebook_url }}"><i class="fab fa-facebook-f"></i></a>{% endif %}<a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-youtube"></i></a>{% if portfolio_settings.instagram_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.instagram_url }}"><i class="fab fa-instagram"></i></a>{% endif %}{% if portfolio_settings.linkedin_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.linkedin_url }}"><i class="fab fa-linkedin-in"></i></a>{% endif %}</div></div>
+        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Popular Link</h5><a class="btn btn-link" href="#about">About Us</a><a class="btn btn-link" href="#contact">Contact Us</a><a class="btn btn-link" href="#">Privacy Policy</a><a class="btn btn-link" href="#">Terms & Condition</a><a class="btn btn-link" href="#">Career</a></div>
+        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Project Gallery</h5><div class="row g-2">{% for project in projects|slice:":6" %}<div class="col-4"><img class="img-fluid" src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}" alt="{{ project.title }}" loading="lazy"></div>{% empty %}<div class="col-12">No projects yet</div>{% endfor %}</div></div>
+        <div class="col-md-6 col-lg-3"><h5 class="text-white mb-4">Newsletter</h5><p>Stay updated with our latest news and offers.</p><form method="post" action="{% url 'newsletter_subscribe' %}" class="position-relative w-100 mt-3">{% csrf_token %}<input class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="email" name="email" placeholder="Your Email" style="height: 48px;" required><button type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2"><i class="fa fa-paper-plane text-primary fs-4"></i></button></form></div>
+      </div>
+    </div>
+    <div class="container px-lg-5"><div class="copyright"><div class="row"><div class="col-md-6 text-center text-md-start mb-3 mb-md-0">&copy; <a class="border-bottom" href="#">{{ portfolio_settings.hero_title|default:"SEO Master" }}</a>, {{ portfolio_settings.footer_copyright|default:"All Right Reserved." }} Designed By <a class="border-bottom" href="https://pritechmw.com">PRITECH</a></div><div class="col-md-6 text-center text-md-end"><div class="footer-menu"><a href="#home">Home</a> <a href="#">Cookies</a> <a href="#">Help</a> <a href="#">FQAs</a></div></div></div></div></div>
+  </div>
+
+  <!-- Dynamic WhatsApp Floating Button -->
+  <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20I%20need%20ICT%20solutions" 
+     class="whatsapp-float" target="_blank" aria-label="Chat on WhatsApp">
+    <i class="fab fa-whatsapp fa-2x"></i><span>Chat with us</span>
+  </a>
+
+  <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top pt-2" aria-label="Back to top"><i class="bi bi-arrow-up"></i></a>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'lib/wow/wow.min.js' %}" defer></script>
+<script src="{% static 'lib/waypoints/waypoints.min.js' %}" defer></script>
+<script src="{% static 'js/main1.js' %}" defer></script>
+</body>
 </html>

@@ -1,0 +1,142 @@
+{% extends "unfold/layouts/base.html" %}
+
+{% load i18n static %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Client KPIs -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                <i class="material-icons text-blue-600 dark:text-blue-300">business</i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Total Clients</h3>
+                <p class="text-2xl font-semibold">{{ total_clients }}</p>
+                <p class="text-xs text-green-600">Active: {{ active_clients }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket KPIs -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-red-100 dark:bg-red-900">
+                <i class="material-icons text-red-600 dark:text-red-300">support_agent</i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Open Tickets</h3>
+                <p class="text-2xl font-semibold">{{ open_tickets }}</p>
+                {% if overdue_tickets %}
+                    <p class="text-xs text-red-600">{{ overdue_tickets }} overdue</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue KPIs -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                <i class="material-icons text-green-600 dark:text-green-300">paid</i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Revenue (this month)</h3>
+                <p class="text-2xl font-semibold">K{{ revenue_this_month|floatformat:0 }}</p>
+                <p class="text-xs text-gray-500">Invoiced: K{{ invoiced_this_month|floatformat:0 }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick action card -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-gray-500 dark:text-gray-400 text-sm">Quick Actions</h3>
+                <div class="mt-2 space-y-2">
+                    <a href="{% url 'admin:tickets_ticket_add' %}" class="block text-sm text-blue-600 hover:underline">+ New Ticket</a>
+                    <a href="{% url 'admin:clients_clientorganization_add' %}" class="block text-sm text-blue-600 hover:underline">+ New Client</a>
+                    <a href="{% url 'admin:finance_invoice_add' %}" class="block text-sm text-blue-600 hover:underline">+ New Invoice</a>
+                </div>
+            </div>
+            <i class="material-icons text-gray-400">bolt</i>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Priority Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-medium mb-4">Tickets by Priority</h3>
+        <canvas id="priorityChart" height="200"></canvas>
+    </div>
+
+    <!-- Weekly Ticket Trend -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-medium mb-4">New Tickets (Last 7 days)</h3>
+        <canvas id="trendChart" height="200"></canvas>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <h3 class="text-lg font-medium mb-4">Recent Page Visits</h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for visit in recent_visits %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ visit.user|default:"Anonymous" }}</td>
+                    <td class="px-6 py-4 text-sm">{{ visit.page_url|truncatechars:50 }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ visit.timestamp|timesince }} ago</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="px-6 py-4 text-center text-gray-500">No visits recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+    const priorityData = {{ priority_stats|safe }};
+    new Chart(priorityCtx, {
+        type: 'bar',
+        data: {
+            labels: priorityData.map(p => p.priority.charAt(0).toUpperCase() + p.priority.slice(1)),
+            datasets: [{
+                label: 'Number of tickets',
+                data: priorityData.map(p => p.count),
+                backgroundColor: '#4154f1',
+                borderRadius: 8
+            }]
+        }
+    });
+
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const trendData = {{ ticket_trend|safe }};
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.date),
+            datasets: [{
+                label: 'Tickets created',
+                data: trendData.map(d => d.count),
+                borderColor: '#2eca6a',
+                tension: 0.3,
+                fill: false
+            }]
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "unfold/layouts/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <h1 class="text-2xl font-bold mb-6">Live Ticket Management</h1>
+
+    <!-- Search box with HTMX -->
+    <div class="mb-6">
+        <input type="text"
+               name="q"
+               placeholder="Search by ticket number or title..."
+               class="w-full md:w-96 px-4 py-2 border rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
+               hx-get="{% url 'admin_live_ticket_search' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#ticket-table-body"
+               hx-indicator="#search-spinner">
+        <div id="search-spinner" class="htmx-indicator text-gray-500 text-sm mt-1">Searching...</div>
+    </div>
+
+    <!-- Ticket table -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket #</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Change status</th>
+                </tr>
+            </thead>
+            <tbody id="ticket-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% include "admin/ticket_rows.html" with tickets=tickets %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -35,23 +35,32 @@
 </tr>
 {% endblock %}
 
-{% block mobile_card %}
-<div class="list-card">
-  <div class="d-flex justify-content-between align-items-start">
-    <a href="{% url 'client_detail' obj.pk %}" class="list-card-title">{{ obj.name }}</a>
-    <a href="{% url 'client_update' obj.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+{% block mobile_list %}
+<div class="row row-cols-1 g-3">
+  {% for obj in object_list %}
+  <div class="col">
+    <div class="list-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1 me-2">
+          <a href="{% url 'client_detail' obj.pk %}" class="list-card-title">{{ obj.name }}</a>
+          {% if obj.status != 'active' %}<span class="badge bg-secondary ms-2">{{ obj.get_status_display }}</span>{% endif %}
+          <div class="list-card-meta mt-1">
+            <span>{{ obj.get_industry_display }}</span>
+            {% if obj.email %}<span>{{ obj.email }}</span>{% endif %}
+          </div>
+          <div class="d-flex align-items-center gap-2 mt-2">
+            {% if obj.open_tickets %}
+              <span class="badge bg-warning">{{ obj.open_tickets }} open ticket{{ obj.open_tickets|pluralize }}</span>
+            {% else %}
+              <span class="text-muted small">No open tickets</span>
+            {% endif %}
+            <span class="fw-semibold small">{{ site_config.currency_symbol }}{{ obj.total_invoiced|floatformat:0 }}</span>
+          </div>
+        </div>
+        <a href="{% url 'client_update' obj.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+      </div>
+    </div>
   </div>
-
-  {# Industry, email, ticket badge — use style to force theme-aware color #}
-  <div class="list-card-meta mt-2" style="color: var(--text-secondary);">
-    <span>{{ obj.get_industry_display }}</span>
-    {% if obj.email %}<span>{{ obj.email }}</span>{% endif %}
-    {% if obj.open_tickets %}<span class="badge bg-warning text-dark">{{ obj.open_tickets }} open</span>{% endif %}
-  </div>
-
-  {# Amount — explicitly use --text-primary so it's always visible #}
-  <div class="mt-2 fw-semibold" style="color: var(--text-primary);">
-    {{ site_config.currency_symbol }}{{ obj.total_invoiced|floatformat:0 }}
-  </div>
+  {% endfor %}
 </div>
-{% endblock %}
+{% endblock mobile_list %}

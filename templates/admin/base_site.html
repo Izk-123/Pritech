@@ -1,0 +1,12 @@
+{% extends "unfold/layouts/base.html" %}
+{% load static %}
+
+{% block branding %}
+    {% with site_config=request.site_config %}
+        {% if site_config and site_config.logo %}
+            <img src="{{ site_config.logo.url }}" height="40" alt="{{ site_config.company_name }}">
+        {% else %}
+            <img src="{% static 'images/logo.png' %}" height="40" alt="Logo">
+        {% endif %}
+    {% endwith %}
+{% endblock %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ invoice.invoice_number }}{% endblock %}
 {% block page_title %}{{ invoice.invoice_number }}{% endblock %}
 
@@ -17,6 +18,7 @@
     </form>
     {% endif %}
     <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
+    
   </div>
 </div>
 
@@ -26,6 +28,9 @@
       <div class="card-body p-4 p-md-5">
         <div class="row mb-4">
           <div class="col-sm-6">
+            <!-- Logo added for print -->
+            <img src="{% static 'images/logo.png' %}" alt="{{ site_config.company_name }}" 
+                 style="max-height: 70px; width: auto; margin-bottom: 10px; display: block;">
             <h2 class="fw-bold text-primary">{{ site_config.company_name }}</h2>
             {% if site_config.address %}<div class="small text-muted">{{ site_config.address|linebreaksbr }}</div>{% endif %}
             {% if site_config.email %}<div class="small">{{ site_config.email }}</div>{% endif %}
@@ -55,10 +60,17 @@
         </div>
         <div class="table-responsive mb-4">
           <table class="table table-bordered">
-            <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+            <thead class="table-dark">
+              <tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr>
+            </thead>
             <tbody>
               {% for item in items %}
-              <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ site_config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end fw-semibold">{{ site_config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
+              <tr>
+                <td>{{ item.description }}</td>
+                <td class="text-end">{{ item.quantity }}</td>
+                <td class="text-end">{{ site_config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+                <td class="text-end fw-semibold">{{ site_config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
+              </tr>
               {% empty %}
               <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td></tr>
               {% endfor %}

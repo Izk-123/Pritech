@@ -29,21 +29,38 @@
   <td class="small">{{ obj.issue_date }}</td>
   <td class="small {% if obj.valid_until < today %}text-danger fw-semibold{% endif %}">{{ obj.valid_until }}</td>
   <td class="fw-semibold">{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</td>
-  <td><span class="badge bg-{% if obj.status == 'approved' %}success{% elif obj.status == 'sent' %}primary{% elif obj.status == 'converted' %}secondary{% elif obj.status == 'rejected' %}danger{% elif obj.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ obj.get_status_display }}</span></td>
+  <td>
+    <span class="badge bg-{% if obj.status == 'approved' %}success{% elif obj.status == 'sent' %}primary{% elif obj.status == 'converted' %}secondary{% elif obj.status == 'rejected' %}danger{% elif obj.status == 'expired' %}warning{% else %}secondary{% endif %}">
+      {{ obj.get_status_display }}
+    </span>
+  </td>
   <td><a href="{% url 'quotation_detail' obj.pk %}" class="btn btn-sm btn-outline-secondary">View</a></td>
 </tr>
 {% endblock %}
 
-{% block mobile_card %}
-<div class="list-card">
-  <div class="d-flex justify-content-between">
-    <a href="{% url 'quotation_detail' obj.pk %}" class="list-card-title">{{ obj.quotation_number }}</a>
-    <span class="badge bg-{% if obj.status == 'approved' %}success{% elif obj.status == 'sent' %}primary{% elif obj.status == 'converted' %}secondary{% elif obj.status == 'rejected' %}danger{% elif obj.status == 'expired' %}warning{% else %}secondary{% endif %}">{{ obj.get_status_display }}</span>
+{% block mobile_list %}
+<div class="row row-cols-1 g-3">
+  {% for obj in object_list %}
+  <div class="col">
+    <div class="list-card">
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-grow-1 me-2">
+          <a href="{% url 'quotation_detail' obj.pk %}" class="list-card-title">{{ obj.quotation_number }}</a>
+          <div class="list-card-meta mt-1">
+            <span>{{ obj.client.name }}</span>
+            <span>{{ obj.issue_date }}</span>
+          </div>
+          <div class="d-flex justify-content-between mt-2">
+            <span class="small">Total: <strong>{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</strong></span>
+            <span class="small {% if obj.valid_until < today %}text-danger{% endif %}">Valid: {{ obj.valid_until }}</span>
+          </div>
+        </div>
+        <span class="badge bg-{% if obj.status == 'approved' %}success{% elif obj.status == 'sent' %}primary{% elif obj.status == 'converted' %}secondary{% elif obj.status == 'rejected' %}danger{% elif obj.status == 'expired' %}warning{% else %}secondary{% endif %} ms-2">
+          {{ obj.get_status_display }}
+        </span>
+      </div>
+    </div>
   </div>
-  <div class="list-card-meta mt-2"><span>{{ obj.client.name }}</span><span>{{ obj.issue_date }}</span></div>
-  <div class="d-flex justify-content-between mt-2">
-    <span>Total: <strong>{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</strong></span>
-    <span>Valid until: {{ obj.valid_until }}</span>
-  </div>
+  {% endfor %}
 </div>
-{% endblock %}
+{% endblock mobile_list %}

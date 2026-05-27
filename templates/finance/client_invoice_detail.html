@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ invoice.invoice_number }}{% endblock %}
 {% block page_title %}{{ invoice.invoice_number }}{% endblock %}
 
@@ -16,6 +17,9 @@
   <div class="card-body p-4 p-md-5">
     <div class="row mb-4">
       <div class="col-sm-6">
+        <!-- Logo added for print -->
+        <img src="{% static 'images/logo.png' %}" alt="{{ config.company_name }}"
+             style="max-height: 70px; width: auto; margin-bottom: 10px; display: block;">
         <h2 class="fw-bold text-primary">{{ config.company_name }}</h2>
         {% if config.address %}<div class="small text-muted">{{ config.address|linebreaksbr }}</div>{% endif %}
         {% if config.email %}<div class="small">{{ config.email }}</div>{% endif %}
@@ -41,10 +45,17 @@
     </div>
     <div class="table-responsive mb-4">
       <table class="table table-bordered">
-        <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
+        <thead class="table-dark">
+          <tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr>
+        </thead>
         <tbody>
           {% for item in items %}
-          <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
+          <tr>
+            <td>{{ item.description }}</td>
+            <td class="text-end">{{ item.quantity }}</td>
+            <td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+            <td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
@@ -58,7 +69,7 @@
         <div class="d-flex justify-content-between py-1 fw-bold {% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}"><span>Balance Due</span><span>{{ config.currency_symbol }}{{ invoice.balance_due|floatformat:2 }}</span></div>
       </div>
     </div>
-    {% if invoice.notes %}<div class="mt-4 p-3 bg-light rounded small">{{ invoice.notes }}</div>{% endif %}
+    {% if invoice.notes %}<div class="mt-4 p-3 bg-body-tertiary rounded small">{{ invoice.notes }}</div>{% endif %}
   </div>
 </div>
 <style>@media print { .sidebar, .topbar, .bottom-nav, .page-header .btn { display: none !important; } }</style>

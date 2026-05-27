@@ -5,7 +5,6 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-{# ========== REAL‑TIME STATS CONTAINER ========== #}
 <div id="dashboard-stats-container"
      hx-get="{% url 'dashboard_stats_partial' %}"
      hx-trigger="every 30s"

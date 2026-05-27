@@ -27,6 +27,7 @@
 </div>
 
 {% if object_list %}
+  {# ========== DESKTOP TABLE – hidden on mobile ========== #}
   <div class="card d-none d-md-block">
     <div class="table-responsive">
       <table class="modern-table">
@@ -40,11 +41,37 @@
     </div>
     {% block pagination %}{% endblock %}
   </div>
+
+  {# ========== MOBILE CARD LIST – hidden on desktop ========== #}
+
   <div class="d-md-none">
-    {% for obj in object_list %}
-      {% block mobile_card %}{% endblock %}
-    {% endfor %}
+    {% block mobile_list %}
+      {# Default fallback – child templates should override this entire block #}
+      <div class="row row-cols-1 g-3">
+        {% for obj in object_list %}
+          <div class="col">
+            <div class="list-card">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1 me-2">
+                  <div class="list-card-title">
+                    {% if obj.name %}{{ obj.name }}
+                    {% elif obj.title %}{{ obj.title }}
+                    {% else %}{{ obj|truncatechars:50 }}{% endif %}
+                  </div>
+                  <div class="list-card-meta mt-1 text-muted small">ID: {{ obj.pk }}</div>
+                </div>
+                {% if obj.get_absolute_url %}
+                  <a href="{{ obj.get_absolute_url }}" class="btn btn-sm btn-outline-primary">View</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endblock mobile_list %}
+    {% block mobile_pagination %}{% endblock %}
   </div>
+
 {% else %}
   <div class="card">
     <div class="card-body">
