@@ -2,9 +2,8 @@ from django.views.generic import TemplateView, CreateView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import redirect
-from django.contrib import messages
 from django.views.decorators.http import require_POST
-from .models import NewsletterSubscriber, PortfolioProject, Inquiry
+from .models import NewsletterSubscriber, PortfolioProject, Inquiry, PortfolioSettings
 from .forms import InquiryForm
 from services.models import Service, ServiceCategory
 
@@ -14,7 +13,9 @@ class HomeView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        ctx['portfolio_settings'] = PortfolioSettings.get()
         ctx['projects'] = PortfolioProject.objects.filter(is_featured=True)[:6]
+        ctx['services'] = Service.objects.filter(is_active=True).select_related('category')[:9]
         ctx['categories'] = ServiceCategory.objects.prefetch_related('services')
         ctx['inquiry_form'] = InquiryForm()
         return ctx
@@ -43,6 +44,4 @@ def newsletter_subscribe(request):
             messages.info(request, 'You are already subscribed.')
     else:
         messages.error(request, 'Please provide a valid email address.')
-
-    # Redirect back to the previous page (or home)
     return redirect(request.META.get('HTTP_REFERER', 'home'))

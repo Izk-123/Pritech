@@ -3,6 +3,7 @@ from .views import (
     ServiceListView, ServiceCreateView, ServiceUpdateView, ServiceDeleteView,
     ServiceCategoryListView, ServiceCategoryCreateView, ServiceCategoryUpdateView,
     ServicePackageListView, ServicePackageCreateView, ServicePackageUpdateView, ServicePackageDeleteView,
+    ClientServiceCatalogView, RequestServiceQuoteView,
 )
 
 urlpatterns = [
@@ -22,4 +23,8 @@ urlpatterns = [
     path('packages/new/', ServicePackageCreateView.as_view(), name='service_package_create'),
     path('packages/<int:pk>/edit/', ServicePackageUpdateView.as_view(), name='service_package_update'),
     path('packages/<int:pk>/delete/', ServicePackageDeleteView.as_view(), name='service_package_delete'),
+
+    # Client-facing catalog & quote request
+    path('catalog/', ClientServiceCatalogView.as_view(), name='client_service_catalog'),
+    path('request-quote/<int:service_pk>/', RequestServiceQuoteView.as_view(), name='request_service_quote'),
 ]

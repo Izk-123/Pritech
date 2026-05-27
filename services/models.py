@@ -1,10 +1,11 @@
 from django.db import models
+from django_quill.fields import QuillField
 
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=100)
     icon = models.CharField(max_length=50, default='🔧')
-    description = models.TextField(blank=True)  # new
+    description = QuillField(blank=True)      # ⬅️ rich text now
 
     def __str__(self):
         return self.name
@@ -27,7 +28,7 @@ class Service(models.Model):
         blank=True,
         related_name='services'
     )
-    description = models.TextField(blank=True)
+    description = QuillField(blank=True)      # ⬅️ rich text now
     base_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     unit = models.CharField(
         max_length=50,
@@ -51,7 +52,7 @@ class Service(models.Model):
 
 class ServicePackage(models.Model):
     name = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    description = QuillField(blank=True)      # ⬅️ rich text now
     services = models.ManyToManyField(Service, related_name='packages')
     monthly_price = models.DecimalField(max_digits=12, decimal_places=2)
     is_active = models.BooleanField(default=True)
