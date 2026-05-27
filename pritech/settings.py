@@ -1,7 +1,10 @@
 import os
 from pathlib import Path
-from decouple import config   # install: pip install python-decouple
+from decouple import config
+from django.templatetags.static import static
+from django.urls import reverse_lazy
 
+# Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ─── SECURITY ───────────────────────────────────────────
@@ -119,9 +122,6 @@ else:
     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
 # ═══════════════ UNFOLD CONFIGURATION ══════════════════
-from django.templatetags.static import static
-from django.urls import reverse_lazy
-
 UNFOLD = {
     "SITE_TITLE": "PriTech Admin",
     "SITE_HEADER": "PriTech Dashboard",
@@ -149,7 +149,7 @@ UNFOLD = {
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
-        "navigation": [   # unchanged – keep your existing navigation
+        "navigation": [
             {
                 "title": "Dashboard",
                 "separator": False,
@@ -158,11 +158,135 @@ UNFOLD = {
                     {"title": "View Website", "icon": "open_in_new", "link": "/", "target": "_blank"},
                 ],
             },
-            # ... (the rest of your navigation – keep as is)
+            {
+                "title": "Clients",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "Organizations", "icon": "corporate_fare", "link": reverse_lazy("admin:clients_clientorganization_changelist")},
+                    {"title": "Contacts", "icon": "contacts", "link": reverse_lazy("admin:clients_clientcontact_changelist")},
+                ],
+            },
+            {
+                "title": "Services",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "Services", "icon": "miscellaneous_services", "link": reverse_lazy("admin:services_service_changelist")},
+                    {"title": "Categories", "icon": "category", "link": reverse_lazy("admin:services_servicecategory_changelist")},
+                    {"title": "Packages", "icon": "package_2", "link": reverse_lazy("admin:services_servicepackage_changelist")},
+                ],
+            },
+            {
+                "title": "Support",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "Tickets", "icon": "support_agent", "link": reverse_lazy("admin:tickets_ticket_changelist"), "badge": "core.admin_badges.open_tickets"},
+                    {"title": "Attachments", "icon": "attach_file", "link": reverse_lazy("admin:tickets_ticketattachment_changelist")},
+                    {"title": "SLAs", "icon": "timer", "link": reverse_lazy("admin:tickets_ticketsla_changelist")},
+                ],
+            },
+            {
+                "title": "Finance",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "Invoices", "icon": "receipt", "link": reverse_lazy("admin:finance_invoice_changelist")},
+                    {"title": "Quotations", "icon": "description", "link": reverse_lazy("admin:finance_quotation_changelist")},
+                    {"title": "Expenses", "icon": "money_off", "link": reverse_lazy("admin:finance_expense_changelist")},
+                ],
+            },
+            {
+                "title": "Portfolio",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "Projects", "icon": "design_services", "link": reverse_lazy("admin:portfolio_portfolioproject_changelist")},
+                    {"title": "Inquiries", "icon": "mail", "link": reverse_lazy("admin:portfolio_inquiry_changelist")},
+                    {"title": "Newsletter", "icon": "subscriptions", "link": reverse_lazy("admin:portfolio_newslettersubscriber_changelist")},
+                    {"title": "Portfolio Settings", "icon": "settings", "link": reverse_lazy("admin:portfolio_portfoliosettings_changelist")},
+                ],
+            },
+            {
+                "title": "Users & Permissions",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "Users", "icon": "manage_accounts", "link": reverse_lazy("admin:accounts_user_changelist")},
+                    {"title": "Roles", "icon": "badge", "link": reverse_lazy("admin:accounts_role_changelist")},
+                    {"title": "Permissions", "icon": "lock", "link": reverse_lazy("admin:accounts_permission_changelist")},
+                    {"title": "Audit Logs", "icon": "history", "link": reverse_lazy("admin:accounts_userauditlog_changelist")},
+                ],
+            },
+            {
+                "title": "Tracking",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {"title": "User Activities", "icon": "timeline", "link": reverse_lazy("admin:tracking_useractivity_changelist")},
+                    {"title": "Page Visits", "icon": "visibility", "link": reverse_lazy("admin:tracking_pagevisit_changelist")},
+                ],
+            },
+            {
+                "title": "Configuration",
+                "separator": True,
+                "items": [
+                    {"title": "Site Settings", "icon": "settings", "link": reverse_lazy("admin:core_siteconfig_changelist")},
+                    # Portfolio Settings already under Portfolio section, but you can also add here if desired
+                ],
+            },
         ],
     },
-    "TABS": [   # keep your existing tabs
-        # ...
+    "TABS": [
+        {
+            "models": ["clients.clientorganization", "clients.clientcontact"],
+            "items": [
+                {"title": "Organizations", "link": reverse_lazy("admin:clients_clientorganization_changelist")},
+                {"title": "Contacts", "link": reverse_lazy("admin:clients_clientcontact_changelist")},
+            ],
+        },
+        {
+            "models": ["services.service", "services.servicecategory", "services.servicepackage"],
+            "items": [
+                {"title": "Services", "link": reverse_lazy("admin:services_service_changelist")},
+                {"title": "Categories", "link": reverse_lazy("admin:services_servicecategory_changelist")},
+                {"title": "Packages", "link": reverse_lazy("admin:services_servicepackage_changelist")},
+            ],
+        },
+        {
+            "models": ["tickets.ticket", "tickets.ticketattachment", "tickets.ticketsla"],
+            "items": [
+                {"title": "Tickets", "link": reverse_lazy("admin:tickets_ticket_changelist")},
+                {"title": "Attachments", "link": reverse_lazy("admin:tickets_ticketattachment_changelist")},
+                {"title": "SLAs", "link": reverse_lazy("admin:tickets_ticketsla_changelist")},
+            ],
+        },
+        {
+            "models": ["finance.invoice", "finance.quotation", "finance.expense"],
+            "items": [
+                {"title": "Invoices", "link": reverse_lazy("admin:finance_invoice_changelist")},
+                {"title": "Quotations", "link": reverse_lazy("admin:finance_quotation_changelist")},
+                {"title": "Expenses", "link": reverse_lazy("admin:finance_expense_changelist")},
+            ],
+        },
+        {
+            "models": ["portfolio.portfolioproject", "portfolio.inquiry", "portfolio.newslettersubscriber", "portfolio.portfoliosettings"],
+            "items": [
+                {"title": "Projects", "link": reverse_lazy("admin:portfolio_portfolioproject_changelist")},
+                {"title": "Inquiries", "link": reverse_lazy("admin:portfolio_inquiry_changelist")},
+                {"title": "Newsletter", "link": reverse_lazy("admin:portfolio_newslettersubscriber_changelist")},
+                {"title": "Portfolio Settings", "link": reverse_lazy("admin:portfolio_portfoliosettings_changelist")},
+            ],
+        },
+        {
+            "models": ["accounts.user", "accounts.role", "accounts.permission"],
+            "items": [
+                {"title": "Users", "link": reverse_lazy("admin:accounts_user_changelist")},
+                {"title": "Roles", "link": reverse_lazy("admin:accounts_role_changelist")},
+                {"title": "Permissions", "link": reverse_lazy("admin:accounts_permission_changelist")},
+            ],
+        },
     ],
     "STYLES": [lambda request: static("css/unfold-overrides.css")],
     "SCRIPTS": [],
