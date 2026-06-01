@@ -1,12 +1,13 @@
+# accounts/middleware.py
 class LastLoginIPMiddleware:
+    """
+    Previously updated last_login_ip on every request.
+    Now only placeholder; actual IP update moved to signal.
+    """
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         response = self.get_response(request)
-        if request.user.is_authenticated:
-            ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
-            if ip and request.user.last_login_ip != ip:
-                request.user.last_login_ip = ip.split(',')[0].strip()
-                request.user.save(update_fields=['last_login_ip'])
+        # IP update removed – handled by signal on user_logged_in
         return response

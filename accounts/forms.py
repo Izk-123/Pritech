@@ -41,3 +41,78 @@ class CustomLoginForm(AuthenticationForm):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'form-control'})
     )
+
+class ClientProfileForm(forms.ModelForm):
+    """Form for client to edit their own profile (user and organization)."""
+    company_name = forms.CharField(max_length=200, required=True)
+    company_phone = forms.CharField(max_length=20, required=False)
+    company_address = forms.CharField(widget=forms.Textarea, required=False)
+    company_email = forms.EmailField(required=False)
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'physical_address']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'physical_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.client_org = kwargs.pop('client_org', None)
+        super().__init__(*args, **kwargs)
+        if self.client_org:
+            self.fields['company_name'].initial = self.client_org.name
+            self.fields['company_phone'].initial = self.client_org.phone
+            self.fields['company_address'].initial = self.client_org.address
+            self.fields['company_email'].initial = self.client_org.email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        if commit:
+            user.save()
+        if self.client_org:
+            self.client_org.name = self.cleaned_data['company_name']
+            self.client_org.phone = self.cleaned_data['company_phone']
+            self.client_org.address = self.cleaned_data['company_address']
+            self.client_org.email = self.cleaned_data['company_email']
+            self.client_org.save()
+        return user
+
+
+class InviteTeamMemberForm(forms.ModelForm):
+    """Invite a new user to the client organization."""
+    email = forms.EmailField()
+    first_name = forms.CharField()
+    last_name = forms.CharField()
+    role = forms.ChoiceField(choices=User.CLIENT_ROLE_CHOICES, initial='viewer')
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'role']
+
+    def __init__(self, *args, **kwargs):
+        self.client_org = kwargs.pop('client_org', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("A user with this email already exists.")
+        return email
+    
+
+class TOTPTokenForm(forms.Form):
+    token = forms.CharField(
+        label='Authenticator code',
+        max_length=6,
+        min_length=6,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '000000',
+            'autocomplete': 'off'
+        })
+    )

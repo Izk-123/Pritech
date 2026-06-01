@@ -1,3 +1,4 @@
+# accounts/signals.py
 from django.contrib.auth.signals import user_logged_in, user_login_failed, user_logged_out
 from django.dispatch import receiver
 from .models import UserAuditLog
@@ -24,6 +25,11 @@ def log_login(sender, request, user, **kwargs):
         ip_address=_get_ip(request),
         user_agent=_get_ua(request),
     )
+    # Update last_login_ip on the user
+    ip = _get_ip(request)
+    if ip and user.last_login_ip != ip:
+        user.last_login_ip = ip
+        user.save(update_fields=['last_login_ip'])
 
 
 @receiver(user_login_failed)
