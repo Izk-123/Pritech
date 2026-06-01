@@ -104,6 +104,7 @@ TEMPLATES = [{
             'django.contrib.messages.context_processors.messages',
             'core.context_processors.site_config',
             'core.context_processors.sidebar_recent_items',
+            'core.context_processors.pending_expenses_count',
             'portfolio.context_processors.portfolio_settings',
         ],
     },
