@@ -1,7 +1,7 @@
 {% load static %}
 {% load socialaccount %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-bs-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -30,6 +30,51 @@
     }
     .password-wrapper input {
       padding-right: 40px;
+    }
+
+    /* Social login buttons – enhanced styling */
+    .btn-social {
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      border-radius: 60px;
+      font-weight: 600;
+      padding: 0.6rem 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+    }
+    .btn-social i {
+      font-size: 1.2rem;
+    }
+    .btn-google {
+      background: #ea4335;      /* Google red */
+      color: white;
+      border: none;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .btn-google:hover {
+      background: #c5221f;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .btn-linkedin {
+      background: #0077b5;      /* LinkedIn blue */
+      color: white;
+      border: none;
+    }
+    .btn-linkedin:hover {
+      background: #005e8c;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    @media (max-width: 480px) {
+      .btn-social {
+        font-size: 0.9rem;
+        padding: 0.5rem 0;
+      }
+      .btn-social i {
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
@@ -81,15 +126,16 @@
             <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Sign in</button>
           </form>
           
-          <hr>
+          <hr class="my-4">
           <div class="text-center mb-3">
             <span class="text-muted">Or continue with</span>
           </div>
-          <div class="d-flex gap-2 justify-content-center">
-            <a href="{% provider_login_url 'google' %}" class="btn btn-outline-danger flex-grow-1">
+          <div class="d-flex gap-3 justify-content-center">
+            <!-- Direct URLs to /social/ prefix (allauth mounted at /social/) -->
+            <a href="/social/google/login/" class="btn-social btn-google flex-grow-1">
               <i class="bi bi-google"></i> Google
             </a>
-            <a href="{% provider_login_url 'linkedin_oauth2' %}" class="btn btn-outline-primary flex-grow-1">
+            <a href="/social/linkedin_oauth2/login/" class="btn-social btn-linkedin flex-grow-1">
               <i class="bi bi-linkedin"></i> LinkedIn
             </a>
           </div>
@@ -109,6 +155,7 @@
   const themeToggle = document.getElementById('themeToggle');
   function setTheme(theme) {
     html.setAttribute('data-theme', theme);
+    html.setAttribute('data-bs-theme', theme);
     localStorage.setItem('theme', theme);
     document.querySelector('.light-icon').style.display = theme === 'dark' ? 'none' : 'inline-block';
     document.querySelector('.dark-icon').style.display = theme === 'dark' ? 'inline-block' : 'none';

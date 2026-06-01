@@ -1,0 +1,170 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Registration — Pritech</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+      padding: 2rem;
+    }
+    :root, [data-theme="light"] {
+      --bg-secondary: #f8fafc;
+      --text-primary: #0f172a;
+      --text-muted: #64748b;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --primary: #4154f1;
+      --input-bg: #ffffff;
+    }
+    [data-theme="dark"] {
+      --bg-secondary: #0f172a;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --primary: #7b9cff;
+      --input-bg: #1e293b;
+    }
+    .card {
+      max-width: 500px;
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--primary);
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+    }
+    .card-body {
+      padding: 2rem;
+    }
+    .provider-badge {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 0.2rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--input-bg);
+      color: var(--text-primary);
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(65,84,241,0.1);
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    .btn {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 60px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      padding: 8px 12px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    .errorlist {
+      color: #dc3545;
+      list-style: none;
+      font-size: 0.85rem;
+      margin-top: -0.5rem;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle" id="themeToggle">
+    <i class="bi bi-sun-fill light-icon"></i>
+    <i class="bi bi-moon-stars-fill dark-icon"></i>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-person-plus-fill me-2"></i> Complete Your Profile
+    </div>
+    <div class="card-body">
+      <div class="provider-badge">{{ account.get_provider.name }}</div>
+      <p>You are about to use your <strong>{{ account.get_provider.name }}</strong> account to log in.</p>
+      <p>Please fill in the details below:</p>
+      <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn">Sign up</button>
+      </form>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const html = document.documentElement;
+      const toggle = document.getElementById('themeToggle');
+      function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        html.setAttribute('data-bs-theme', theme);
+        localStorage.setItem('theme', theme);
+        const lightIcon = document.querySelector('.light-icon');
+        const darkIcon = document.querySelector('.dark-icon');
+        if (theme === 'dark') {
+          lightIcon.style.display = 'none';
+          darkIcon.style.display = 'inline-block';
+        } else {
+          lightIcon.style.display = 'inline-block';
+          darkIcon.style.display = 'none';
+        }
+      }
+      const saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      setTheme(saved);
+      toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+      });
+    })();
+  </script>
+</body>
+</html>

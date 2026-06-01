@@ -1,0 +1,130 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Error — Pritech</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s;
+      padding: 2rem;
+    }
+    :root, [data-theme="light"] {
+      --bg-secondary: #f8fafc;
+      --text-primary: #0f172a;
+      --text-muted: #64748b;
+      --card-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --danger: #dc3545;
+    }
+    [data-theme="dark"] {
+      --bg-secondary: #0f172a;
+      --text-primary: #f8fafc;
+      --text-muted: #94a3b8;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --danger: #ef4444;
+    }
+    .card {
+      max-width: 500px;
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .card-header {
+      background: var(--danger);
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+    }
+    .card-body {
+      padding: 2rem;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.5rem;
+      border-radius: 60px;
+      font-weight: 600;
+      background: var(--text-primary);
+      color: var(--bg-secondary);
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 50px;
+      padding: 8px 12px;
+      cursor: pointer;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle" id="themeToggle">
+    <i class="bi bi-sun-fill light-icon"></i>
+    <i class="bi bi-moon-stars-fill dark-icon"></i>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i> Authentication Error
+    </div>
+    <div class="card-body">
+      <p>We couldn't log you in using your social account.</p>
+      <p class="text-muted">{{ auth_error.code|default:"Unknown error" }}</p>
+      <a href="{% url 'login' %}" class="btn">Back to Login</a>
+    </div>
+  </div>
+  <script>
+    (function() {
+      const html = document.documentElement;
+      const toggle = document.getElementById('themeToggle');
+      function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        html.setAttribute('data-bs-theme', theme);
+        localStorage.setItem('theme', theme);
+        const lightIcon = document.querySelector('.light-icon');
+        const darkIcon = document.querySelector('.dark-icon');
+        if (theme === 'dark') {
+          lightIcon.style.display = 'none';
+          darkIcon.style.display = 'inline-block';
+        } else {
+          lightIcon.style.display = 'inline-block';
+          darkIcon.style.display = 'none';
+        }
+      }
+      const saved = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      setTheme(saved);
+      toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+      });
+    })();
+  </script>
+</body>
+</html>
