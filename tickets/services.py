@@ -1,14 +1,20 @@
+# tickets/services.py
 import json
-from django.utils import timezone
 from datetime import timedelta
-from .models import Ticket, TicketComment, TicketWorkLog, TicketSLA
-from infrastructure.notifications import notify_ticket_created, notify_ticket_status_changed
+from decimal import Decimal
+
+from django.utils import timezone
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.contrib.sites.models import Site
+
+from .models import Ticket, TicketComment, TicketWorkLog, TicketSLA, CannedResponse
+from core.models import SiteConfig
 
 
 class TicketService:
     @staticmethod
     def _ensure_quill_json(value):
-        """Convert plain text to Quill JSON if needed."""
         if value is None:
             return None
         if isinstance(value, str) and not value.strip().startswith('{'):
@@ -28,7 +34,7 @@ class TicketService:
             status='open'
         )
         TicketService.create_sla(ticket)
-        notify_ticket_created(ticket)
+        TicketService.notify_ticket_created(ticket)
         return ticket
 
     @staticmethod
@@ -52,22 +58,42 @@ class TicketService:
         )
 
     @staticmethod
+    def update_sla(ticket):
+        """Recalculate SLA due dates based on current priority."""
+        if not hasattr(ticket, 'sla'):
+            return
+        hours_map = {'low': 48, 'medium': 24, 'high': 8, 'critical': 4}
+        hours = hours_map.get(ticket.priority, 24)
+        resolution_hours = hours * 4
+        now = timezone.now()
+        ticket.sla.response_due = now + timedelta(hours=hours)
+        ticket.sla.resolution_due = now + timedelta(hours=resolution_hours)
+        ticket.sla.breached = False
+        ticket.sla.save()
+
+    @staticmethod
     def transition(ticket, new_status, user=None, note=''):
         if not ticket.can_transition_to(new_status):
             raise ValueError(f'Cannot move ticket from {ticket.status} to {new_status}')
-        old = ticket.status
+        old_status = ticket.status
+        old_priority = ticket.priority
         ticket.status = new_status
         if new_status == 'resolved':
             ticket.resolved_at = timezone.now()
         ticket.save(update_fields=['status', 'resolved_at', 'updated_at'])
+
+        # If priority changed during transition, update SLA
+        if ticket.priority != old_priority and hasattr(ticket, 'sla'):
+            TicketService.update_sla(ticket)
+
         if note or user:
-            note_json = TicketService._ensure_quill_json(note or f'Status changed from {old} to {new_status}')
+            note_json = TicketService._ensure_quill_json(note or f'Status changed from {old_status} to {new_status}')
             TicketComment.objects.create(
                 ticket=ticket, author=user,
                 content=note_json,
                 is_internal=True
             )
-        notify_ticket_status_changed(ticket, old, user)
+        TicketService.notify_ticket_status_changed(ticket, old_status, user)
         return ticket
 
     @staticmethod
@@ -91,3 +117,28 @@ class TicketService:
             ticket=ticket, technician=technician,
             hours=hours, description=description_json
         )
+
+    # --- Email notifications ---
+    @staticmethod
+    def notify_ticket_created(ticket):
+        config = SiteConfig.get()
+        subject = f"New Ticket: {ticket.ticket_number} - {ticket.title}"
+        context = {'ticket': ticket, 'site_url': Site.objects.get_current().domain}
+        message = render_to_string('tickets/emails/ticket_created.txt', context)
+        html_message = render_to_string('tickets/emails/ticket_created.html', context)
+        recipients = [ticket.client.email]
+        if ticket.assigned_to:
+            recipients.append(ticket.assigned_to.email)
+        send_mail(subject, message, config.email, recipients, html_message=html_message, fail_silently=True)
+
+    @staticmethod
+    def notify_ticket_status_changed(ticket, old_status, user):
+        config = SiteConfig.get()
+        subject = f"Ticket {ticket.ticket_number} status changed to {ticket.get_status_display()}"
+        context = {'ticket': ticket, 'old_status': old_status, 'changed_by': user}
+        message = render_to_string('tickets/emails/status_changed.txt', context)
+        html_message = render_to_string('tickets/emails/status_changed.html', context)
+        recipients = [ticket.client.email]
+        if ticket.assigned_to:
+            recipients.append(ticket.assigned_to.email)
+        send_mail(subject, message, config.email, recipients, html_message=html_message, fail_silently=True)

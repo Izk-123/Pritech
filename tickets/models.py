@@ -4,17 +4,27 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django_quill.fields import QuillField
+from simple_history.models import HistoricalRecords
 
 
 class Ticket(models.Model):
+    """
+    Support ticket model with full lifecycle tracking.
+    Includes SLA, comments, work logs, and attachments.
+    """
     STATUS_CHOICES = [
-        ('open', 'Open'), ('assigned', 'Assigned'),
-        ('in_progress', 'In Progress'), ('resolved', 'Resolved'),
-        ('closed', 'Closed'), ('escalated', 'Escalated'),
+        ('open', 'Open'),
+        ('assigned', 'Assigned'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+        ('escalated', 'Escalated'),
     ]
     PRIORITY_CHOICES = [
-        ('low', 'Low'), ('medium', 'Medium'),
-        ('high', 'High'), ('critical', 'Critical'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
     ]
     VALID_TRANSITIONS = {
         'open': ['assigned', 'closed'],
@@ -25,20 +35,42 @@ class Ticket(models.Model):
         'closed': ['open'],
     }
 
+    # Core fields
     ticket_number = models.CharField(max_length=20, unique=True, blank=True)
     title = models.CharField(max_length=300)
     description = QuillField()
-    client = models.ForeignKey('clients.ClientOrganization', on_delete=models.CASCADE, related_name='tickets')
+    client = models.ForeignKey(
+        'clients.ClientOrganization',
+        on_delete=models.CASCADE,
+        related_name='tickets',
+        db_index=True  # Performance index
+    )
     service = models.ForeignKey('services.Service', on_delete=models.SET_NULL, null=True, blank=True)
-    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                    null=True, blank=True, related_name='assigned_tickets')
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-                                   null=True, blank=True, related_name='created_tickets')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
-    created_at = models.DateTimeField(auto_now_add=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='assigned_tickets',
+        db_index=True
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='created_tickets'
+    )
+
+    # Status & priority
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', db_index=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium', db_index=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
+
+    # Audit log
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ['-created_at']
@@ -74,13 +106,13 @@ class Ticket(models.Model):
     @property
     def status_color(self):
         return {
-            'open': 'blue', 'assigned': 'purple', 'in_progress': 'amber',
-            'resolved': 'teal', 'closed': 'gray', 'escalated': 'red'
-        }.get(self.status, 'gray')
+            'open': 'primary', 'assigned': 'info', 'in_progress': 'warning',
+            'resolved': 'success', 'closed': 'secondary', 'escalated': 'danger'
+        }.get(self.status, 'secondary')
 
     @property
     def priority_color(self):
-        return {'low': 'gray', 'medium': 'blue', 'high': 'amber', 'critical': 'red'}.get(self.priority, 'gray')
+        return {'low': 'secondary', 'medium': 'primary', 'high': 'warning', 'critical': 'danger'}.get(self.priority, 'secondary')
 
 
 class TicketComment(models.Model):
@@ -88,13 +120,13 @@ class TicketComment(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     content = QuillField()
     is_internal = models.BooleanField(default=False)
+    is_solution = models.BooleanField(default=False)  # Mark as solution
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['created_at']
 
     def save(self, *args, **kwargs):
-        # Auto-convert plain text comment to Quill JSON if needed
         if self.content and isinstance(self.content, str) and not self.content.strip().startswith('{'):
             self.content = json.dumps({
                 "html": f"<p>{self.content}</p>",
@@ -111,7 +143,6 @@ class TicketWorkLog(models.Model):
     logged_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        # Auto-convert plain text work log description to Quill JSON if needed
         if self.description and isinstance(self.description, str) and not self.description.strip().startswith('{'):
             self.description = json.dumps({
                 "html": f"<p>{self.description}</p>",
@@ -142,3 +173,15 @@ class TicketSLA(models.Model):
 
     def __str__(self):
         return f"SLA for {self.ticket.ticket_number}"
+
+
+class CannedResponse(models.Model):
+    """Predefined reply templates for technicians."""
+    title = models.CharField(max_length=100)
+    content = models.TextField(help_text="The reply text (supports basic HTML).")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
