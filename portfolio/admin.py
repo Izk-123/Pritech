@@ -38,7 +38,7 @@ class PortfolioSettingsAdmin(ModelAdmin):
         ("Hero Section", {"fields": ("hero_title", "hero_subtitle", "hero_image")}),
         ("About Section", {"fields": ("about_title", "about_text", "about_image")}),
         ("Achievements Counters", {"fields": ("projects_count", "satisfaction_percent", "support_hours", "years_experience")}),
-        ("Social Links", {"fields": ("facebook_url", "twitter_url", "instagram_url", "linkedin_url")}),
+        ("Social Links", {"fields": ("facebook_url", "twitter_url", "instagram_url", "linkedin_url", "whatsapp_number")}),
         ("SEO & Meta", {"fields": ("meta_description", "meta_keywords")}),
         ("Footer", {"fields": ("footer_copyright",)}),
     )
