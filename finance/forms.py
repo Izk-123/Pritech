@@ -1,5 +1,5 @@
 from django import forms
-from .models import Invoice, InvoiceItem, Payment, Expense, Quotation, QuotationItem
+from .models import ClientSubscription, Invoice, InvoiceItem, Payment, Expense, Plan, Quotation, QuotationItem
 
 
 class InvoiceForm(forms.ModelForm):
@@ -52,3 +52,10 @@ QuotationItemFormSet = forms.inlineformset_factory(
     Quotation, QuotationItem, form=QuotationItemForm,
     extra=1, can_delete=True
 )
+
+class SubscriptionChangeForm(forms.ModelForm):
+    plan = forms.ModelChoiceField(queryset=Plan.objects.filter(is_active=True), label="Select Plan")
+
+    class Meta:
+        model = ClientSubscription
+        fields = ['plan']

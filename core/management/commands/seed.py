@@ -7,7 +7,9 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from tickets.models import Ticket  # <-- ADDED MISSING IMPORT
+from tickets.models import Ticket
+from finance.models import Plan, ClientSubscription
+from tickets.models import CannedResponse   # <-- added
 
 User = get_user_model()
 
@@ -70,8 +72,8 @@ class Command(BaseCommand):
         for user, role_code in [(admin_user, 'ADMIN'), (tech_user, 'TECHNICIAN'), (fin_user, 'FINANCE')]:
             UserRole.objects.get_or_create(user=user, role=roles[role_code])
 
-        # ── Client user + linked organization
-        client_user = self._create_user('client@acme.mw', 'James', 'Kalinda', 'client123', 'client', False)
+        # ── Client user + linked organization (with admin client_role)
+        client_user = self._create_user('client@acme.mw', 'James', 'Kalinda', 'client123', 'client', False, client_role='admin')
         UserRole.objects.get_or_create(user=client_user, role=roles['CLIENT'])
 
         from clients.models import ClientOrganization, ClientContact
@@ -102,6 +104,25 @@ class Command(BaseCommand):
             }
         )
         self.stdout.write('  ✓ Users created (including client org)')
+
+        # ── Subscription Plans
+        plans_data = [
+            {'name': 'Basic', 'monthly_price': 49.99, 'features': {'tickets': 5, 'storage_gb': 1}, 'is_active': True},
+            {'name': 'Pro', 'monthly_price': 99.99, 'features': {'tickets': 20, 'storage_gb': 5}, 'is_active': True},
+            {'name': 'Enterprise', 'monthly_price': 299.99, 'features': {'tickets': 'unlimited', 'storage_gb': 20}, 'is_active': True},
+        ]
+        plan_objects = {}
+        for pdata in plans_data:
+            plan, _ = Plan.objects.get_or_create(
+                name=pdata['name'],
+                defaults={
+                    'monthly_price': pdata['monthly_price'],
+                    'features': pdata['features'],
+                    'is_active': pdata['is_active']
+                }
+            )
+            plan_objects[plan.name] = plan
+        self.stdout.write('  ✓ Subscription plans created')
 
         # ── Service categories + services
         from services.models import ServiceCategory, Service
@@ -175,6 +196,43 @@ class Command(BaseCommand):
             )
         self.stdout.write('  ✓ Clients created')
 
+        # ── Assign subscriptions to clients
+        today = date.today()
+        for client in clients:
+            if ClientSubscription.objects.filter(client=client).exists():
+                continue
+            if client.name == 'Acme Corporation':
+                plan = plan_objects['Pro']
+            elif client.name in ['Malawi Revenue Authority', 'Standard Bank Malawi']:
+                plan = plan_objects['Enterprise']
+            else:
+                plan = plan_objects['Basic']
+            start_date = today - timedelta(days=random.randint(30, 90))
+            ClientSubscription.objects.create(
+                client=client,
+                plan=plan,
+                status='active',
+                start_date=start_date,
+                current_period_start=start_date,
+                current_period_end=start_date + timedelta(days=30),
+                cancel_at_period_end=False
+            )
+        self.stdout.write('  ✓ Subscriptions assigned to clients')
+
+        # ── Canned responses for tickets
+        canned_list = [
+            ('Greeting', 'Thank you for contacting support. We are looking into your issue.'),
+            ('Closing', 'We believe your issue has been resolved. Please reply if you need further assistance.'),
+            ('Need more info', 'Could you please provide more details or screenshots?'),
+            ('SLA reminder', 'This ticket is approaching its SLA deadline. Please provide an update.'),
+        ]
+        for title, content in canned_list:
+            CannedResponse.objects.get_or_create(
+                title=title,
+                defaults={'content': content, 'created_by': admin_user, 'is_active': True}
+            )
+        self.stdout.write('  ✓ Canned responses created')
+
         # ── Tickets (using service layer, which expects JSON for description)
         from tickets.services import TicketService
 
@@ -232,10 +290,10 @@ class Command(BaseCommand):
 
         self.stdout.write('  ✓ Tickets created with SLAs')
 
-        # ── Quotations (notes are Quill JSON)
+        # ── Quotations
         from finance.models import Quotation, QuotationItem
         from finance.services import QuotationService
-        today = date.today()
+
         quote_data = [
             (clients[0], [('Network Infrastructure Upgrade', 1, 250000), ('24/7 Monitoring Service', 12, 15000)], 'sent'),
             (clients[1], [('CCTV System with 8 Cameras', 1, 380000), ('Installation & Configuration', 1, 80000)], 'approved'),
@@ -279,8 +337,9 @@ class Command(BaseCommand):
                 quote.save()
         self.stdout.write('  ✓ Quotations created')
 
-        # ── Invoices (notes are Quill JSON)
+        # ── Invoices
         from finance.models import Invoice, InvoiceItem, Payment
+
         invoice_data = [
             (clients[0], [('Network Installation & Configuration', 1, 85000), ('Monthly Support Contract', 3, 15000)], 'paid'),
             (clients[1], [('Server Room Maintenance', 1, 120000), ('UPS Battery Replacement', 2, 35000)], 'paid'),
@@ -336,6 +395,7 @@ class Command(BaseCommand):
 
         # ── Expenses
         from finance.models import Expense
+
         for cat, desc, amount in [
             ('salaries', 'Staff salaries – October', 850000),
             ('equipment', 'Network switches purchase', 320000),
@@ -356,9 +416,9 @@ class Command(BaseCommand):
         self.stdout.write('  Admin:   admin@pritech.mw / admin123')
         self.stdout.write('  Tech:    tech@pritech.mw  / tech123')
         self.stdout.write('  Finance: finance@pritech.mw / fin123')
-        self.stdout.write('  Client:  client@acme.mw / client123')
+        self.stdout.write('  Client:  client@acme.mw / client123 (client_role=admin, active)')
 
-    def _create_user(self, email, first, last, password, user_type, is_superuser):
+    def _create_user(self, email, first, last, password, user_type, is_superuser, client_role=None):
         if User.objects.filter(email=email).exists():
             return User.objects.get(email=email)
         u = User(
@@ -367,6 +427,8 @@ class Command(BaseCommand):
             user_type=user_type, is_active=True,
             is_staff=is_superuser, is_superuser=is_superuser,
         )
+        if client_role is not None:
+            u.client_role = client_role
         u.set_password(password)
         u.save()
         return u

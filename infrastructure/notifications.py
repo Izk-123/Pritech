@@ -112,3 +112,12 @@ def _safe_send(subject, body, recipients):
         logging.getLogger('pritech.notifications').warning(
             f'Email send failed to {recipients}: {e}'
         )
+
+# infrastructure/notifications.py
+def send_sla_breach_notification(ticket):
+    from django.core.mail import send_mail
+    from core.models import SiteConfig
+    config = SiteConfig.get()
+    subject = f"SLA BREACH: Ticket {ticket.ticket_number}"
+    message = f"Ticket {ticket.ticket_number} ({ticket.title}) has exceeded its resolution due date."
+    send_mail(subject, message, config.email, [ticket.assigned_to.email, ticket.client.email], fail_silently=True)

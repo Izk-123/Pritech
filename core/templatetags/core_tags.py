@@ -1,3 +1,4 @@
+# core/templatetags/core_tags.py
 from django import template
 
 register = template.Library()
@@ -43,3 +44,15 @@ def active_nav(context, url_name):
     except NoReverseMatch:
         pass
     return ''
+
+
+@register.filter(name='has_any_role')
+def has_any_role(user, roles_str):
+    """
+    Check if the user has any of the roles given as a comma‑separated string.
+    Usage: {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
+    """
+    if not user or not user.is_authenticated:
+        return False
+    roles = [role.strip() for role in roles_str.split(',')]
+    return any(user.has_role(role) for role in roles)

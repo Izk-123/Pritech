@@ -1,10 +1,16 @@
+# finance/services.py
+import json
+import logging
 from datetime import date, timedelta
 from decimal import Decimal
+
 from django.conf import settings
 from django.db import transaction
-import json
+
 from .models import Invoice, InvoiceItem, Payment, Quotation, QuotationItem
 from infrastructure.notifications import notify_invoice_issued, notify_payment_received
+
+logger = logging.getLogger(__name__)
 
 
 def get_vat_rate():
@@ -17,6 +23,10 @@ class InvoiceService:
     @staticmethod
     @transaction.atomic
     def create_invoice(client, items_data, issue_date, due_date, ticket=None, notes='', created_by=None):
+        # Validate ticket belongs to client
+        if ticket and ticket.client != client:
+            raise ValueError('Ticket does not belong to the specified client.')
+
         invoice = Invoice.objects.create(
             client=client, ticket=ticket, issue_date=issue_date,
             due_date=due_date, notes=notes, created_by=created_by, status='draft'
@@ -67,6 +77,26 @@ class InvoiceService:
     def issue(invoice):
         if invoice.status != 'draft':
             raise ValueError('Only draft invoices can be issued.')
+
+        # Recalculate totals to ensure consistency
+        subtotal = sum(item.total for item in invoice.items.all())
+        vat = get_vat_rate()
+        tax = subtotal * vat
+        total = subtotal + tax
+
+        if (invoice.subtotal != subtotal or
+            invoice.tax_amount != tax or
+            invoice.total_amount != total):
+            # Auto-correct to actual values
+            invoice.subtotal = subtotal
+            invoice.tax_amount = tax
+            invoice.total_amount = total
+            invoice.save(update_fields=['subtotal', 'tax_amount', 'total_amount'])
+            logger.warning(
+                f"Invoice {invoice.invoice_number} totals were inconsistent and have been corrected. "
+                f"Old subtotal {invoice.subtotal} → {subtotal}, tax {invoice.tax_amount} → {tax}, total {invoice.total_amount} → {total}"
+            )
+
         invoice.status = 'issued'
         invoice.save(update_fields=['status'])
         notify_invoice_issued(invoice)
@@ -75,7 +105,6 @@ class InvoiceService:
 class QuotationService:
     @staticmethod
     def _ensure_quill_json(value):
-        """Convert plain text to Quill JSON if needed."""
         if value is None:
             return None
         if isinstance(value, str) and not value.strip().startswith('{'):
@@ -85,9 +114,7 @@ class QuotationService:
     @staticmethod
     @transaction.atomic
     def create_quotation(client, items_data, issue_date, valid_until, notes='', created_by=None):
-        # Convert notes to Quill JSON automatically
         notes_json = QuotationService._ensure_quill_json(notes)
-
         quotation = Quotation.objects.create(
             client=client, issue_date=issue_date, valid_until=valid_until,
             notes=notes_json, created_by=created_by, status='draft'
@@ -135,14 +162,21 @@ class QuotationService:
 
     @staticmethod
     def convert_to_invoice(quotation, created_by=None):
-        # Only approved quotations can be converted
         if quotation.status != 'approved':
             raise ValueError('Quotation must be approved by client before conversion to invoice.')
+
+        # Combine original notes with client feedback
+        notes_content = ""
+        if quotation.notes:
+            notes_content += quotation.notes
+        if quotation.client_feedback:
+            notes_content += f"\n\n<strong>Client feedback during approval:</strong><br>{quotation.client_feedback}"
+
         invoice = Invoice.objects.create(
             client=quotation.client,
             issue_date=date.today(),
             due_date=date.today() + timedelta(days=30),
-            notes=quotation.notes,
+            notes=notes_content,
             created_by=created_by,
             status='draft'
         )
