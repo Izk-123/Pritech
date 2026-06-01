@@ -281,7 +281,7 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": True,
-    "ENVIRONMENT": "Production" if not DEBUG else "Development",
+    "ENVIRONMENT": "Development" if DEBUG else "Production",
     "COLORS": {
         "primary": {
             "50": "238 242 255", "100": "224 231 255", "200": "199 210 255",
@@ -326,9 +326,37 @@ UNFOLD = {
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {"title": "Tickets", "icon": "support_agent", "link": reverse_lazy("admin:tickets_ticket_changelist")},
-                    {"title": "Attachments", "icon": "attach_file", "link": reverse_lazy("admin:tickets_ticketattachment_changelist")},
-                    {"title": "SLAs", "icon": "timer", "link": reverse_lazy("admin:tickets_ticketsla_changelist")},
+                    {
+                        "title": "Tickets",
+                        "icon": "support_agent",
+                        "link": reverse_lazy("admin:tickets_ticket_changelist"),
+                        "badge": "core.admin_badges.open_tickets",
+                    },
+                    {
+                        "title": "Comments",
+                        "icon": "chat",
+                        "link": reverse_lazy("admin:tickets_ticketcomment_changelist"),
+                    },
+                    {
+                        "title": "Work Logs",
+                        "icon": "clock_history",
+                        "link": reverse_lazy("admin:tickets_ticketworklog_changelist"),
+                    },
+                    {
+                        "title": "Attachments",
+                        "icon": "attach_file",
+                        "link": reverse_lazy("admin:tickets_ticketattachment_changelist"),
+                    },
+                    {
+                        "title": "SLAs",
+                        "icon": "timer",
+                        "link": reverse_lazy("admin:tickets_ticketsla_changelist"),
+                    },
+                    {
+                        "title": "Canned Responses",
+                        "icon": "reply_all",
+                        "link": reverse_lazy("admin:tickets_cannedresponse_changelist"),
+                    },
                 ],
             },
             {
@@ -363,10 +391,10 @@ UNFOLD = {
                     {"title": "Roles", "icon": "badge", "link": reverse_lazy("admin:accounts_role_changelist")},
                     {"title": "Permissions", "icon": "lock", "link": reverse_lazy("admin:accounts_permission_changelist")},
                     {"title": "Audit Logs", "icon": "history", "link": reverse_lazy("admin:accounts_userauditlog_changelist")},
-                    {"title": "Email Verification Tokens", "icon": "mark_email_read", "link": reverse_lazy("admin:accounts_emailverificationtoken_changelist")},
-                    {"title": "Invitation Tokens", "icon": "email", "link": reverse_lazy("admin:accounts_invitationtoken_changelist")},
                     {"title": "Social Applications", "icon": "share", "link": reverse_lazy("admin:socialaccount_socialapp_changelist")},
                     {"title": "Social Accounts", "icon": "people", "link": reverse_lazy("admin:socialaccount_socialaccount_changelist")},
+                    {"title": "Email Verification Tokens", "icon": "mark_email_read", "link": reverse_lazy("admin:accounts_emailverificationtoken_changelist")},
+                    {"title": "Invitation Tokens", "icon": "email", "link": reverse_lazy("admin:accounts_invitationtoken_changelist")},
                 ],
             },
             {
@@ -405,11 +433,21 @@ UNFOLD = {
             ],
         },
         {
-            "models": ["tickets.ticket", "tickets.ticketattachment", "tickets.ticketsla"],
+            "models": [
+                "tickets.ticket",
+                "tickets.ticketcomment",
+                "tickets.ticketworklog",
+                "tickets.ticketattachment",
+                "tickets.ticketsla",
+                "tickets.cannedresponse",
+            ],
             "items": [
                 {"title": "Tickets", "link": reverse_lazy("admin:tickets_ticket_changelist")},
+                {"title": "Comments", "link": reverse_lazy("admin:tickets_ticketcomment_changelist")},
+                {"title": "Work Logs", "link": reverse_lazy("admin:tickets_ticketworklog_changelist")},
                 {"title": "Attachments", "link": reverse_lazy("admin:tickets_ticketattachment_changelist")},
                 {"title": "SLAs", "link": reverse_lazy("admin:tickets_ticketsla_changelist")},
+                {"title": "Canned Responses", "link": reverse_lazy("admin:tickets_cannedresponse_changelist")}
             ],
         },
         {
@@ -423,29 +461,20 @@ UNFOLD = {
             ],
         },
         {
-            "models": ["portfolio.portfolioproject", "portfolio.inquiry", "portfolio.newslettersubscriber", "portfolio.portfoliosettings"],
+            "models": ["portfolio.portfolioproject", "portfolio.inquiry", "portfolio.newslettersubscriber"],
             "items": [
                 {"title": "Projects", "link": reverse_lazy("admin:portfolio_portfolioproject_changelist")},
                 {"title": "Inquiries", "link": reverse_lazy("admin:portfolio_inquiry_changelist")},
-                {"title": "Newsletter", "link": reverse_lazy("admin:portfolio_newslettersubscriber_changelist")},
-                {"title": "Portfolio Settings", "link": reverse_lazy("admin:portfolio_portfoliosettings_changelist")},
+                {"title": "Subscribers", "link": reverse_lazy("admin:portfolio_newslettersubscriber_changelist")},
             ],
         },
         {
-            "models": [
-                "accounts.user", "accounts.role", "accounts.permission",
-                "accounts.userrole", "accounts.rolepermission",
-                "accounts.emailverificationtoken", "accounts.invitationtoken",
-                "socialaccount.socialapp", "socialaccount.socialaccount"
-            ],
+            "models": ["accounts.user", "accounts.role", "accounts.permission", "accounts.userrole", "accounts.userrole", "socialaccount.socialapp", "socialaccount.socialaccount"],
             "items": [
                 {"title": "Users", "link": reverse_lazy("admin:accounts_user_changelist")},
                 {"title": "Roles", "link": reverse_lazy("admin:accounts_role_changelist")},
                 {"title": "Permissions", "link": reverse_lazy("admin:accounts_permission_changelist")},
                 {"title": "User Roles", "link": reverse_lazy("admin:accounts_userrole_changelist")},
-                {"title": "Role Permissions", "link": reverse_lazy("admin:accounts_rolepermission_changelist")},
-                {"title": "Email Verification Tokens", "link": reverse_lazy("admin:accounts_emailverificationtoken_changelist")},
-                {"title": "Invitation Tokens", "link": reverse_lazy("admin:accounts_invitationtoken_changelist")},
                 {"title": "Social Apps", "link": reverse_lazy("admin:socialaccount_socialapp_changelist")},
                 {"title": "Social Accounts", "link": reverse_lazy("admin:socialaccount_socialaccount_changelist")},
             ],
@@ -475,7 +504,6 @@ UNFOLD = {
         },
     ],
 }
-
 # -----------------------------------------------------------------------------
 # Quill Editor Configuration
 # -----------------------------------------------------------------------------
