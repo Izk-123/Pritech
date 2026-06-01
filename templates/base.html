@@ -2,7 +2,7 @@
 {% load account_tags %}
 {% load core_tags %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-bs-theme="light">
 
 <head>
   <meta charset="UTF-8">
@@ -22,28 +22,72 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'css/mobile-first.css' %}">
   {% block extra_css %}{% endblock %}
+
+  <style>
+    /* HTMX loading indicators */
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline-block; }
+    .spinner-border-sm { width: 1rem; height: 1rem; border-width: 0.2em; }
+
+    /* Skip to main content (accessibility) */
+    .visually-hidden-focusable:not(:focus) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .visually-hidden-focusable:focus {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: var(--bg-primary);
+      color: var(--primary);
+      padding: 0.5rem 1rem;
+      z-index: 2000;
+      text-decoration: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Back to top button */
+    .back-to-top {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      display: none;
+      z-index: 1000;
+    }
+    @media (max-width: 768px) {
+      .back-to-top { bottom: 70px; }
+    }
+  </style>
 </head>
 
 <body class="{% if request.user.is_authenticated %}sidebar-expanded{% endif %}">
 
-  <!-- ========== DESKTOP SIDEBAR ========== -->
+  <!-- Skip link for keyboard navigation -->
+  <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
+
+  <!-- ========== DESKTOP SIDEBAR (only for authenticated users) ========== -->
+  {% if request.user.is_authenticated %}
   <aside class="desktop-sidebar d-none d-lg-flex">
     <div class="sidebar-header">
       <div class="d-flex align-items-center justify-content-between mb-3">
         <div class="d-flex align-items-center gap-2">
-          <div class="brand-icon">
-            <span class="fw-bold">PT</span>
-          </div>
+          <div class="brand-icon"><span class="fw-bold">PT</span></div>
           <span class="fw-bold brand-name">{{ site_config.company_name|truncatechars:16 }}</span>
         </div>
-        <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button" data-bs-toggle="tooltip"
-          title="Collapse sidebar">
+        <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button"
+                data-bs-toggle="tooltip" title="Collapse sidebar" aria-label="Collapse sidebar">
           <i class="bi bi-chevron-double-left"></i>
         </button>
       </div>
-      <a href="{% url 'ticket_create' %}" class="new-chat-btn">
-        <i class="bi bi-plus-circle"></i> New Ticket
-      </a>
+      <a href="{% url 'ticket_create' %}" class="new-chat-btn"><i class="bi bi-plus-circle"></i> New Ticket</a>
     </div>
 
     <div class="sidebar-search">
@@ -51,24 +95,46 @@
     </div>
 
     <div class="sidebar-nav-section">
+      <!-- Main navigation -->
       <div class="nav-label">Main</div>
       <a href="{% url 'dashboard' %}" class="ai-nav-link"><i class="bi bi-house"></i> Dashboard</a>
-      <a href="{% url 'client_list' %}" class="ai-nav-link"><i class="bi bi-people"></i> Clients</a>
+
+      <!-- Staff with appropriate roles: full client list (using custom filter) -->
+      {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
+        <a href="{% url 'client_list' %}" class="ai-nav-link"><i class="bi bi-people"></i> Clients</a>
+      {% endif %}
+
+      <!-- Clients: their own organization (if linked) -->
+      {% if request.user.user_type == 'client' and request.user.client_organization %}
+        <a href="{% url 'client_detail' request.user.client_organization.pk %}" class="ai-nav-link">
+          <i class="bi bi-building"></i> My Organization
+        </a>
+      {% endif %}
+
       <a href="{% url 'ticket_list' %}" class="ai-nav-link"><i class="bi bi-chat-text"></i> Tickets</a>
 
-      {# ---------- CLIENT SERVICE CATALOG ---------- #}
+      <!-- Client‑specific: Service Catalog -->
       {% if request.user.user_type == 'client' %}
         <a href="{% url 'client_service_catalog' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> Service Catalog</a>
       {% endif %}
 
-      {# ---------- CLIENT FINANCE SECTION ---------- #}
+      <!-- Client: My Finance -->
       {% if request.user.user_type == 'client' and request.user.client_organization %}
         <div class="nav-label mt-3">My Finance</div>
         <a href="{% url 'client_invoice_list' %}" class="ai-nav-link"><i class="bi bi-receipt"></i> My Invoices</a>
         <a href="{% url 'client_quotation_list' %}" class="ai-nav-link"><i class="bi bi-file-earmark-text"></i> My Quotations</a>
+        <a href="{% url 'client_subscription_detail' %}" class="ai-nav-link"><i class="bi bi-calendar-check"></i> My Subscription</a>
       {% endif %}
 
-      {# ---------- SERVICES SECTION (Staff only) ---------- #}
+      <!-- Client: Administration (self-service) -->
+      {% if request.user.user_type == 'client' and request.user.client_organization %}
+        <div class="nav-label mt-3">Administration</div>
+        <a href="{% url 'client_team' %}" class="ai-nav-link"><i class="bi bi-people"></i> Team Members</a>
+        <a href="{% url 'client_profile_edit' %}" class="ai-nav-link"><i class="bi bi-person-circle"></i> Edit Profile</a>
+        <a href="{% url 'client_audit_log' %}" class="ai-nav-link"><i class="bi bi-journal-text"></i> Audit Log</a>
+      {% endif %}
+
+      <!-- Staff: Services Management -->
       {% if request.user.is_staff %}
         <div class="nav-label mt-3">Services</div>
         <a href="{% url 'service_list' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> All Services</a>
@@ -76,15 +142,21 @@
         <a href="{% url 'service_package_list' %}" class="ai-nav-link"><i class="bi bi-box"></i> Packages</a>
       {% endif %}
 
-      {# ---------- FINANCE SECTION (role‑aware for staff) ---------- #}
+      <!-- Staff: Finance Management -->
       {% if request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
         <div class="nav-label mt-3">Finance</div>
         <a href="{% url 'quotation_list' %}" class="ai-nav-link"><i class="bi bi-file-earmark-text"></i> Quotations</a>
         <a href="{% url 'invoice_list' %}" class="ai-nav-link"><i class="bi bi-receipt"></i> Invoices</a>
-        <a href="{% url 'expense_list' %}" class="ai-nav-link"><i class="bi bi-cash-stack"></i> Expenses</a>
+        <a href="{% url 'expense_list' %}?status=pending" class="ai-nav-link">
+          <i class="bi bi-cash-stack"></i> Expenses
+          {% if pending_expenses_count %}
+            <span class="badge bg-warning ms-2">{{ pending_expenses_count }}</span>
+          {% endif %}
+        </a>
         <a href="{% url 'finance_reports' %}" class="ai-nav-link"><i class="bi bi-bar-chart-line"></i> Reports</a>
       {% endif %}
 
+      <!-- Recent items (shared) -->
       <div class="recent-section">
         <div class="nav-label">Recent Tickets</div>
         {% if recent_sidebar_tickets %}
@@ -111,8 +183,9 @@
         {% endif %}
       </div>
 
-      {# ---------- SYSTEM SECTION (staff / admin only) ---------- #}
+      <!-- System (shared) -->
       <div class="nav-label mt-3">System</div>
+      <a href="{% url 'profile' %}" class="ai-nav-link"><i class="bi bi-person-circle"></i> My Profile</a>
       <a href="{% url 'home' %}" class="ai-nav-link"><i class="bi bi-globe"></i> Public Site</a>
       {% if request.user.is_staff %}
         <a href="{% url 'admin:index' %}" class="ai-nav-link"><i class="bi bi-shield"></i> Admin</a>
@@ -121,7 +194,7 @@
       {% endif %}
     </div>
 
-    <!-- Footer with user profile -->
+    <!-- Sidebar footer (user info + logout) -->
     <div class="sidebar-footer">
       <div class="user-profile">
         <div class="user-avatar">
@@ -133,69 +206,91 @@
         </div>
         <form method="post" action="{% url 'logout' %}" class="ms-auto">
           {% csrf_token %}
-          <button type="submit" class="logout-btn" data-bs-toggle="tooltip" title="Logout">
+          <button type="submit" class="logout-btn" data-bs-toggle="tooltip" title="Logout" aria-label="Logout">
             <i class="bi bi-box-arrow-right"></i>
           </button>
         </form>
       </div>
     </div>
   </aside>
+  {% endif %}
 
   <!-- ========== TOPBAR ========== -->
   <header class="topbar sticky-top {% if request.user.is_authenticated %}topbar-desktop{% endif %}">
     <div class="d-flex align-items-center h-100 px-3">
+      {% if request.user.is_authenticated %}
       <button class="desktop-menu-btn d-none d-lg-block me-2" id="desktopMenuToggle" type="button"
-        data-bs-toggle="tooltip" title="Toggle sidebar">
+              data-bs-toggle="tooltip" title="Toggle sidebar" aria-label="Toggle sidebar">
         <i class="bi bi-list fs-5"></i>
       </button>
       <button class="mobile-menu-btn d-lg-none me-2" type="button" data-bs-toggle="offcanvas"
-        data-bs-target="#mobileSidebar">
+              data-bs-target="#mobileSidebar" aria-label="Open menu">
         <i class="bi bi-list fs-5"></i>
       </button>
+      {% endif %}
 
       <span class="page-title fw-semibold flex-grow-1">{% block page_title %}Dashboard{% endblock %}</span>
 
-      <button class="theme-toggle-btn me-2" id="themeToggle" type="button" data-bs-toggle="tooltip"
-        title="Switch theme">
+      <button class="theme-toggle-btn me-2" id="themeToggle" type="button"
+              data-bs-toggle="tooltip" title="Switch theme" aria-label="Switch dark/light mode">
         <i class="bi bi-sun-fill light-icon"></i>
         <i class="bi bi-moon-stars-fill dark-icon"></i>
       </button>
 
+      {% if request.user.is_authenticated %}
       <a href="{% url 'ticket_create' %}" class="btn btn-primary btn-sm rounded-pill px-3 d-none d-sm-block">
         <i class="bi bi-plus-lg me-1"></i> New Ticket
       </a>
-      <a href="{% url 'ticket_create' %}" class="btn btn-primary btn-sm rounded-circle d-sm-none">
+      <a href="{% url 'ticket_create' %}" class="btn btn-primary btn-sm rounded-circle d-sm-none" aria-label="New Ticket">
         <i class="bi bi-plus-lg"></i>
       </a>
+      {% endif %}
     </div>
   </header>
 
-  <!-- ========== MOBILE OFFCANVAS DRAWER ========== -->
+  <!-- ========== MOBILE OFFCANVAS DRAWER (only for authenticated users) ========== -->
+  {% if request.user.is_authenticated %}
   <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" style="width: 280px;">
     <div class="offcanvas-header bg-primary text-white">
       <h5 class="offcanvas-title fw-bold">PT</h5>
-      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0">
       <nav class="nav flex-column p-2">
         <div class="px-3 py-2 text-muted small fw-semibold">MAIN</div>
         <a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-grid me-2"></i>Dashboard</a>
-        <a href="{% url 'client_list' %}" class="nav-link"><i class="bi bi-building me-2"></i>Clients</a>
+
+        <!-- Role‑based client list in mobile menu -->
+        {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
+          <a href="{% url 'client_list' %}" class="nav-link"><i class="bi bi-building me-2"></i>Clients</a>
+        {% endif %}
+
+        <!-- Clients: their own organization -->
+        {% if request.user.user_type == 'client' and request.user.client_organization %}
+          <a href="{% url 'client_detail' request.user.client_organization.pk %}" class="nav-link">
+            <i class="bi bi-building me-2"></i>My Organization
+          </a>
+        {% endif %}
+
         <a href="{% url 'ticket_list' %}" class="nav-link"><i class="bi bi-ticket me-2"></i>Tickets</a>
 
-        {# Client service catalog in mobile menu #}
         {% if request.user.user_type == 'client' %}
           <a href="{% url 'client_service_catalog' %}" class="nav-link"><i class="bi bi-grid-3x3 me-2"></i>Service Catalog</a>
         {% endif %}
 
-        {# Client finance links in mobile menu #}
+        <!-- Client finance -->
         {% if request.user.user_type == 'client' and request.user.client_organization %}
           <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">MY FINANCE</div>
           <a href="{% url 'client_invoice_list' %}" class="nav-link"><i class="bi bi-receipt me-2"></i>My Invoices</a>
           <a href="{% url 'client_quotation_list' %}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>My Quotations</a>
+          <a href="{% url 'client_subscription_detail' %}" class="nav-link"><i class="bi bi-calendar-check me-2"></i>My Subscription</a>
+          <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">ADMINISTRATION</div>
+          <a href="{% url 'client_team' %}" class="nav-link"><i class="bi bi-people me-2"></i>Team Members</a>
+          <a href="{% url 'client_profile_edit' %}" class="nav-link"><i class="bi bi-person-circle me-2"></i>Edit Profile</a>
+          <a href="{% url 'client_audit_log' %}" class="nav-link"><i class="bi bi-journal-text me-2"></i>Audit Log</a>
         {% endif %}
 
-        {# Services for staff only in mobile #}
+        <!-- Staff services -->
         {% if request.user.is_staff %}
           <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">SERVICES</div>
           <a href="{% url 'service_list' %}" class="nav-link"><i class="bi bi-grid-3x3 me-2"></i>All Services</a>
@@ -203,15 +298,20 @@
           <a href="{% url 'service_package_list' %}" class="nav-link"><i class="bi bi-box me-2"></i>Packages</a>
         {% endif %}
 
+        <!-- Staff finance -->
         {% if request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
           <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">FINANCE</div>
           <a href="{% url 'quotation_list' %}" class="nav-link"><i class="bi bi-file-earmark-text me-2"></i>Quotations</a>
           <a href="{% url 'invoice_list' %}" class="nav-link"><i class="bi bi-receipt me-2"></i>Invoices</a>
-          <a href="{% url 'expense_list' %}" class="nav-link"><i class="bi bi-cash-stack me-2"></i>Expenses</a>
+          <a href="{% url 'expense_list' %}?status=pending" class="nav-link">
+            <i class="bi bi-cash-stack me-2"></i>Expenses
+            {% if pending_expenses_count %}<span class="badge bg-warning ms-2">{{ pending_expenses_count }}</span>{% endif %}
+          </a>
           <a href="{% url 'finance_reports' %}" class="nav-link"><i class="bi bi-bar-chart-line me-2"></i>Reports</a>
         {% endif %}
 
         <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">SYSTEM</div>
+        <a href="{% url 'profile' %}" class="nav-link"><i class="bi bi-person-circle me-2"></i>My Profile</a>
         <a href="{% url 'home' %}" class="nav-link"><i class="bi bi-globe me-2"></i>Public Site</a>
         {% if request.user.is_staff %}
           <a href="{% url 'admin:index' %}" class="nav-link"><i class="bi bi-gear me-2"></i>Admin</a>
@@ -227,15 +327,16 @@
       </nav>
     </div>
   </div>
+  {% endif %}
 
   <!-- ========== MAIN CONTENT ========== -->
-  <main class="main-content pb-5 mb-4 {% if request.user.is_authenticated %}main-content-desktop{% endif %}">
+  <main id="main-content" class="main-content pb-6 mb-4 {% if request.user.is_authenticated %}main-content-desktop{% endif %}">
     <div class="container-fluid py-3">
       {% if messages %}
         {% for msg in messages %}
           <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
             {{ msg }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
         {% endfor %}
       {% endif %}
@@ -245,27 +346,44 @@
     </div>
   </main>
 
-  <!-- ========== BOTTOM NAVIGATION (Mobile) ========== -->
+  <!-- ========== BOTTOM NAVIGATION (mobile) ========== -->
+  {% if request.user.is_authenticated %}
   <nav class="bottom-nav d-lg-none fixed-bottom">
     <div class="bottom-nav-inner">
       <a href="{% url 'dashboard' %}" class="bottom-link"><i class="bi bi-grid"></i><span>Home</span></a>
-      <a href="{% url 'client_list' %}" class="bottom-link"><i class="bi bi-building"></i><span>Clients</span></a>
+
+      <!-- Role‑based client link in bottom navigation -->
+      {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
+        <a href="{% url 'client_list' %}" class="bottom-link"><i class="bi bi-building"></i><span>Clients</span></a>
+      {% elif request.user.user_type == 'client' and request.user.client_organization %}
+        <a href="{% url 'client_detail' request.user.client_organization.pk %}" class="bottom-link">
+          <i class="bi bi-building"></i><span>My Org</span>
+        </a>
+      {% else %}
+        <a href="{% url 'ticket_list' %}" class="bottom-link"><i class="bi bi-ticket"></i><span>Tickets</span></a>
+      {% endif %}
+
       <a href="{% url 'ticket_list' %}" class="bottom-link"><i class="bi bi-ticket"></i><span>Tickets</span></a>
 
-      {# For clients: add Service Catalog to bottom nav #}
-      {% if request.user.user_type == 'client' %}
-        <a href="{% url 'client_service_catalog' %}" class="bottom-link"><i class="bi bi-grid-3x3"></i><span>Services</span></a>
+      {% if request.user.user_type == 'client' and request.user.client_organization %}
+        <a href="{% url 'client_subscription_detail' %}" class="bottom-link"><i class="bi bi-calendar-check"></i><span>Plan</span></a>
       {% elif request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
         <a href="{% url 'invoice_list' %}" class="bottom-link"><i class="bi bi-receipt"></i><span>Finance</span></a>
       {% else %}
         <a href="{% url 'ticket_list' %}" class="bottom-link"><i class="bi bi-receipt"></i><span>Finance</span></a>
       {% endif %}
 
-      <button class="bottom-link" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+      <button class="bottom-link" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-label="Menu">
         <i class="bi bi-list"></i><span>Menu</span>
       </button>
     </div>
   </nav>
+  {% endif %}
+
+  <!-- Back to Top Button -->
+  <button id="back-to-top" class="btn btn-primary rounded-circle shadow back-to-top" aria-label="Back to top">
+    <i class="bi bi-arrow-up"></i>
+  </button>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -277,12 +395,14 @@
       const desktopToggle = document.getElementById('desktopMenuToggle');
       const themeToggle = document.getElementById('themeToggle');
       const topbar = document.querySelector('.topbar');
+      const backToTopBtn = document.getElementById('back-to-top');
 
+      // Topbar shadow and back‑to‑top visibility
       window.addEventListener('scroll', () => {
-        if (window.scrollY > 10) {
-          topbar?.classList.add('scrolled');
-        } else {
-          topbar?.classList.remove('scrolled');
+        if (window.scrollY > 10) topbar?.classList.add('scrolled');
+        else topbar?.classList.remove('scrolled');
+        if (backToTopBtn) {
+          backToTopBtn.style.display = window.scrollY > 300 ? 'flex' : 'none';
         }
       });
 
@@ -290,7 +410,6 @@
         body.classList.toggle('sidebar-collapsed');
         const isCollapsed = body.classList.contains('sidebar-collapsed');
         localStorage.setItem('sidebarCollapsed', isCollapsed);
-
         const icon = collapseBtn?.querySelector('i');
         if (icon) {
           if (isCollapsed) {
@@ -306,7 +425,6 @@
           if (tooltip) tooltip.dispose();
           new bootstrap.Tooltip(collapseBtn);
         }
-
         if (desktopToggle) {
           desktopToggle.setAttribute('title', isCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
           const tooltip = bootstrap.Tooltip.getInstance(desktopToggle);
@@ -330,6 +448,7 @@
 
       function setTheme(theme) {
         html.setAttribute('data-theme', theme);
+        html.setAttribute('data-bs-theme', theme);
         localStorage.setItem('theme', theme);
         const lightIcon = document.querySelector('.light-icon');
         const darkIcon = document.querySelector('.dark-icon');
@@ -357,6 +476,7 @@
         });
       }
 
+      // Active navigation link
       const path = window.location.pathname;
       document.querySelectorAll('.ai-nav-link, .bottom-link, .offcanvas .nav-link').forEach(link => {
         const href = link.getAttribute('href');
@@ -366,13 +486,36 @@
         }
       });
 
+      // Initial tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
 
+      // Re‑initialize tooltips after HTMX content swap
+      document.body.addEventListener('htmx:afterSwap', function() {
+        var newTooltipTriggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        newTooltipTriggers.map(el => new bootstrap.Tooltip(el));
+      });
+
+      // Staggered animation for table rows
       document.querySelectorAll('.modern-table tbody tr').forEach((el, index) => {
         el.classList.add('stagger-item');
         el.style.animationDelay = `${index * 0.05}s`;
       });
+
+      // HTMX CSRF protection
+      document.body.addEventListener('htmx:configRequest', function(event) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (csrfToken) {
+          event.detail.headers['X-CSRFToken'] = csrfToken;
+        }
+      });
+
+      // Back to top click
+      if (backToTopBtn) {
+        backToTopBtn.addEventListener('click', () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      }
     })();
   </script>
   {% block extra_js %}{% endblock %}

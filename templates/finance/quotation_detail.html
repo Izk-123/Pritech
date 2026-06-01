@@ -13,12 +13,16 @@
     </span>
   </div>
   <div class="d-flex gap-2">
-    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
+    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Print</button>
     {% if quotation.status == 'draft' %}
       <a href="{% url 'quotation_update' quotation.pk %}" class="btn btn-primary">Edit</a>
       <form method="post" action="{% url 'quotation_send' quotation.pk %}" class="d-inline">
         {% csrf_token %}
         <button type="submit" class="btn btn-success">Send to Client</button>
+      </form>
+      <form method="post" action="{% url 'quotation_duplicate' quotation.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-files"></i> Duplicate</button>
       </form>
     {% elif quotation.status == 'sent' %}
       <form method="post" action="{% url 'quotation_send' quotation.pk %}" class="d-inline">
@@ -26,7 +30,7 @@
         <button type="submit" class="btn btn-secondary" disabled>Already Sent</button>
       </form>
       {% if perms.finance.can_convert_quotation %}
-      <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline" onsubmit="return confirm('Convert this quotation to an invoice? This action cannot be undone.');">
+      <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline" onsubmit="return confirm('Convert this quotation to an invoice?');">
         {% csrf_token %}
         <button type="submit" class="btn btn-warning">Convert to Invoice</button>
       </form>
@@ -40,13 +44,13 @@
   </div>
 </div>
 
-{# --- Display client feedback if quotation was rejected --- #}
+{# Display client feedback if any #}
 {% if quotation.status == 'rejected' and quotation.client_feedback %}
 <div class="alert alert-warning">
   <strong><i class="bi bi-chat-dots"></i> Client rejection reason / change request:</strong>
   <div class="mt-2">{{ quotation.client_feedback|linebreaks }}</div>
   <hr>
-  <small>Use the "Edit" button above to revise the quotation and send again.</small>
+  <small>Use the "Edit" button above to revise and send again.</small>
 </div>
 {% endif %}
 
@@ -54,75 +58,50 @@
   <div class="card-body p-4 p-md-5">
     <div class="row mb-4">
       <div class="col-sm-6">
-        <img src="{% static 'images/logo.png' %}" alt="{{ config.company_name }}"
-             style="max-height: 70px; width: auto; margin-bottom: 10px; display: block;"
-             onerror="this.style.display='none'; this.nextSibling.style.display='block';">
-        <h2 class="fw-bold text-primary" style="display: inline-block;">{{ config.company_name }}</h2>
-        {% if config.address %}<div class="small text-muted">{{ config.address|linebreaksbr }}</div>{% endif %}
-        {% if config.email %}<div class="small">{{ config.email }}</div>{% endif %}
-        {% if config.phone %}<div class="small">{{ config.phone }}</div>{% endif %}
+        <img src="{% static 'images/logo.png' %}" alt="{{ config.company_name }}" style="max-height:70px;">
+        <h2 class="fw-bold text-primary">{{ config.company_name }}</h2>
+        <!-- address, email, phone -->
       </div>
       <div class="col-sm-6 text-sm-end">
         <div class="display-6 fw-bold text-primary">QUOTATION</div>
         <div class="fs-5 fw-semibold">{{ quotation.quotation_number }}</div>
       </div>
     </div>
-
+    <!-- Bill to / details / items table / totals / notes -->
     <div class="row mb-4">
       <div class="col-sm-6">
-        <div class="text-uppercase small fw-semibold text-muted mb-2">Prepared For</div>
+        <div class="text-uppercase small fw-semibold text-muted">Prepared For</div>
         <h5 class="fw-bold">{{ quotation.client.name }}</h5>
         {% if quotation.client.address %}<div class="small">{{ quotation.client.address|linebreaksbr }}</div>{% endif %}
         {% if quotation.client.email %}<div class="small">{{ quotation.client.email }}</div>{% endif %}
       </div>
       <div class="col-sm-6 text-sm-end">
-        <div class="text-uppercase small fw-semibold text-muted mb-2">Details</div>
-        <div class="d-flex justify-content-sm-end gap-3 small"><span class="text-muted">Issue Date:</span><span>{{ quotation.issue_date }}</span></div>
-        <div class="d-flex justify-content-sm-end gap-3 small"><span class="text-muted">Valid Until:</span><span class="{% if quotation.valid_until < today %}text-danger{% endif %}">{{ quotation.valid_until }}</span></div>
+        <div class="text-uppercase small fw-semibold text-muted">Details</div>
+        <div class="small">Issue Date: {{ quotation.issue_date }}</div>
+        <div class="small">Valid Until: {{ quotation.valid_until }}</div>
       </div>
     </div>
-
     <div class="table-responsive mb-4">
       <table class="table table-bordered">
-        <thead class="table-dark">
-          <tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr>
-        </thead>
+        <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
         <tbody>
           {% for item in items %}
-          <tr>
-            <td>{{ item.description }}</td>
-            <td class="text-end">{{ item.quantity }}</td>
-            <td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
-            <td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
-          </tr>
+          <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
           {% empty %}
-          <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td></tr>
+          <tr><td colspan="4">No items added</td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-
     <div class="d-flex justify-content-end">
       <div style="width: 300px;">
-        <div class="d-flex justify-content-between py-1"><span>Subtotal</span><span>{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span></div>
-        <div class="d-flex justify-content-between py-1 border-bottom"><span>VAT</span><span>{{ config.currency_symbol }}{{ quotation.tax_amount|floatformat:2 }}</span></div>
-        <div class="d-flex justify-content-between py-2 fs-5 fw-bold"><span>Total</span><span>{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span></div>
+        <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span></div>
+        <div class="d-flex justify-content-between border-bottom"><span>VAT</span><span>{{ config.currency_symbol }}{{ quotation.tax_amount|floatformat:2 }}</span></div>
+        <div class="d-flex justify-content-between fs-5 fw-bold"><span>Total</span><span>{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span></div>
       </div>
     </div>
-
-    {% if quotation.notes %}<div class="mt-4 p-3 bg-body-tertiary rounded small">{{ quotation.notes }}</div>{% endif %}
-    <div class="mt-4 small text-muted">This quotation is valid until {{ quotation.valid_until }}. Prices and availability are subject to change after this date.</div>
+    {% if quotation.notes %}<div class="mt-4 p-3 bg-light">{{ quotation.notes }}</div>{% endif %}
+    <div class="mt-4 small text-muted">Valid until {{ quotation.valid_until }}.</div>
   </div>
 </div>
-
-<style>
-  @media print {
-    .sidebar, .topbar, .bottom-nav, .page-header .btn, .page-header form, .btn, .alert { display: none !important; }
-    .main-content, .container-fluid, .card, #quotation-doc, .card-body { display: block !important; visibility: visible !important; margin: 0 !important; padding: 0.5cm !important; width: 100% !important; }
-    .table-bordered, .table-bordered th, .table-bordered td { border: 1px solid #ccc !important; }
-    img { max-height: 50px !important; }
-    #quotation-doc { page-break-inside: avoid; }
-    .text-primary, .fw-bold, h1, h2, h3 { color: black !important; }
-  }
-</style>
 {% endblock %}

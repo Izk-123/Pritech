@@ -1,332 +1,585 @@
+{% extends "portfolio/base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>{{ portfolio_settings.hero_title|default:"SEO Master" }} | ICT Solutions</title>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  
-  <!-- SEO Meta Tags -->
-  <meta name="description" content="{{ portfolio_settings.meta_description|default:'All-in-one SEO tool to grow your business rapidly. Expert ICT solutions with 10 years of experience.' }}">
-  <meta name="keywords" content="{{ portfolio_settings.meta_keywords|default:'SEO, ICT solutions, digital marketing, web development, Malawi' }}">
-  <meta name="author" content="{{ site_config.company_name|default:'PRITECH' }}">
-  <meta name="copyright" content="{{ site_config.company_name|default:'PRITECH' }}">
-  <meta name="robots" content="index, follow">
-  <meta name="language" content="English">
-  
-  <!-- Canonical URL -->
-  <link rel="canonical" href="{{ request.build_absolute_uri }}">
-  
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="{{ request.build_absolute_uri }}">
-  <meta property="og:title" content="{{ portfolio_settings.hero_title|default:'SEO Master - ICT Solutions' }}">
-  <meta property="og:description" content="{{ portfolio_settings.meta_description|default:'All-in-one SEO tool to grow your business rapidly.' }}">
-  <meta property="og:image" content="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}">
-  <meta property="og:image:alt" content="{{ portfolio_settings.hero_title|default:'ICT Solutions Hero Image' }}">
-  <meta property="og:site_name" content="{{ site_config.company_name|default:'SEO Master' }}">
-  <meta property="og:locale" content="en_US">
-  
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="{{ request.build_absolute_uri }}">
-  <meta name="twitter:title" content="{{ portfolio_settings.hero_title|default:'SEO Master - ICT Solutions' }}">
-  <meta name="twitter:description" content="{{ portfolio_settings.meta_description|default:'Expert ICT solutions to grow your business.' }}">
-  <meta name="twitter:image" content="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}">
-  
-  <!-- Favicon -->
-  <link href="{% static 'images/logo.png' %}" rel="icon">
-  
-  <!-- Preconnect for faster external resources -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com">
-  
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-  
-  <!-- Libraries & Custom CSS -->
-  <link href="{% static 'lib/animate/animate.min.css' %}" rel="stylesheet">
-  <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
-  <link href="{% static 'css/style.css' %}" rel="stylesheet">
-  
-  <script src="https://cdn.jsdelivr.net/gh/studio-freight/lenis@1.0.27/bundled/lenis.min.js"></script>
-  
-  <!-- Structured Data (JSON-LD) - Organization + LocalBusiness + BreadcrumbList -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": "{{ request.build_absolute_uri }}#organization",
-        "name": "{{ site_config.company_name|default:'SEO Master' }}",
-        "url": "{{ request.build_absolute_uri }}",
-        "logo": "{% static 'images/logo.png' %}",
-        "sameAs": [
-          "{% if portfolio_settings.facebook_url %}{{ portfolio_settings.facebook_url }}{% endif %}",
-          "{% if portfolio_settings.twitter_url %}{{ portfolio_settings.twitter_url }}{% endif %}",
-          "{% if portfolio_settings.instagram_url %}{{ portfolio_settings.instagram_url }}{% endif %}",
-          "{% if portfolio_settings.linkedin_url %}{{ portfolio_settings.linkedin_url }}{% endif %}"
-        ],
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "telephone": "{{ site_config.phone|default:'+265888888888' }}",
-          "contactType": "customer service",
-          "availableLanguage": ["English"]
-        }
-      },
-      {
-        "@type": "LocalBusiness",
-        "parentOrganization": { "@id": "{{ request.build_absolute_uri }}#organization" },
-        "name": "{{ site_config.company_name|default:'SEO Master' }}",
-        "image": "{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}",
-        "description": "{{ portfolio_settings.meta_description|default:'ICT solutions provider in Malawi.' }}",
-        "address": {
-          "@type": "PostalAddress",
-          "streetAddress": "{{ site_config.address|default:'123 ICT Street' }}",
-          "addressLocality": "Lilongwe",
-          "addressCountry": "MW"
-        },
-        "telephone": "{{ site_config.phone|default:'+265888888888' }}",
-        "priceRange": "$$"
-      },
-      {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ request.build_absolute_uri }}" },
-          { "@type": "ListItem", "position": 2, "name": "Services", "item": "{{ request.build_absolute_uri }}#services" },
-          { "@type": "ListItem", "position": 3, "name": "Contact", "item": "{{ request.build_absolute_uri }}#contact" }
-        ]
-      }
-    ]
-  }
-  </script>
-</head>
-<body>
-<div class="reading-progress-bar"></div>
-<a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
-<div class="container-fluid bg-white p-0">
-  <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
-    <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status"><span class="sr-only">Loading...</span></div>
-  </div>
 
-  <div class="container-fluid position-relative p-0">
-    <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
-      <a href="{% url 'home' %}" class="navbar-brand p-0">
-        <img src="{% static 'images/logoDark.png' %}" alt="Logo" class="logo-dark" style="max-height: 70px;">
-        <img src="{% static 'images/logo.png' %}" alt="Logo" class="logo-light" style="max-height: 70px;">
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-label="Toggle navigation">
-        <span class="fa fa-bars"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarCollapse">
-        <div class="navbar-nav ms-auto py-0">
-          <a href="#home" class="nav-item nav-link active">Home</a>
-          <a href="#about" class="nav-item nav-link">About</a>
-          <a href="#services" class="nav-item nav-link">Service</a>
-          <a href="#projects" class="nav-item nav-link">Project</a>
-          <a href="#contact" class="nav-item nav-link">Contact</a>
+{% block title %}{{ portfolio_settings.hero_title|default:"Smart ICT Solutions – Pritech" }}{% endblock %}
+{% block meta_description %}{{ portfolio_settings.meta_description|default:"Pritech ICT Solutions delivers managed IT, custom software, and digital transformation for modern businesses in Malawi." }}{% endblock %}
+
+{% block content %}
+
+<!-- {# ══════════════════════════════════════════════════════ HERO SECTION══════════════════════════════════════════════════════ #} -->
+<section class="hero" id="home" aria-labelledby="hero-heading">
+  <div class="container">
+    <div class="hero-content">
+
+      {# Text side #}
+      <div class="hero-text">
+
+        <div class="hero-eyebrow reveal">
+          <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          Malawi's Leading ICT Partner
         </div>
-        <div class="dark-mode-toggle ms-3"><i class="fas fa-moon"></i></div>
-        {% if request.user.is_authenticated %}
-        <a href="{% url 'dashboard' %}" class="btn btn-secondary text-light rounded-pill py-2 px-4 ms-3">Dashboard</a>
-        {% else %}
-        <a href="{% url 'login' %}" class="btn btn-secondary text-light rounded-pill py-2 px-4 ms-3">Login</a>
-        {% endif %}
-      </div>
-    </nav>
 
-    <div class="container-fluid py-5 bg-primary hero-header mb-5" id="home">
-      <div class="bg-glow-orb" style="position: absolute; top: -20%; left: -10%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(71,119,245,0.4) 0%, rgba(33,36,177,0) 70%); filter: blur(60px); z-index: 0;"></div>
-      <div class="bg-glow-orb" style="position: absolute; bottom: -20%; right: -10%; width: 600px; height: 600px; background: radial-gradient(circle, rgba(33,36,177,0.3) 0%, rgba(0,0,0,0) 70%); filter: blur(70px); z-index: 0;"></div>
-      <div class="container my-5 py-5 px-lg-5 position-relative" style="z-index: 2;">
-        <div class="row g-5 align-items-center">
-          <div class="col-lg-6 text-center text-lg-start">
-            <div class="d-inline-flex align-items-center glass-card px-3 py-1 rounded-pill mb-4"><span class="text-warning me-2">✨</span><span class="text-white small">AI‑Powered ICT Solutions</span></div>
-            <h1 class="text-white mb-4 display-4 fw-bold">{{ portfolio_settings.hero_title|default:"All in one SEO tool to grow your business rapidly" }}</h1>
-            <p class="text-white-50 pb-3 fs-5">{{ portfolio_settings.hero_subtitle|default:"Expert ICT solutions tailored to your needs." }}</p>
-            <div class="d-flex flex-wrap gap-3 mb-5">
-              <a href="#contact" class="btn btn-light rounded-pill py-3 px-5 fw-semibold shadow-lg">Free Quote →</a>
-              <a href="#contact" class="btn btn-outline-light rounded-pill py-3 px-5">Contact Us</a>
+        <h1 class="hero-title reveal reveal-delay-1" id="hero-heading">
+          {{ portfolio_settings.hero_title|default:"Smart ICT Solutions for Modern Businesses" }}
+        </h1>
+
+        <p class="hero-subtitle reveal reveal-delay-2">
+          {{ portfolio_settings.hero_subtitle|default:"From managed IT support to custom software, we deliver technology that drives growth and keeps your business running 24/7." }}
+        </p>
+
+        <div class="hero-actions reveal reveal-delay-3">
+          <a href="#contact" class="btn btn-primary btn-lg">
+            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+            Start a Project
+          </a>
+          <a href="#portfolio" class="btn btn-outline btn-lg">
+            <i class="fa-regular fa-eye" aria-hidden="true"></i>
+            View Our Work
+          </a>
+        </div>
+
+        {# Key metrics #}
+        <div class="hero-metrics reveal reveal-delay-4">
+          <div class="metric">
+            <span class="metric-value" data-count="{{ portfolio_settings.projects_count|default:150 }}">0</span>
+            <span class="metric-label">Projects Delivered</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" data-count="{{ portfolio_settings.satisfaction_percent|default:98 }}">0</span>
+            <span class="metric-label">% Client Satisfaction</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" data-count="{{ portfolio_settings.support_hours|default:24 }}">0</span>
+            <span class="metric-label">hr Support</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" data-count="{{ portfolio_settings.years_experience|default:12 }}">0</span>
+            <span class="metric-label">Years Experience</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- {# Dashboard visual #} -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-dashboard">
+          <div class="hero-dash-header">
+            <span class="dash-dot"></span>
+            <span class="dash-dot"></span>
+            <span class="dash-dot"></span>
+            <span class="hero-dash-title">Client Dashboard</span>
+          </div>
+
+          <div class="hero-stat-grid">
+            <div class="hero-stat-card">
+              <div class="hero-stat-num">48</div>
+              <div class="hero-stat-label">Open Tickets</div>
             </div>
-            <div class="row g-4 mt-3">
-              <div class="col-4"><div class="counter-box"><h3 class="text-white mb-0 counter" data-target="{{ portfolio_settings.projects_count|default:150 }}">0</h3><p class="text-white-50 small">Projects</p></div></div>
-              <div class="col-4"><div class="counter-box"><h3 class="text-white mb-0 counter" data-target="{{ portfolio_settings.satisfaction_percent|default:98 }}">0%</h3><p class="text-white-50 small">Satisfaction</p></div></div>
-              <div class="col-4"><div class="counter-box"><h3 class="text-white mb-0 counter" data-target="{{ portfolio_settings.support_hours|default:24 }}">0/7</h3><p class="text-white-50 small">Support</p></div></div>
+            <div class="hero-stat-card">
+              <div class="hero-stat-num" style="color:var(--success)">99.9%</div>
+              <div class="hero-stat-label">Uptime</div>
+            </div>
+            <div class="hero-stat-card">
+              <div class="hero-stat-num" style="color:var(--accent2)">12</div>
+              <div class="hero-stat-label">Active Projects</div>
+            </div>
+            <div class="hero-stat-card">
+              <div class="hero-stat-num" style="color:var(--warning)">3</div>
+              <div class="hero-stat-label">Pending Invoices</div>
             </div>
           </div>
-          <div class="col-lg-6 text-center"><div class="position-relative"><img class="img-fluid floating" src="{% if portfolio_settings.hero_image %}{{ portfolio_settings.hero_image.url }}{% else %}{% static 'img/hero.png' %}{% endif %}" alt="Hero" style="filter: drop-shadow(0 20px 25px rgba(0,0,0,0.2));"><div class="glass-card position-absolute bottom-0 start-0 p-3 rounded-4" style="width: 150px;"><small class="text-white">⭐ 4.9/5</small><div class="text-warning small">★★★★★</div></div></div></div>
+
+          <div class="hero-bar-list">
+            <div class="hero-bar-item">
+              <div class="hero-bar-label"><span>Network Health</span><span>94%</span></div>
+              <div class="hero-bar-track">
+                <div class="hero-bar-fill" style="width:94%;background:var(--success)"></div>
+              </div>
+            </div>
+            <div class="hero-bar-item">
+              <div class="hero-bar-label"><span>Storage Used</span><span>67%</span></div>
+              <div class="hero-bar-track">
+                <div class="hero-bar-fill" style="width:67%;background:var(--accent)"></div>
+              </div>
+            </div>
+            <div class="hero-bar-item">
+              <div class="hero-bar-label"><span>Ticket Resolution</span><span>89%</span></div>
+              <div class="hero-bar-track">
+                <div class="hero-bar-fill" style="width:89%;background:var(--accent2)"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 
-  <main id="main-content">
-    <div class="container-fluid py-5" id="about">
-      <div class="container px-lg-5">
-        <div class="row g-5">
-          <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
-            <div class="section-title position-relative mb-4 pb-2"><h6 class="position-relative text-primary ps-4">About Us</h6><h2 class="mt-2">{{ portfolio_settings.about_title|default:"The best SEO solution with 10 years of experience" }}</h2></div>
-            <p class="mb-4">{{ portfolio_settings.about_text|default:"We are a team of passionate engineers delivering reliable ICT solutions." }}</p>
-            <div class="row g-3"><div class="col-sm-6"><h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>Award Winning</h6><h6 class="mb-0"><i class="fa fa-check text-primary me-2"></i>Professional Staff</h6></div><div class="col-sm-6"><h6 class="mb-3"><i class="fa fa-check text-primary me-2"></i>24/7 Support</h6><h6 class="mb-0"><i class="fa fa-check text-primary me-2"></i>Fair Prices</h6></div></div>
-            <div class="d-flex align-items-center mt-4">
-              <a class="btn btn-primary rounded-pill px-4 me-3" href="#contact">Contact Us</a>
-              {% if portfolio_settings.facebook_url %}<a class="btn btn-outline-primary btn-square me-3" href="{{ portfolio_settings.facebook_url }}"><i class="fab fa-facebook-f"></i></a>{% endif %}
-              {% if portfolio_settings.twitter_url %}<a class="btn btn-outline-primary btn-square me-3" href="{{ portfolio_settings.twitter_url }}"><i class="fab fa-twitter"></i></a>{% endif %}
-              {% if portfolio_settings.instagram_url %}<a class="btn btn-outline-primary btn-square me-3" href="{{ portfolio_settings.instagram_url }}"><i class="fab fa-instagram"></i></a>{% endif %}
-              {% if portfolio_settings.linkedin_url %}<a class="btn btn-outline-primary btn-square" href="{{ portfolio_settings.linkedin_url }}"><i class="fab fa-linkedin-in"></i></a>{% endif %}
-            </div>
-          </div>
-          <div class="col-lg-6"><img class="img-fluid wow zoomIn" data-wow-delay="0.5s" src="{% if portfolio_settings.about_image %}{{ portfolio_settings.about_image.url }}{% else %}{% static 'img/about.jpg' %}{% endif %}" alt="About us" loading="lazy"></div>
-        </div>
-      </div>
+  <!-- {# Scroll indicator #} -->
+  <a href="#services" class="scroll-indicator" style="position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-muted);font-size:.75rem;text-decoration:none;animation:bounce 2s ease infinite;">
+    <span>Scroll</span>
+    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+  </a>
+
+  <style>
+    @keyframes bounce {
+      0%,100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(6px); }
+    }
+  </style>
+</section>
+
+<!-- 
+{# ══════════════════════════════════════════════════════
+   SERVICES SECTION
+══════════════════════════════════════════════════════ #} -->
+<section class="section services" id="services" aria-labelledby="services-heading">
+  <div class="container">
+
+    <div class="section-header reveal">
+      <span class="section-tag">
+        <i class="fa-solid fa-gears" aria-hidden="true"></i>
+        What We Do
+      </span>
+      <h2 id="services-heading">Comprehensive ICT Services</h2>
+      <p>From infrastructure to innovation — end-to-end technology solutions tailored for your business needs.</p>
     </div>
 
-    <div class="container-fluid py-5" id="services">
-      <div class="container px-lg-5">
-        <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s"><h6 class="position-relative d-inline text-primary ps-4">Our Services</h6><h2 class="mt-2">What Solutions We Provide</h2></div>
-        {% if services %}
-        <div class="row g-4 bento-grid">
-          {% for service in services|slice:":6" %}
-          <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.{{ forloop.counter }}s">
-            <div class="service-item p-4 h-100 d-flex flex-column">
-              <div class="service-icon mb-4"><i class="fa fa-{{ service.icon|default:service.category.icon|default:'laptop-code' }} fa-3x text-primary"></i></div>
-              <h5 class="mb-3">{{ service.name }}</h5>
-              <p class="flex-grow-1">{{ service.description|truncatechars:80|safe }}</p>
-              <a href="#contact" class="btn btn-link text-primary p-0 mt-3">Learn more →</a>
+    {# Category filter tabs #}
+    {% if categories %}
+    <div class="service-tabs reveal reveal-delay-1" role="tablist" aria-label="Service categories">
+      <button class="service-tab active" data-category="all" role="tab" aria-selected="true">All Services</button>
+      {% for cat in categories %}
+      <button class="service-tab" data-category="{{ cat.pk }}" role="tab" aria-selected="false">{{ cat.name }}</button>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Services grid #}
+    <div class="services-grid">
+      {% for service in services %}
+      <article class="card service-card reveal reveal-delay-{{ forloop.counter|divisibleby:3|yesno:'3,2,1' }}"
+               data-category="{{ service.category.pk|default:'uncategorized' }}"
+               aria-label="{{ service.name }}">
+        <div class="service-icon" aria-hidden="true">
+          {% if service.icon %}
+            <i class="{{ service.icon }}"></i>
+          {% else %}
+            <i class="fa-solid fa-microchip"></i>
+          {% endif %}
+        </div>
+        <h3 class="service-name">{{ service.name }}</h3>
+        <p class="service-desc">{{ service.short_description|default:service.description|truncatewords:20|striptags }}</p>
+        <span class="service-arrow" aria-hidden="true">
+          Learn more <i class="fa-solid fa-arrow-right fa-xs"></i>
+        </span>
+      </article>
+      {% empty %}
+      {# Placeholder cards when no services in DB — FIXED: added data-category="all" #}
+      {% for item in "123456789"|make_list %}
+      <article class="card service-card reveal reveal-delay-{{ forloop.counter }}"
+               data-category="all"
+               aria-label="Service placeholder">
+        <div class="service-icon" aria-hidden="true">
+          <i class="fa-solid {% cycle 'fa-server' 'fa-code' 'fa-shield-halved' 'fa-cloud' 'fa-wifi' 'fa-headset' 'fa-database' 'fa-mobile-screen' 'fa-chart-line' %}"></i>
+        </div>
+        <h3 class="service-name">{% cycle 'Managed IT Support' 'Custom Software Dev' 'Cybersecurity' 'Cloud Solutions' 'Network Infrastructure' '24/7 Helpdesk' 'Data Management' 'Mobile Applications' 'IT Consulting' %}</h3>
+        <p class="service-desc">{% cycle 'End-to-end IT management so you can focus on your business.' 'Bespoke software engineered for your exact requirements.' 'Protect your business with enterprise-grade security.' 'Scalable cloud infrastructure for modern businesses.' 'Reliable, fast networks built for growth.' 'Round-the-clock support from certified technicians.' 'Secure backup, recovery, and analytics solutions.' 'Cross-platform apps for iOS and Android.' 'Strategic technology roadmaps for long-term success.' %}</p>
+        <span class="service-arrow" aria-hidden="true">
+          Learn more <i class="fa-solid fa-arrow-right fa-xs"></i>
+        </span>
+      </article>
+      {% endfor %}
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+
+<!-- 
+{# ══════════════════════════════════════════════════════
+   PORTFOLIO SECTION
+══════════════════════════════════════════════════════ #} -->
+{% if projects %}
+<section class="section" id="portfolio" aria-labelledby="portfolio-heading">
+  <div class="container">
+
+    <div class="section-header reveal">
+      <span class="section-tag">
+        <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
+        Our Work
+      </span>
+      <h2 id="portfolio-heading">Featured Projects</h2>
+      <p>A selection of solutions we've delivered for clients across industries.</p>
+    </div>
+
+    <div class="portfolio-grid">
+      {% for project in projects %}
+      <article class="project-card reveal reveal-delay-{{ forloop.counter }}" aria-label="{{ project.title }}">
+
+        <div class="project-img-wrap">
+          {% if project.image %}
+            <img src="{{ project.image.url }}"
+                 alt="{{ project.title }}"
+                 loading="lazy"
+                 width="600" height="375" />
+          {% else %}
+            <div class="project-img-placeholder" aria-hidden="true">
+              <i class="fa-solid fa-laptop-code" style="color:var(--accent);opacity:.5;"></i>
             </div>
+          {% endif %}
+          <div class="project-overlay" aria-hidden="true">
+            <span class="badge badge-accent">View Project</span>
           </div>
+        </div>
+
+        <div class="project-body">
+          <div class="project-meta">
+            {% if project.client_name %}
+            <span class="project-client">
+              <i class="fa-solid fa-building fa-xs" aria-hidden="true"></i>
+              {{ project.client_name }}
+            </span>
+            {% endif %}
+          </div>
+          <h3 class="project-title">{{ project.title }}</h3>
+          {% if project.technologies %}
+          <p class="project-tech">
+            <i class="fa-solid fa-tags fa-xs" aria-hidden="true"></i>
+            {{ project.technologies }}
+          </p>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+{% endif %}
+
+<!-- {# ══════════════════════════════════════════════════════
+   ABOUT SECTION
+══════════════════════════════════════════════════════ #} -->
+<section class="section" id="about" style="background:var(--bg-secondary);" aria-labelledby="about-heading">
+  <div class="container">
+    <div class="about-grid">
+
+      {# Image column #}
+      <div class="reveal">
+        <div class="about-img-wrap">
+          {% if portfolio_settings.about_image %}
+            <img src="{{ portfolio_settings.about_image.url }}"
+                 alt="Pritech team at work"
+                 loading="lazy"
+                 width="600" height="450" />
+          {% else %}
+            {# Decorative placeholder #}
+            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--card-grad);">
+              <div style="text-align:center;padding:2rem;">
+                <div style="font-size:5rem;margin-bottom:1rem;opacity:.4;">🖥️</div>
+                <p style="color:var(--text-muted);font-size:.9rem;">Add your about image in settings</p>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="about-img-badge glass">
+            <strong>{{ portfolio_settings.years_experience|default:12 }}+</strong>
+            <span>Years of Excellence</span>
+          </div>
+        </div>
+      </div>
+
+      {# Text column #}
+      <div class="reveal reveal-delay-2">
+        <span class="section-tag">
+          <i class="fa-solid fa-users" aria-hidden="true"></i>
+          About Us
+        </span>
+        <h2 id="about-heading" style="margin-bottom:1rem;">{{ portfolio_settings.about_title|default:"Your Trusted Technology Partner" }}</h2>
+        <p style="margin-bottom:1.5rem;line-height:1.8;">{{ portfolio_settings.about_text|default:"We are a team of passionate engineers, developers, and support specialists dedicated to solving business problems with technology." }}</p>
+
+        {# Feature points #}
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.75rem;margin-bottom:2rem;">
+          {% for point in "123"|make_list %}
+          <li style="display:flex;align-items:flex-start;gap:.75rem;">
+            <span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;">
+              <i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i>
+            </span>
+            <span style="color:var(--text-secondary);">{% cycle 'Certified ICT professionals with 12+ years in the field' 'Transparent communication and regular project updates' 'Post-delivery support and ongoing maintenance included' %}</span>
+          </li>
           {% endfor %}
-          <div class="col-lg-6 wow fadeInUp"><div class="service-item bg-gradient p-5 h-100 d-flex flex-column justify-content-between" style="background: linear-gradient(135deg, #2124B1 0%, #4777F5 100%);"><div><i class="fa fa-brain fa-3x text-white mb-4"></i><h5 class="text-white">AI SEO Analyzer</h5><p class="text-white-50">Get real‑time insights and automated recommendations.</p></div><a href="#contact" class="btn btn-light mt-4 align-self-start">Try Demo →</a></div></div>
-        </div>
-        {% else %}<div class="text-center"><p>No services added yet.</p></div>{% endif %}
-      </div>
-    </div>
+        </ul>
 
-    <div class="container-fluid py-5" id="projects">
-      <div class="container px-lg-5">
-        <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s"><h6 class="position-relative d-inline text-primary ps-4">Our Projects</h6><h2 class="mt-2">Recently Launched Projects</h2></div>
-        <div class="row g-4">
-          {% for project in projects %}
-          <div class="col-lg-4 col-md-6 portfolio-item wow zoomIn" data-wow-delay="0.{{ forloop.counter }}s">
-            <div class="position-relative rounded overflow-hidden">
-              <img class="img-fluid w-100" src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}" alt="{{ project.title }}" loading="lazy">
-              <div class="portfolio-overlay"><a class="btn btn-light" href="{% if project.image %}{{ project.image.url }}{% else %}#{% endif %}"><i class="fa fa-plus fa-2x text-primary"></i></a><div class="mt-auto"><small class="text-white"><i class="fa fa-folder me-2"></i>{{ project.client_name|default:"Project" }}</small><a class="h5 d-block text-white mt-1 mb-0" href="#">{{ project.title }}</a></div></div>
-            </div>
+        <a href="#contact" class="btn btn-primary">
+          <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+          Work With Us
+        </a>
+
+        {# Stats bento #}
+        <div class="stats-bento">
+          <div class="stat-card">
+            <span class="stat-num" data-count="{{ portfolio_settings.projects_count|default:150 }}">0</span>
+            <span class="stat-label">Projects Completed</span>
           </div>
-          {% empty %}<div class="col-12 text-center"><p>No featured projects yet.</p></div>{% endfor %}
-        </div>
-      </div>
-    </div>
-
-    <div class="container-fluid py-5" id="contact">
-      <div class="container px-lg-5">
-        <div class="row justify-content-center">
-          <div class="col-lg-7">
-            <div class="section-title position-relative text-center mb-5 pb-2 wow fadeInUp" data-wow-delay="0.1s"><h6 class="position-relative d-inline text-primary ps-4">Contact Us</h6><h2 class="mt-2">Contact For Any Query</h2></div>
-            <div class="wow fadeInUp" data-wow-delay="0.3s">
-              {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }}">{{ message }}</div>{% endfor %}{% endif %}
-              <form method="post" action="{% url 'inquiry' %}" novalidate>
-                {% csrf_token %}
-                <div class="row g-3">
-                  <div class="col-md-6"><div class="form-floating"><input type="text" class="form-control" id="name" name="name" placeholder="Your Name" required><label for="name">Your Name</label><div class="invalid-feedback">Please enter your name.</div></div></div>
-                  <div class="col-md-6"><div class="form-floating"><input type="email" class="form-control" id="email" name="email" placeholder="Your Email" required><label for="email">Your Email</label><div class="invalid-feedback">Valid email required.</div></div></div>
-                  <div class="col-12"><div class="form-floating"><input type="text" class="form-control" id="subject" name="subject" placeholder="Subject" required><label for="subject">Subject</label><div class="invalid-feedback">Subject required.</div></div></div>
-                  <div class="col-12"><div class="form-floating"><textarea class="form-control" id="message" name="message" style="height: 150px" required></textarea><label for="message">Message</label><div class="invalid-feedback">Message required.</div></div></div>
-                  <div class="col-12"><button class="btn btn-primary w-100 py-3" type="submit">Send Message</button></div>
-                </div>
-              </form>
-            </div>
+          <div class="stat-card">
+            <span class="stat-num" data-count="{{ portfolio_settings.satisfaction_percent|default:98 }}">0</span>
+            <span class="stat-label">% Satisfaction Rate</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" data-count="{{ portfolio_settings.support_hours|default:24 }}">0</span>
+            <span class="stat-label">Hour Support</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" data-count="{{ portfolio_settings.years_experience|default:12 }}">0</span>
+            <span class="stat-label">Years Experience</span>
           </div>
         </div>
       </div>
     </div>
-  </main>
+  </div>
+</section>
 
-  <div class="container-fluid bg-primary text-light footer mt-5 pt-5 wow fadeIn">
-    <div class="container py-5 px-lg-5">
-      <div class="row g-5">
-        <div class="col-md-6 col-lg-3">
-          <h5 class="text-white mb-4">Get In Touch</h5>
-          <p><i class="fa fa-map-marker-alt me-3"></i>{{ site_config.address|default:"123 Street, New York, USA" }}</p>
-          <p><i class="fa fa-phone-alt me-3"></i>{{ site_config.phone|default:"+012 345 67890" }}</p>
-          <p><i class="fa fa-envelope me-3"></i>{{ site_config.email|default:"info@example.com" }}</p>
-          <div class="d-flex pt-2">
-            {% if portfolio_settings.twitter_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.twitter_url }}"><i class="fab fa-twitter"></i></a>{% endif %}
-            {% if portfolio_settings.facebook_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.facebook_url }}"><i class="fab fa-facebook-f"></i></a>{% endif %}
-            <a class="btn btn-outline-light btn-social" href="#"><i class="fab fa-youtube"></i></a>
-            {% if portfolio_settings.instagram_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.instagram_url }}"><i class="fab fa-instagram"></i></a>{% endif %}
-            {% if portfolio_settings.linkedin_url %}<a class="btn btn-outline-light btn-social" href="{{ portfolio_settings.linkedin_url }}"><i class="fab fa-linkedin-in"></i></a>{% endif %}
-          </div>
-        </div>
-        <div class="col-md-6 col-lg-3">
-          <h5 class="text-white mb-4">Popular Link</h5>
-          <a class="btn btn-link" href="#about">About Us</a>
-          <a class="btn btn-link" href="#contact">Contact Us</a>
-          <a class="btn btn-link" href="#">Privacy Policy</a>
-          <a class="btn btn-link" href="#">Terms & Condition</a>
-          <a class="btn btn-link" href="#">Career</a>
-        </div>
-        <div class="col-md-6 col-lg-3">
-          <h5 class="text-white mb-4">Project Gallery</h5>
-          <div class="row g-2">
-            {% for project in projects|slice:":6" %}
-            <div class="col-4">
-              <img class="img-fluid" src="{% if project.image %}{{ project.image.url }}{% else %}{% static 'img/portfolio-default.jpg' %}{% endif %}" alt="{{ project.title }}" loading="lazy">
+<!-- 
+{# ══════════════════════════════════════════════════════
+   CONTACT / INQUIRY SECTION
+══════════════════════════════════════════════════════ #} -->
+<section class="section" id="contact" aria-labelledby="contact-heading">
+  <div class="container">
+
+    <div class="section-header reveal">
+      <span class="section-tag">
+        <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+        Contact Us
+      </span>
+      <h2 id="contact-heading">Let's Build Something Together</h2>
+      <p>Tell us about your project or challenge — we'll get back within 24 hours.</p>
+    </div>
+
+    <div class="contact-grid">
+
+      {# Contact info #}
+      <div class="reveal">
+        <div class="contact-info-card">
+
+          {% if site_config.phone %}
+          <div class="contact-item">
+            <div class="contact-item-icon" aria-hidden="true">
+              <i class="fa-solid fa-phone"></i>
             </div>
-            {% empty %}
-            <div class="col-12">No projects yet</div>
-            {% endfor %}
+            <div>
+              <div class="contact-item-label">Phone</div>
+              <a href="tel:{{ site_config.phone }}" class="contact-item-value">{{ site_config.phone }}</a>
+            </div>
           </div>
+          {% endif %}
+
+          {% if site_config.email %}
+          <div class="contact-item">
+            <div class="contact-item-icon" aria-hidden="true">
+              <i class="fa-solid fa-envelope"></i>
+            </div>
+            <div>
+              <div class="contact-item-label">Email</div>
+              <a href="mailto:{{ site_config.email }}" class="contact-item-value">{{ site_config.email }}</a>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if site_config.address %}
+          <div class="contact-item">
+            <div class="contact-item-icon" aria-hidden="true">
+              <i class="fa-solid fa-location-dot"></i>
+            </div>
+            <div>
+              <div class="contact-item-label">Office</div>
+              <span class="contact-item-value">{{ site_config.address }}</span>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="contact-item">
+            <div class="contact-item-icon" aria-hidden="true">
+              <i class="fa-solid fa-clock"></i>
+            </div>
+            <div>
+              <div class="contact-item-label">Support Hours</div>
+              <span class="contact-item-value">24/7 — Always Available</span>
+            </div>
+          </div>
+
+          {% if portfolio_settings.whatsapp_number %}
+          <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20Pritech%2C%20I%20would%20like%20to%20discuss%20a%20project."
+             class="btn btn-whatsapp"
+             target="_blank"
+             rel="noopener noreferrer"
+             aria-label="Start WhatsApp chat with Pritech">
+            <i class="fa-brands fa-whatsapp fa-lg" aria-hidden="true"></i>
+            Chat on WhatsApp
+          </a>
+          {% endif %}
+
         </div>
-        <div class="col-md-6 col-lg-3">
-          <h5 class="text-white mb-4">Newsletter</h5>
-          <p>Stay updated with our latest news and offers.</p>
-          <form method="post" action="{% url 'newsletter_subscribe' %}" class="position-relative w-100 mt-3">
+      </div>
+
+      {# Inquiry form #}
+      <div class="reveal reveal-delay-2">
+        <div class="inquiry-form">
+          <h3 style="margin-bottom:1.5rem;font-size:1.2rem;">Send us a Message</h3>
+
+          <form method="post" action="{% url 'inquiry' %}" novalidate aria-label="Contact inquiry form">
             {% csrf_token %}
-            <input class="form-control border-0 rounded-pill w-100 ps-4 pe-5" type="email" name="email" placeholder="Your Email" style="height: 48px;" required>
-            <button type="submit" class="btn shadow-none position-absolute top-0 end-0 mt-1 me-2"><i class="fa fa-paper-plane text-primary fs-4"></i></button>
+
+            <div class="form-row" style="margin-bottom:1rem;">
+
+              <div class="form-group">
+                <label class="form-label" for="id_name">
+                  Full Name <span class="required-star" aria-label="required">*</span>
+                </label>
+                <input type="text"
+                       class="form-control{% if inquiry_form.name.errors %} error{% endif %}"
+                       id="id_name"
+                       name="name"
+                       placeholder="Your full name"
+                       required
+                       autocomplete="name"
+                       value="{{ inquiry_form.name.value|default:'' }}"
+                       aria-required="true"
+                       aria-describedby="name-error" />
+                {% if inquiry_form.name.errors %}
+                <span class="form-error" id="name-error" role="alert">{{ inquiry_form.name.errors.0 }}</span>
+                {% else %}
+                <span class="form-error" id="name-error" aria-live="polite"></span>
+                {% endif %}
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="id_email">
+                  Email Address <span class="required-star" aria-label="required">*</span>
+                </label>
+                <input type="email"
+                       class="form-control{% if inquiry_form.email.errors %} error{% endif %}"
+                       id="id_email"
+                       name="email"
+                       placeholder="your@email.com"
+                       required
+                       autocomplete="email"
+                       value="{{ inquiry_form.email.value|default:'' }}"
+                       aria-required="true"
+                       aria-describedby="email-error" />
+                {% if inquiry_form.email.errors %}
+                <span class="form-error" id="email-error" role="alert">{{ inquiry_form.email.errors.0 }}</span>
+                {% else %}
+                <span class="form-error" id="email-error" aria-live="polite"></span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <div class="form-row" style="margin-bottom:1rem;">
+
+              <div class="form-group">
+                <label class="form-label" for="id_phone">Phone Number</label>
+                <input type="tel"
+                       class="form-control"
+                       id="id_phone"
+                       name="phone"
+                       placeholder="+265 XXX XXX XXX"
+                       autocomplete="tel"
+                       value="{{ inquiry_form.phone.value|default:'' }}"
+                       aria-describedby="phone-error" />
+                <span class="form-error" id="phone-error" aria-live="polite"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="id_subject">
+                  Subject <span class="required-star" aria-label="required">*</span>
+                </label>
+                <input type="text"
+                       class="form-control{% if inquiry_form.subject.errors %} error{% endif %}"
+                       id="id_subject"
+                       name="subject"
+                       placeholder="How can we help?"
+                       required
+                       value="{{ inquiry_form.subject.value|default:'' }}"
+                       aria-required="true"
+                       aria-describedby="subject-error" />
+                {% if inquiry_form.subject.errors %}
+                <span class="form-error" id="subject-error" role="alert">{{ inquiry_form.subject.errors.0 }}</span>
+                {% else %}
+                <span class="form-error" id="subject-error" aria-live="polite"></span>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <div class="form-group form-group--full" style="margin-bottom:1.5rem;">
+              <label class="form-label" for="id_message">
+                Message <span class="required-star" aria-label="required">*</span>
+              </label>
+              <textarea class="form-control{% if inquiry_form.message.errors %} error{% endif %}"
+                        id="id_message"
+                        name="message"
+                        placeholder="Tell us about your project or requirements..."
+                        required
+                        rows="5"
+                        aria-required="true"
+                        aria-describedby="message-error">{{ inquiry_form.message.value|default:'' }}</textarea>
+              {% if inquiry_form.message.errors %}
+              <span class="form-error" id="message-error" role="alert">{{ inquiry_form.message.errors.0 }}</span>
+              {% else %}
+              <span class="form-error" id="message-error" aria-live="polite"></span>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+              Send Message
+            </button>
           </form>
         </div>
       </div>
+
     </div>
-    <div class="container px-lg-5">
-      <div class="copyright">
-        <div class="row">
-          <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
-            &copy; <a class="border-bottom" href="#">{{ site_config.company_name|default:"SEO Master" }}</a>,
-            {{ portfolio_settings.footer_copyright|default:"All Right Reserved." }}
-            Designed By <a class="border-bottom" href="https://pritechmw.com">PRITECH</a>
-          </div>
-          <div class="col-md-6 text-center text-md-end">
-            <div class="footer-menu">
-              <a href="#home">Home</a>
-              <a href="#">Cookies</a>
-              <a href="#">Help</a>
-              <a href="#">FQAs</a>
-            </div>
-          </div>
-        </div>
-      </div>
+
+  </div>
+</section>
+
+<!-- 
+{# ══════════════════════════════════════════════════════
+   NEWSLETTER SECTION (FULL-WIDTH FIX)
+══════════════════════════════════════════════════════ #} -->
+<div class="newsletter-fullwidth">
+  <div class="container">
+    <div class="newsletter-section reveal" role="complementary" aria-labelledby="newsletter-heading">
+      <span class="section-tag" style="background:rgba(255,255,255,.2);color:white;border-color:rgba(255,255,255,.3);">
+        <i class="fa-solid fa-bell" aria-hidden="true"></i>
+        Stay Updated
+      </span>
+      <h2 id="newsletter-heading" style="margin-top:.75rem;">Get ICT Tips & Updates</h2>
+      <p>Subscribe to our newsletter for tech insights, service updates, and exclusive offers.</p>
+
+      <form method="post" action="{% url 'newsletter_subscribe' %}" class="newsletter-form" aria-label="Newsletter subscription">
+        {% csrf_token %}
+        <label for="newsletter-email" class="sr-only">Email address</label>
+        <input type="email"
+               id="newsletter-email"
+               name="email"
+               class="newsletter-input"
+               placeholder="Enter your email address"
+               required
+               autocomplete="email"
+               aria-required="true" />
+        <button type="submit" class="newsletter-btn" aria-label="Subscribe to newsletter">
+          Subscribe
+        </button>
+      </form>
+
+      <p style="color:rgba(255,255,255,.6);font-size:.8rem;margin-top:1rem;">
+        <i class="fa-solid fa-lock fa-xs" aria-hidden="true"></i>
+        No spam, ever. Unsubscribe at any time.
+      </p>
     </div>
   </div>
-
-  <!-- Dynamic WhatsApp Floating Button -->
-  <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20I%20need%20ICT%20solutions" 
-     class="whatsapp-float" target="_blank" aria-label="Chat on WhatsApp">
-    <i class="fab fa-whatsapp fa-2x"></i><span>Chat with us</span>
-  </a>
-
-  <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top pt-2" aria-label="Back to top"><i class="bi bi-arrow-up"></i></a>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{% static 'lib/wow/wow.min.js' %}" defer></script>
-<script src="{% static 'lib/waypoints/waypoints.min.js' %}" defer></script>
-<script src="{% static 'js/main1.js' %}" defer></script>
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+  {# ── SEO Meta ──────────────────────────────────────────────── #}
+  <title>{% block title %}Pritech ICT Solutions – Smart Technology for Modern Businesses{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}{{ portfolio_settings.meta_description|default:'Pritech ICT Solutions delivers managed IT support, custom software, and digital transformation services for businesses in Malawi and beyond.' }}{% endblock %}" />
+  <meta name="keywords" content="{% block meta_keywords %}{{ portfolio_settings.meta_keywords|default:'ICT solutions Malawi, managed IT support, software development, digital transformation, Pritech' }}{% endblock %}" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="{{ request.build_absolute_uri }}" />
+
+  {# ── Open Graph ───────────────────────────────────────────── #}
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{% block og_title %}Pritech ICT Solutions{% endblock %}" />
+  <meta property="og:description" content="{% block og_description %}Smart ICT Solutions for Modern Businesses{% endblock %}" />
+  <meta property="og:url" content="{{ request.build_absolute_uri }}" />
+  <meta property="og:image" content="{% block og_image %}{% if portfolio_settings.hero_image %}{{ request.scheme }}://{{ request.get_host }}{{ portfolio_settings.hero_image.url }}{% endif %}{% endblock %}" />
+  <meta property="og:site_name" content="{{ site_config.company_name|default:'Pritech ICT Solutions' }}" />
+
+  {# ── Twitter Card ─────────────────────────────────────────── #}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{% block tw_title %}Pritech ICT Solutions{% endblock %}" />
+  <meta name="twitter:description" content="{% block tw_description %}Smart ICT Solutions for Modern Businesses{% endblock %}" />
+
+  {# ── Structured Data ──────────────────────────────────────── #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "{{ site_config.company_name|default:'Pritech ICT Solutions' }}",
+    "url": "{{ request.scheme }}://{{ request.get_host }}",
+    "logo": "{% if site_config.logo %}{{ request.scheme }}://{{ request.get_host }}{{ site_config.logo.url }}{% endif %}",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "{{ site_config.phone|default:'' }}",
+      "contactType": "customer service"
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Blantyre",
+      "addressCountry": "MW"
+    }
+  }
+  </script>
+
+  {# ── Favicon ──────────────────────────────────────────────── #}
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230ea5e9'/><text y='22' x='6' font-size='18' font-weight='900' fill='white' font-family='monospace'>P</text></svg>" />
+
+  {# ── Fonts ────────────────────────────────────────────────── #}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+
+  {# ── Icons ────────────────────────────────────────────────── #}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  {# ── Styles ───────────────────────────────────────────────── #}
+  <link rel="stylesheet" href="{% static 'css/pritech.css' %}" />
+  {% block extra_css %}{% endblock %}
+
+  {# ── Mobile nav adjustments (hide Get Started button on small screens) ── #}
+  <style>
+    @media (max-width: 767px) {
+      .navbar-actions .btn-sm {
+        display: none;
+      }
+    }
+  </style>
+
+  {# ── Theme persistence (no FOUC) ──────────────────────────── #}
+  <script>
+    (function() {
+      const t = localStorage.getItem('pritech-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+</head>
+
+<body>
+
+{# ────────────────────────────────── NAVBAR ─────────────────────────────── #}
+<header class="site-header" id="site-header" role="banner">
+  <nav class="navbar container" aria-label="Main navigation">
+
+    {# Logo #}
+    <a href="{% url 'home' %}" class="navbar-brand" aria-label="Pritech ICT Solutions – Home">
+      <span class="brand-icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="var(--accent)"/>
+          <path d="M8 10h8c3.3 0 6 2.7 6 6s-2.7 6-6 6H8V10z" fill="white" opacity=".9"/>
+          <circle cx="24" cy="22" r="3" fill="white" opacity=".5"/>
+        </svg>
+      </span>
+      <span class="brand-name">Pritech<span class="brand-dot">.</span></span>
+    </a>
+
+    {# Desktop nav links #}
+    <ul class="navbar-links" role="list">
+      <li><a href="{% url 'home' %}#services" class="nav-link">Services</a></li>
+      <li><a href="{% url 'home' %}#portfolio" class="nav-link">Portfolio</a></li>
+      <li><a href="{% url 'home' %}#about" class="nav-link">About</a></li>
+      <li><a href="{% url 'home' %}#contact" class="nav-link">Contact</a></li>
+      {% if user.is_authenticated %}
+      <li class="nav-dropdown">
+        <button class="nav-link nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+          <i class="fa-solid fa-user-circle" aria-hidden="true"></i>
+          {{ user.get_full_name|default:user.email|truncatechars:20 }}
+          <i class="fa-solid fa-chevron-down fa-xs" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu" role="menu">
+          <li role="menuitem"><a href="{% url 'dashboard' %}"><i class="fa-solid fa-gauge-high"></i> Dashboard</a></li>
+          <li role="menuitem"><a href="{% url 'profile' %}"><i class="fa-solid fa-id-card"></i> Profile</a></li>
+          {% if user.user_type == 'client' %}
+          <li role="menuitem"><a href="{% url 'client_team' %}"><i class="fa-solid fa-users"></i> Team</a></li>
+          {% endif %}
+          <li class="dropdown-divider" role="separator"></li>
+          <li role="menuitem"><a href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a></li>
+        </ul>
+      </li>
+      {% else %}
+      <li><a href="{% url 'login' %}" class="nav-link">Log in</a></li>
+      {% endif %}
+    </ul>
+
+    {# Right actions #}
+    <div class="navbar-actions">
+      {# Theme toggle #}
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+        <span class="theme-icon theme-icon--moon" aria-hidden="true">🌙</span>
+        <span class="theme-icon theme-icon--sun" aria-hidden="true">☀️</span>
+      </button>
+
+      {# CTA – hidden on mobile via CSS #}
+      {% if not user.is_authenticated %}
+      <a href="{% url 'home' %}#contact" class="btn btn-primary btn-sm">Get Started</a>
+      {% endif %}
+
+      {# Mobile hamburger #}
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  {# Mobile drawer #}
+  <div class="mobile-menu" id="mobile-menu" aria-hidden="true" role="dialog" aria-label="Mobile navigation">
+    <button class="mobile-close-btn" aria-label="Close menu">✕</button>
+    <ul class="mobile-links" role="list">
+      <li><a href="{% url 'home' %}#services" class="mobile-link">Services</a></li>
+      <li><a href="{% url 'home' %}#portfolio" class="mobile-link">Portfolio</a></li>
+      <li><a href="{% url 'home' %}#about" class="mobile-link">About</a></li>
+      <li><a href="{% url 'home' %}#contact" class="mobile-link">Contact</a></li>
+      {% if user.is_authenticated %}
+      <li><a href="{% url 'dashboard' %}" class="mobile-link">Dashboard</a></li>
+      <li><a href="{% url 'logout' %}" class="mobile-link">Logout</a></li>
+      {% else %}
+      <li><a href="{% url 'login' %}" class="mobile-link">Log In</a></li>
+      <li><a href="{% url 'register' %}" class="mobile-link mobile-link--cta">Register Free</a></li>
+      {% endif %}
+    </ul>
+  </div>
+</header>
+
+{# ── Progress bar ─────────────────────────────────────────────── #}
+<div class="scroll-progress" id="scrollProgress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Page scroll progress"></div>
+
+{# ── Django messages ──────────────────────────────────────────── #}
+{% if messages %}
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true">
+  {% for message in messages %}
+  <div class="toast toast--{{ message.tags }}" role="alert">
+    <span class="toast-icon" aria-hidden="true">
+      {% if 'success' in message.tags %}✅
+      {% elif 'error' in message.tags %}❌
+      {% elif 'warning' in message.tags %}⚠️
+      {% else %}ℹ️
+      {% endif %}
+    </span>
+    <span class="toast-body">{{ message }}</span>
+    <button class="toast-close" aria-label="Dismiss notification">×</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Main content ─────────────────────────────────────────────── #}
+<main id="main-content" tabindex="-1">
+  {% block content %}{% endblock %}
+</main>
+
+{# ────────────────────────────────── FOOTER ─────────────────────────────── #}
+<footer class="site-footer" role="contentinfo">
+  <div class="container">
+    <div class="footer-grid">
+
+      {# Brand column #}
+      <div class="footer-col footer-col--brand">
+        <a href="{% url 'home' %}" class="footer-brand">
+          <span class="brand-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="8" fill="var(--accent)"/>
+              <path d="M8 10h8c3.3 0 6 2.7 6 6s-2.7 6-6 6H8V10z" fill="white" opacity=".9"/>
+              <circle cx="24" cy="22" r="3" fill="white" opacity=".5"/>
+            </svg>
+          </span>
+          <span class="brand-name">Pritech<span class="brand-dot">.</span></span>
+        </a>
+        <p class="footer-tagline">{{ site_config.tagline|default:'Smart ICT Solutions for Modern Businesses' }}</p>
+        {# Social links #}
+        <div class="social-links">
+          {% if portfolio_settings.facebook_url %}
+          <a href="{{ portfolio_settings.facebook_url }}" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+          </a>
+          {% endif %}
+          {% if portfolio_settings.twitter_url %}
+          <a href="{{ portfolio_settings.twitter_url }}" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="Twitter / X">
+            <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+          </a>
+          {% endif %}
+          {% if portfolio_settings.linkedin_url %}
+          <a href="{{ portfolio_settings.linkedin_url }}" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <i class="fa-brands fa-linkedin-in" aria-hidden="true"></i>
+          </a>
+          {% endif %}
+          {% if portfolio_settings.instagram_url %}
+          <a href="{{ portfolio_settings.instagram_url }}" class="social-link" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+          </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Services column #}
+      <div class="footer-col">
+        <h3 class="footer-heading">Services</h3>
+        <ul class="footer-links" role="list">
+          <li><a href="{% url 'home' %}#services">Managed IT Support</a></li>
+          <li><a href="{% url 'home' %}#services">Software Development</a></li>
+          <li><a href="{% url 'home' %}#services">Network Infrastructure</a></li>
+          <li><a href="{% url 'home' %}#services">Cloud Solutions</a></li>
+          <li><a href="{% url 'home' %}#services">Cybersecurity</a></li>
+        </ul>
+      </div>
+
+      {# Company column #}
+      <div class="footer-col">
+        <h3 class="footer-heading">Company</h3>
+        <ul class="footer-links" role="list">
+          <li><a href="{% url 'home' %}#about">About Us</a></li>
+          <li><a href="{% url 'home' %}#portfolio">Our Work</a></li>
+          <li><a href="{% url 'home' %}#contact">Contact</a></li>
+          {% if user.is_authenticated %}
+          <li><a href="{% url 'dashboard' %}">Client Portal</a></li>
+          {% else %}
+          <li><a href="{% url 'login' %}">Client Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      {# Contact column #}
+      <div class="footer-col">
+        <h3 class="footer-heading">Get in Touch</h3>
+        <address class="footer-contact">
+          {% if site_config.phone %}
+          <a href="tel:{{ site_config.phone }}" class="footer-contact-item">
+            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+            {{ site_config.phone }}
+          </a>
+          {% endif %}
+          {% if site_config.email %}
+          <a href="mailto:{{ site_config.email }}" class="footer-contact-item">
+            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+            {{ site_config.email }}
+          </a>
+          {% endif %}
+          {% if site_config.address %}
+          <span class="footer-contact-item">
+            <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+            {{ site_config.address }}
+          </span>
+          {% endif %}
+        </address>
+        {# WhatsApp #}
+        {% if portfolio_settings.whatsapp_number %}
+        <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Chat on WhatsApp
+        </a>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <p class="footer-copy">
+        &copy; {% now "Y" %} {{ site_config.company_name|default:'Pritech ICT Solutions' }}.
+        {{ portfolio_settings.footer_copyright|default:'All Rights Reserved.' }}
+      </p>
+      <p class="footer-tech">Built with <span aria-hidden="true">❤️</span> in Malawi</p>
+    </div>
+  </div>
+</footer>
+
+{# ── WhatsApp FAB ─────────────────────────────────────────────── #}
+{% if portfolio_settings.whatsapp_number %}
+<a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20Pritech%2C%20I%20need%20assistance."
+   class="fab-whatsapp"
+   target="_blank"
+   rel="noopener noreferrer"
+   aria-label="Chat with us on WhatsApp"
+   title="WhatsApp Chat">
+  <i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+  <span class="fab-pulse" aria-hidden="true"></span>
+</a>
+{% endif %}
+
+{# ── Back to top ──────────────────────────────────────────────── #}
+<button class="back-to-top" id="backToTop" aria-label="Back to top">
+  <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+</button>
+
+{# ── Scripts ──────────────────────────────────────────────────── #}
+<script src="{% static 'js/pritech.js' %}" defer></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

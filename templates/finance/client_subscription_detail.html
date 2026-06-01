@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}My Subscription{% endblock %}
+{% block page_title %}My Subscription{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Subscription Details</h1>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">{{ subscription.plan.name }}</h5>
+        <p class="card-text">{{ subscription.plan.description }}</p>
+        <div class="display-6">{{ site_config.currency_symbol }}{{ subscription.plan.monthly_price }}<small class="text-muted">/month</small></div>
+        <hr>
+        <p><strong>Status:</strong> <span class="badge bg-{% if subscription.status == 'active' %}success{% elif subscription.status == 'past_due' %}danger{% else %}secondary{% endif %}">{{ subscription.get_status_display }}</span></p>
+        <p><strong>Current period:</strong> {{ subscription.current_period_start }} to {{ subscription.current_period_end }}</p>
+        <p><strong>Renews automatically:</strong> {% if subscription.cancel_at_period_end %}No (cancels on {{ subscription.current_period_end }}){% else %}Yes{% endif %}</p>
+      </div>
+      <div class="card-footer">
+        <a href="{% url 'client_subscription_change' %}" class="btn btn-primary">Change Plan</a>
+        <form method="post" action="{% url 'client_subscription_cancel' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel subscription? You will lose access at the end of the billing period.')">Cancel Subscription</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Available Plans</div>
+      <div class="list-group list-group-flush">
+        {% for plan in available_plans %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <strong>{{ plan.name }}</strong>
+            <span>{{ site_config.currency_symbol }}{{ plan.monthly_price }}/month</span>
+          </div>
+          <small>{{ plan.description|truncatewords:15 }}</small>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">Profile Summary</div>
+      <div class="card-body text-center">
+        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+          {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+        </div>
+        <h5>{{ request.user.get_full_name|default:request.user.email }}</h5>
+        <p class="text-muted">{{ request.user.email }}</p>
+        <hr>
+        <p><strong>Role:</strong> {{ request.user.get_user_type_display }}</p>
+        {% if request.user.user_type == 'client' %}
+          <p><strong>Client role:</strong> {{ request.user.get_client_role_display }}</p>
+          <p><strong>Organization:</strong> {{ request.user.client_organization.name|default:"—" }}</p>
+        {% endif %}
+        <p><strong>Member since:</strong> {{ request.user.date_joined|date:"d M Y" }}</p>
+        <p><strong>Last login:</strong> {{ request.user.last_login|date:"d M Y H:i" }}</p>
+        <a href="{% url 'client_profile_edit' %}" class="btn btn-outline-primary mt-2">Edit Profile</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <!-- Security Card (2FA) -->
+    <div class="card mb-4">
+      <div class="card-header">Security</div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong>Two‑factor authentication (2FA)</strong>
+            <p class="text-muted small mb-0">Add an extra layer of security to your account.</p>
+          </div>
+          <div>
+            {% if request.user.is_2fa_enabled %}
+              <span class="badge bg-success">Enabled</span>
+              <a href="{% url 'two_factor_disable' %}" class="btn btn-sm btn-outline-danger ms-2">Disable</a>
+            {% else %}
+              <span class="badge bg-secondary">Disabled</span>
+              <a href="{% url 'two_factor_setup' %}" class="btn btn-sm btn-primary ms-2">Enable</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Info Card -->
+    <div class="card mb-4">
+      <div class="card-header">Contact Information</div>
+      <div class="card-body">
+        <ul class="list-unstyled mb-0">
+          <li class="mb-2"><strong>Email:</strong> {{ request.user.email }}</li>
+          <li class="mb-2"><strong>Phone:</strong> {{ request.user.phone_number|default:"—" }}</li>
+          <li class="mb-2"><strong>Address:</strong> {{ request.user.physical_address|default:"—"|linebreaks }}</li>
+          {% if request.user.user_type == 'client' and request.user.client_organization %}
+            <li><strong>Company name:</strong> {{ request.user.client_organization.name }}</li>
+            <li><strong>Company email:</strong> {{ request.user.client_organization.email|default:"—" }}</li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Recent Activity (Audit Log) -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Recent Activity</span>
+        {% if request.user.user_type == 'client' %}
+          <a href="{% url 'client_audit_log' %}" class="btn btn-sm btn-link">View all</a>
+        {% elif request.user.is_staff %}
+          <a href="{% url 'audit_log' %}" class="btn btn-sm btn-link">View all</a>
+        {% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>IP Address</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in request.user.userauditlog_set.all|slice:":5" %}
+              <tr>
+                <td>{{ log.action }}</td>
+                <td>{{ log.ip_address|default:"—" }}</td>
+                <td>{{ log.timestamp|date:"d M H:i" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3">No recent activity.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

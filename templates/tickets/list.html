@@ -1,52 +1,109 @@
-{% extends "generic/list.html" %}
+{% extends "base.html" %}
+{% load static %}
+
 {% block title %}Tickets{% endblock %}
-{% block breadcrumb %}<div class="page-breadcrumb">Tickets</div>{% endblock %}
-{% block actions %}<a href="{% url 'ticket_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Ticket</a>{% endblock %}
+{% block page_title %}Tickets{% endblock %}
 
-{% block filters %}
-<div class="col-auto"><select name="status" class="form-select"><option value="">All statuses</option>{% for val, label in status_choices %}<option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-<div class="col-auto"><select name="priority" class="form-select"><option value="">All priorities</option>{% for val, label in priority_choices %}<option value="{{ val }}" {% if current_priority == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-<div class="col-auto"><button type="submit" class="btn btn-outline-primary">Filter</button>{% if current_status or current_priority %}<a href="{% url 'ticket_list' %}" class="btn btn-outline-secondary ms-1">Clear</a>{% endif %}</div>
-{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div><h1>Tickets</h1></div>
+    <div><a href="{% url 'ticket_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Ticket</a></div>
+</div>
 
-{% block table_head %}
-<tr><th>#</th><th>Ticket #</th><th>Title</th><th>Client</th><th>Assigned</th><th>Status</th><th>Priority</th><th>Date</th></tr>
-{% endblock %}
-
-{% block table_row %}
-<tr>
-  <td class="text-muted">{{ forloop.counter }}</td>
-  <td><code>{{ obj.ticket_number }}</code></td>
-  <td><a href="{% url 'ticket_detail' obj.pk %}" class="fw-semibold">{{ obj.title|truncatechars:50 }}</a></td>
-  <td>{{ obj.client.name }}</td>
-  <td>{% if obj.assigned_to %}<div class="d-flex align-items-center gap-2"><span class="avatar-sm bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width:26px;height:26px;font-size:0.7rem;">{{ obj.assigned_to.first_name|first|upper }}{{ obj.assigned_to.last_name|first|upper }}</span><span class="small">{{ obj.assigned_to.get_full_name|default:obj.assigned_to.email }}</span></div>{% else %}<span class="text-muted small">Unassigned</span>{% endif %}</td>
-  <td><span class="badge bg-{{ obj.status_color }}">{{ obj.get_status_display }}</span></td>
-  <td><span class="badge bg-{{ obj.priority_color }}">{{ obj.get_priority_display }}</span></td>
-  <td class="small text-muted">{{ obj.created_at|date:"d M Y" }}</td>
-</tr>
-{% endblock %}
-
-{% block mobile_card %}
-<div class="list-card">
-  <div class="d-flex justify-content-between">
-    <div>
-      <a href="{% url 'ticket_detail' obj.pk %}" class="list-card-title">{{ obj.ticket_number }} {{ obj.title|truncatechars:30 }}</a>
+<!-- Filter form -->
+<form method="get" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All statuses</option>
+                    {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Priority</label>
+                <select name="priority" class="form-select">
+                    <option value="">All priorities</option>
+                    {% for val, label in priority_choices %}
+                        <option value="{{ val }}" {% if current_priority == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Search</label>
+                <input type="text" name="q" class="form-control" placeholder="Search tickets..." value="{{ current_q }}">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                {% if current_status or current_priority or current_q %}
+                    <a href="{% url 'ticket_list' %}" class="btn btn-outline-secondary ms-1">Clear</a>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    <span class="badge bg-{{ obj.status_color }}">{{ obj.get_status_display }}</span>
-  </div>
-  <div class="list-card-meta mt-2"><span>{{ obj.client.name }}</span><span class="badge bg-{{ obj.priority_color }}">{{ obj.get_priority_display }}</span></div>
-  <div class="small text-muted mt-2">{{ obj.created_at|date:"d M Y" }}</div>
-</div>
-{% endblock %}
+</form>
 
-{% block pagination %}
+<!-- Bulk action -->
+<form method="post" action="{% url 'ticket_bulk_action' %}">
+    {% csrf_token %}
+    <div class="d-flex gap-2 mb-3">
+        <select name="action" class="form-select w-auto">
+            <option value="">Bulk actions</option>
+            <option value="close">Close selected</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>#</th>
+                    <th>Ticket #</th>
+                    <th>Title</th>
+                    <th>Client</th>
+                    <th>Assigned</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obj in tickets %}
+                <tr>
+                    <td><input type="checkbox" name="ticket_ids" value="{{ obj.pk }}" class="ticket-checkbox"></td>
+                    <td>{{ forloop.counter }}</td>
+                    <td><code>{{ obj.ticket_number }}</code></td>
+                    <td><a href="{% url 'ticket_detail' obj.pk %}">{{ obj.title|truncatechars:50 }}</a></td>
+                    <td>{{ obj.client.name }}</td>
+                    <td>{% if obj.assigned_to %}{{ obj.assigned_to.get_full_name|default:obj.assigned_to.email }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
+                    <td><span class="badge bg-{{ obj.status_color }}">{{ obj.get_status_display }}</span></td>
+                    <td><span class="badge bg-{{ obj.priority_color }}">{{ obj.get_priority_display }}</span></td>
+                    <td>{{ obj.created_at|date:"d M Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center py-4 text-muted">No tickets found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
 {% if is_paginated %}
-<div class="card-footer d-flex justify-content-between align-items-center">
-  <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
-  <div class="btn-group">
-    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}&priority={{ current_priority }}" class="btn btn-sm btn-outline-secondary">← Prev</a>{% endif %}
-    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&status={{ current_status }}&priority={{ current_priority }}" class="btn btn-sm btn-outline-secondary">Next →</a>{% endif %}
-  </div>
-</div>
+<nav><ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}&priority={{ current_priority }}&q={{ current_q }}">Previous</a></li>{% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ current_status }}&priority={{ current_priority }}&q={{ current_q }}">Next</a></li>{% endif %}
+</ul></nav>
 {% endif %}
+
+<script>
+    document.getElementById('select-all')?.addEventListener('change', function(e) {
+        document.querySelectorAll('.ticket-checkbox').forEach(cb => cb.checked = e.target.checked);
+    });
+</script>
 {% endblock %}

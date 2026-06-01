@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Invite Team Member{% endblock %}
+{% block page_title %}Invite Team Member{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit" class="btn btn-primary">Send Invitation</button>
+          <a href="{% url 'client_team' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

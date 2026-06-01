@@ -1,13 +1,34 @@
+{% load static %}
+{% load custom_filters %}
+
 <div class="d-flex gap-3 mb-3 {% if comment.is_internal %}bg-warning bg-opacity-10 p-3 rounded{% endif %}">
-  <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
-    {{ comment.author.first_name|first|upper }}{{ comment.author.last_name|first|upper }}
-  </div>
-  <div class="flex-grow-1">
-    <div class="d-flex gap-2 mb-1">
-      <span class="fw-semibold">{{ comment.author.get_full_name|default:comment.author.email }}</span>
-      {% if comment.is_internal %}<span class="badge bg-warning">Internal</span>{% endif %}
-      <span class="text-muted small">{{ comment.created_at|date:"d M H:i" }}</span>
+    <!-- Avatar -->
+    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+        {{ comment.author.first_name|first|upper }}{{ comment.author.last_name|first|upper }}
     </div>
-    <div class="quill-content">{{ comment.content.html|safe }}</div>
-  </div>
+
+    <!-- Comment content -->
+    <div class="flex-grow-1">
+        <div class="d-flex flex-wrap gap-2 mb-1 align-items-center">
+            <span class="fw-semibold">{{ comment.author.get_full_name|default:comment.author.email }}</span>
+            {% if comment.is_internal %}
+                <span class="badge bg-warning">Internal</span>
+            {% endif %}
+            {% if comment.is_solution %}
+                <span class="badge bg-success">Solution ✓</span>
+            {% endif %}
+            <span class="text-muted small">{{ comment.created_at|date:"d M H:i" }}</span>
+        </div>
+
+        <!-- Quill content (sanitized) -->
+        <div class="quill-content">{{ comment.content.html|safe }}</div>
+
+        <!-- Mark as solution button (staff only, if not already solution) -->
+        {% if request.user.user_type == 'staff' and not comment.is_solution %}
+            <form method="post" action="{% url 'mark_solution' ticket.pk comment.pk %}" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-success">Mark as solution</button>
+            </form>
+        {% endif %}
+    </div>
 </div>
