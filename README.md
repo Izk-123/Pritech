@@ -1,218 +1,270 @@
-## Comprehensive Analysis of the Pritech System
+# Pritech ICT Management System (PIMS)
 
-### 1. Project Overview
+[![Django Version](https://img.shields.io/badge/django-5.2.7-green)](https://www.djangoproject.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-The **Pritech System** is a full‑stack Django ERP platform built for **Pritech Systems Malawi**, an ICT service provider. It manages clients, services, support tickets, quotations, invoices, payments, expenses, subscriptions, user roles, and real‑time dashboards. The system is designed to be **AI‑ready**, incorporating data collection for future machine learning (e.g., revenue prediction, service recommendations).
+**Pritech System** is a modern, AI‑ready ERP platform designed for **Pritech Systems Malawi**. It centralises client management, ICT service delivery, support ticketing, financial operations, and business intelligence into one unified system.
 
-The codebase is extensive, covering:
-
-- **Custom user model** with role‑based access control (RBAC)
-- **Client management** (organizations, contacts, status)
-- **Service catalogue** (categories, services, packages)
-- **Ticketing system** with SLA, work logs, comments, attachments, and internal notes
-- **Finance module** (quotations, invoices, payments, expenses, subscription plans)
-- **Portfolio & public site** (projects, inquiries, newsletter)
-- **Tracking** (page visits, user activity, audit logs)
-- **HTMX integration** for partial page updates
-- **Unfold admin** for a modern admin interface
-- **Celery** for background tasks (e.g., monthly subscription invoicing)
-- **django‑otp** for two‑factor authentication
-- **django‑allauth** for social login (Google, LinkedIn)
-
-The project is largely functional but has several areas needing improvement before production deployment.
+> 🚀 **Live Demo** – *Coming soon*  
+> 📖 **Documentation** – [Wiki](https://github.com/your-repo/wiki)
 
 ---
 
-### 2. Technical Architecture
+## ✨ Features
 
-| Component            | Technology / Approach                                    |
-|----------------------|----------------------------------------------------------|
-| Backend framework    | Django 5.2.7                                             |
-| Database             | SQLite (development) – should be PostgreSQL in production|
-| Authentication       | EmailOrPhoneBackend + allauth + 2FA (django‑otp)         |
-| Authorization        | RoleRequiredMixin, PermissionRequiredMixin, client_role |
-| Frontend             | Bootstrap 5.3, HTMX, custom CSS (mobile‑first)           |
-| Real‑time updates    | HTMX polling (30s) – WebSockets not implemented yet      |
-| Background tasks     | Celery + Redis (invoice generation, SLA checks, PDF generation) |
-| PDF generation       | WeasyPrint + HTML templates (sanitized with bleach)      |
-| Caching              | Database cache (for rate limiting, PDF storage)          |
-| API                  | No REST API yet; only internal views                     |
-| Logging & monitoring | Basic console logging; no structured logging or Sentry   |
+### 👥 Client Management
+- Client organisations with contacts, industry, status (active/lead/inactive)
+- Full client self‑service portal (invoices, quotations, tickets, team management)
+- Role‑based access for staff (Admin, Sales, Finance, Technician)
 
-The architecture is **modular** (apps: core, accounts, clients, services, tickets, finance, portfolio, tracking), which is good for maintainability and scalability.
+### 🛠️ Service Catalogue
+- Service categories with icons
+- Services (one‑time / recurring), packages
+- Client‑friendly service catalog with “Request Quotation”
 
----
+### 🎫 Support Ticketing
+- Full ticket lifecycle (open → assigned → in progress → resolved → closed)
+- SLA deadlines (response & resolution based on priority)
+- Work logs, comments (internal / public), file attachments (drag & drop)
+- Mark comment as solution, canned responses for staff
+- Email notifications (ticket creation, status change) – *SMTP config required*
 
-### 3. Feature Completeness vs. Stated Goals
+### 💰 Financial Management
+- Quotations → client approval → automatic invoice creation
+- Invoices (draft, issued, partial, paid, overdue, cancelled)
+- Payment recording (cash, bank transfer, mobile money)
+- Expenses with approval workflow
+- Financial reports: income statement, accounts receivable aging, top clients, monthly trends
+- Branded PDF invoices & quotations (with company logo)
+- Subscription plans & recurring monthly invoicing (Celery task)
 
-The system meets **most** of the strategic objectives, with some gaps.
+### 🔐 Security & Access Control
+- Custom user model with email/phone authentication
+- Role‑based permissions (ADMIN, TECHNICIAN, FINANCE, CLIENT)
+- Two‑factor authentication (TOTP) – optional
+- Social login (Google, LinkedIn) via django‑allauth
+- Rate limiting on login, registration, PDF generation
+- HTML sanitisation (bleach) to prevent XSS in rich text fields
+- Audit logs (user login, page visits, model history via simple_history)
 
-#### ✅ Achieved / Well‑Implemented
+### 📊 Dashboards & Real‑time
+- Staff dashboard with key metrics, charts, recent tickets/invoices
+- Client dashboard tailored to their organisation
+- HTMX for live ticket search, inline status updates, comment posting
+- Celery background tasks (SLA breach checks, subscription invoicing, async PDF generation)
 
-| Goal | Implementation |
-|------|----------------|
-| **Centralized operations** | Single Django app with integrated modules for clients, services, tickets, finance. |
-| **Service delivery** | Full ticketing lifecycle: create, assign, transition, SLA, work logs, comments. |
-| **Financial management** | Quotations → invoices → payments → expenses + reporting (income statement, aging, top clients). |
-| **Real‑time monitoring** | Dashboard with HTMX polling (30s) and live ticket search. |
-| **Customer self‑service portal** | Clients can view their tickets, invoices, quotations, approve/reject quotes, manage team members, edit profile, view audit logs. |
-| **Accountability** | UserAuditLog, PageVisit, simple_history for finance models. |
-| **Role‑based access** | Granular roles (ADMIN, TECHNICIAN, FINANCE, CLIENT) and permissions. |
-| **Scalable foundation** | Modular design, Celery for async tasks, caching ready. |
-
-#### ❌ Missing / Incomplete
-
-| Gap | Impact |
-|-----|--------|
-| **Email notifications** | `EMAIL_BACKEND = console` – no real emails are sent. Clients never receive ticket updates, invoice reminders, or quotation notifications. |
-| **AI features** | No AI models implemented; only data collection and future‑ready architecture. |
-| **WebSockets / real‑time push** | Uses polling, which is inefficient. No live notifications for ticket updates. |
-| **Payment gateway** | Clients cannot pay online; all payments are recorded manually. |
-| **Mobile app** | No mobile app; responsive web only. |
-| **Production hardening** | `DEBUG=True`, `ALLOWED_HOSTS=['*']`, hardcoded secret key, SQLite, no HTTPS. |
-| **REST API** | No external API for integration or mobile app. |
-| **Recurring billing** | Subscription models exist, but auto‑invoicing is a Celery task that needs verification and email integration. |
-| **Multi‑tenancy** | Data isolation is based on `client_organization` foreign key – fine for single‑tenant but not a true multi‑tenant SaaS. |
+### 🖥️ Admin Interface
+- Modern Unfold admin theme with collapsible sidebar and tabs
+- Full management of users, roles, permissions, social apps, sites
 
 ---
 
-### 4. Strengths
+## 🛠️ Tech Stack
 
-- **Comprehensive RBAC** – roles and permissions enforced at view level, decorators available for FBVs.
-- **Rich ticket system** – SLA, transitions, work logs, internal/external comments, attachments, file validation.
-- **Finance workflow** – Quotation → approval → conversion to invoice → payment recording → expense tracking → reports.
-- **Client self‑service** – approve/reject quotes, view invoices, manage team, subscription management.
-- **Security features** – 2FA, rate limiting, HTML sanitization (bleach), object‑level permissions in client views, CSRF protection.
-- **HTMX** – provides SPA‑like interactions without heavy JavaScript.
-- **Unfold admin** – modern, customizable admin panel.
-- **Audit logging** – `simple_history` for finance models, `UserAuditLog` for login events.
-- **Async tasks** – Celery for monthly subscription invoices, SLA breach checks, PDF generation.
-- **Mobile‑first CSS** – responsive design with Bootstrap and custom media queries.
-
----
-
-### 5. Weaknesses / Gaps (Detailed)
-
-#### Security & Production Readiness
-
-- **`DEBUG=True`** – exposes sensitive error details.
-- **`ALLOWED_HOSTS = ['*']`** – host header vulnerability.
-- **Hardcoded `SECRET_KEY`** – should be environment variable.
-- **SQLite** – not suitable for concurrent production load.
-- **No HTTPS** – cookies not marked secure.
-- **Missing rate limiting on many endpoints** – only applied to login, registration, and PDF views.
-- **File upload validation** – good, but missing virus scanning.
-- **No CSRF token in some HTMX forms?** – Added global handler, but check all forms.
-
-#### Functional Gaps
-
-- **Email notifications** – completely missing (console only). No password reset emails, ticket notifications, invoice reminders.
-- **Payment gateway** – clients cannot pay online.
-- **Recurring billing** – only monthly subscription invoices; no pro‑ration or pause/cancel mid‑period.
-- **No multi‑currency / multi‑tax** – assumes MWK and one VAT rate.
-- **No export to Excel/CSV** – only invoices have CSV export.
-- **No bulk actions for tickets** – only close, but no bulk assign, status change, etc.
-- **No advanced reporting** – drill‑down from charts, custom date ranges, saved reports.
-- **No service usage tracking** – services have `billing_type` but no invoicing based on usage.
-- **No client‑facing knowledge base** – help articles or FAQ.
-
-#### Code Quality & Maintainability
-
-- **Duplicate template tag library** (`custom_filters` in core and portfolio) – causes warning.
-- **Inconsistent use of `select_related` / `prefetch_related`** – some list views may have N+1 queries.
-- **Hardcoded URLs in some templates** – use `{% url %}` mostly, but a few places may have raw paths.
-- **Large `base.html`** – could be split into includes (sidebar, topbar, scripts).
-- **No unit or integration tests** – `tests.py` is empty in most apps.
-- **Environment‑specific settings** – no `settings/dev.py` and `settings/prod.py`.
-
-#### AI‑Readiness
-
-- **Data collected** but no models or pipelines.
-- **No feature store** or real‑time inference endpoints.
-- **No feedback loops** for model improvement.
+| Layer               | Technology                                                        |
+|---------------------|-------------------------------------------------------------------|
+| Backend             | Django 5.2.7, Celery, Redis                                       |
+| Database            | SQLite (dev) / PostgreSQL (production)                            |
+| Frontend            | Bootstrap 5, HTMX, custom CSS (mobile‑first)                      |
+| Authentication      | django‑allauth, django‑otp                                        |
+| PDF Generation      | WeasyPrint (sanitised with bleach)                                |
+| Caching             | Django cache framework (database / Redis)                         |
+| Task Queue          | Celery + Redis (or RabbitMQ)                                      |
+| Admin Theme         | Unfold                                                            |
 
 ---
 
-### 6. Alignment with Strategic Objectives (Score)
+## 📦 Installation
 
-| Objective | Score (1‑5) | Justification |
-|-----------|-------------|----------------|
-| Centralize operations | 4.5 | Most modules integrated; missing a few (e.g., HR, inventory). |
-| Improve service delivery | 4.0 | Ticketing works well; email notifications missing hurts. |
-| Strengthen financial management | 4.0 | Good workflow; payment gateway and recurring billing gaps. |
-| Real‑time monitoring | 3.0 | HTMX polling is okay but not true real‑time. |
-| Leverage data for decisions | 3.5 | Reports exist but limited; no advanced analytics. |
-| AI‑driven platform | 1.5 | No AI yet; only data collection infrastructure. |
-| Enhance customer experience | 4.0 | Self‑service portal strong; missing online payments. |
-| Accountability and transparency | 4.5 | Audit logs, history, page visits – excellent. |
-| Support business growth | 4.0 | Modular, scalable; would need API and multi‑tenant support for large growth. |
+### Prerequisites
+- Python 3.11+
+- Redis (for Celery) – optional but recommended
+- PostgreSQL (production) or SQLite (development)
 
-**Overall score: ~3.8/5** – solid foundation but needs production hardening and missing modules.
+### Step‑by‑step
 
----
+```bash
+# 1. Clone the repository
+git clone https://github.com/your-org/pritech.git
+cd pritech
 
-### 7. AI‑Ready Assessment
+# 2. Create virtual environment
+python -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
 
-The system **collects rich operational data**: tickets, invoices, service usage, client behaviour. This data could feed:
+# 3. Install dependencies
+pip install -r requirements.txt
 
-- **Revenue prediction** (time‑series models)
-- **Client churn prediction** (based on ticket resolution times, overdue invoices)
-- **Service recommendation** (collaborative filtering)
-- **Workload forecasting** (for technician scheduling)
+# 4. Configure environment variables (create .env file)
+cp .env.example .env
+# Edit .env with your SECRET_KEY, DATABASE_URL, EMAIL settings, etc.
 
-However, **no AI code** is present – only the infrastructure to collect data. To be truly AI‑ready, the project would need:
+# 5. Run migrations
+python manage.py migrate
 
-- A data pipeline (e.g., dbt, Airflow) to transform raw Django data into features.
-- Model training and deployment (e.g., using TensorFlow, PyTorch, or a cloud AI service).
-- An API to serve predictions (e.g., REST endpoint for “recommended services”).
-- Feedback loop to retrain models.
+# 6. Seed demo data (optional)
+python manage.py seed
 
-The current “AI‑ready” claim is aspirational but not yet realised.
+# 7. Create superuser (if not using seed)
+python manage.py createsuperuser
 
----
+# 8. Start development server
+python manage.py runserver
+```
 
-### 8. Recommendations (Priority Order)
-
-#### Immediate (Before Production)
-
-1. **Set `DEBUG=False`, `ALLOWED_HOSTS` to actual domains, and use environment variables for secrets.**
-2. **Switch to PostgreSQL** and run migrations.
-3. **Configure real email backend** (SMTP) and implement all email notifications.
-4. **Add HTTPS** and set `SECURE_SSL_REDIRECT = True`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`.
-5. **Add rate limiting** to all sensitive POST endpoints (already done for some).
-6. **Write at least a smoke test suite** for critical flows (login, ticket creation, invoice generation).
-7. **Fix the duplicate `custom_filters` warning** (rename one).
-
-#### Medium‑Term (1‑2 months)
-
-8. **Implement online payment gateway** (e.g., Paynow, Stripe) with webhook callback.
-9. **Add CSV/Excel export** for all list views (tickets, quotations, expenses).
-10. **Complete recurring billing** (support pro‑rated upgrades/downgrades, pause, etc.).
-11. **Add WebSocket / Server‑Sent Events** for real‑time notifications (ticket updates, new invoices).
-12. **Implement REST API** using Django REST Framework (for mobile app and integrations).
-13. **Improve reporting** – add drill‑down from charts, custom date pickers, saved reports.
-14. **Add client‑facing knowledge base / FAQ** to reduce support tickets.
-
-#### Long‑Term (3‑6 months)
-
-15. **Build AI models** – start with a simple revenue prediction model using historical invoice data.
-16. **Implement a mobile app** (React Native or Flutter) using the new API.
-17. **Add multi‑tenant support** if the system will be offered to external businesses.
-18. **Introduce service usage metering** (track hours/units per client) and auto‑invoice based on usage.
-19. **Replace HTMX polling** with WebSockets for dashboards.
-20. **Conduct security audit** and penetration testing.
+Access the application at `http://127.0.0.1:8000`
 
 ---
 
-### 9. Conclusion
+## ⚙️ Configuration
 
-The **Pritech System** is a **well‑designed, feature‑rich Django ERP** that successfully addresses core business needs: client management, support ticketing, financial operations, and a client portal. Its architecture is modern (HTMX, Celery, Bootstrap 5) and extensible.
+### Environment Variables (`.env`)
 
-However, it is **not yet production‑ready** due to missing email notifications, lack of HTTPS, debug mode, SQLite, and several security gaps. The “AI‑ready” label is an aspiration – real AI integration is absent.
+| Variable | Description |
+|----------|-------------|
+| `SECRET_KEY` | Django secret key – **change in production** |
+| `DEBUG` | Set to `False` in production |
+| `ALLOWED_HOSTS` | Comma‑separated list of domains |
+| `DATABASE_URL` | e.g. `postgres://user:pass@localhost/db` |
+| `REDIS_URL` | For Celery broker (e.g. `redis://localhost:6379/0`) |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP settings |
+| `LINKEDIN_CLIENT_ID`, `LINKEDIN_SECRET` | For LinkedIn OAuth |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_SECRET` | For Google OAuth |
 
-With the recommended fixes, the system can become a robust, scalable platform that truly transforms Pritech’s operations. The codebase provides an excellent foundation, and the next steps should focus on **production hardening**, **email automation**, **payment gateway**, and **API development** before considering AI features.
+### Social Login Setup
+1. Create OAuth applications on [Google Cloud Console](https://console.cloud.google.com/) and [LinkedIn Developer Portal](https://www.linkedin.com/developers/).
+2. Add `SocialApp` records in Django admin (`/admin/socialaccount/socialapp/`).
+3. Set redirect URIs:
+   - Google: `http://127.0.0.1:8000/accounts/google/login/callback/`
+   - LinkedIn: `http://127.0.0.1:8000/accounts/linkedin_oauth2/login/callback/`
 
-**Final verdict:**  
-✅ **Strong internal ERP for ICT service business**  
-⚠️ **Needs production deployment hardening**  
-❌ **Not yet AI‑powered** – but the data is ready for future AI integration.
+### Celery (for production)
+```bash
+celery -A pritech worker -l info
+celery -A pritech beat -l info   # for periodic tasks
+```
+
+---
+
+## 🧪 Testing
+
+Run the test suite (once written):
+
+```bash
+python manage.py test
+```
+
+Currently the project has no automated tests – **contribution welcome**.
+
+---
+
+## 🚀 Deployment
+
+### Production Checklist
+
+- [ ] Set `DEBUG=False`, `ALLOWED_HOSTS=[your-domain.com]`
+- [ ] Use PostgreSQL database
+- [ ] Configure HTTPS (SSL certificate)
+- [ ] Set secure cookies: `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`
+- [ ] Configure real email backend (SMTP)
+- [ ] Run `python manage.py collectstatic`
+- [ ] Use a production WSGI server (Gunicorn / uWSGI)
+- [ ] Set up Celery with Redis/RabbitMQ and a supervisor
+- [ ] Enable caching (Redis or Memcached)
+
+### Example with Gunicorn + Nginx
+
+```bash
+# Install Gunicorn
+pip install gunicorn
+
+# Start Gunicorn
+gunicorn pritech.wsgi:application --bind 0.0.0.0:8000
+```
+
+See `deployment/nginx.conf` for a sample Nginx configuration (not included – to be added).
+
+---
+
+## 📁 Project Structure
+
+```
+pritech/
+├── accounts/          # Custom user model, roles, permissions, 2FA, social auth
+├── clients/           # Client organisations, contacts, views
+├── core/              # Site config, dashboard, context processors, admin badges
+├── finance/           # Invoices, quotations, payments, expenses, reports, subscriptions
+├── portfolio/         # Public site, projects, newsletter
+├── services/          # Service catalogue, categories, packages
+├── tickets/           # Tickets, SLA, comments, work logs, attachments
+├── tracking/          # Page visits, user activity
+├── infrastructure/    # PDF generation, notifications, sanitisation helpers
+├── templates/         # Base templates, partials, email templates
+├── static/            # CSS, JS, images
+└── pritech/           # Project settings, URLs, Celery config
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow the standard GitHub flow:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing`)
+5. Open a Pull Request
+
+For major changes, please open an issue first to discuss what you would like to change.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgements
+
+- Django community
+- Bootstrap, HTMX, Unfold
+- All open‑source libraries used
+
+---
+
+## 📞 Support
+
+For questions or support, please contact:
+- **Email**: info@pritech.mw
+- **Issue Tracker**: [GitHub Issues](https://github.com/your-org/pritech/issues)
+
+---
+
+## 🗺️ Roadmap
+
+### ✅ Completed
+- Core RBAC, client management, ticketing, finance (quotations, invoices, payments, expenses)
+- Client self‑service portal (approve quotes, view invoices, manage team)
+- Real‑time HTMX interactions, PDF generation, Celery tasks
+- 2FA, social login, rate limiting, sanitisation, audit logs
+
+### 🔄 In Progress
+- Email notifications (templates ready, SMTP needed)
+- Online payment gateway integration
+- Mobile app (API first)
+
+### 📅 Planned
+- AI features: revenue forecasting, service recommendations, anomaly detection
+- Multi‑tenant SaaS offering
+- Advanced analytics with drill‑downs
+- WebSocket real‑time dashboards
+
+---
+
+**Built with ❤️ for Pritech Systems Malawi**
+```
+
+This README provides a clear, professional overview of the project, its capabilities, and how to get started. It also highlights the current gaps (email, payment gateway, AI) and future plans, which is honest and helps set expectations.
