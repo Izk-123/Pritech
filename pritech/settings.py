@@ -1,31 +1,78 @@
+"""
+Pritech Production Settings
+---------------------------
+This configuration is optimised for a production environment using:
+- PostgreSQL database
+- Redis for Celery and caching (optional but recommended)
+- HTTPS / SSL
+- Environment variables via python-decouple
+- Gunicorn + Nginx
+- Celery for background tasks
+- Allauth for social login
+- django-otp for two‑factor authentication
+- simple_history for audit trails
+- Unfold admin theme
+"""
+
 import os
 from pathlib import Path
 from decouple import config
 from django.templatetags.static import static
 from django.urls import reverse_lazy
+from celery.schedules import crontab
 
-# Build paths
+# -----------------------------------------------------------------------------
+# Base directory
+# -----------------------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# ─── SECURITY ───────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Security
+# -----------------------------------------------------------------------------
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
 
-# ─── APPS ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Application definition
+# -----------------------------------------------------------------------------
 INSTALLED_APPS = [
+    # Unfold admin theme (must be first)
     'unfold',
     'unfold.contrib.inlines',
+
+    # Django core
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',          # Required by django-allauth
+
+    # Third‑party
     'django_quill',
     'django_htmx',
-    'core', 'accounts', 'clients', 'services',
-    'tickets', 'finance', 'portfolio', 'tracking',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.linkedin_oauth2',
+    'simple_history',
+    'celery',
+
+    # Local apps
+    'core',
+    'accounts',
+    'clients',
+    'services',
+    'tickets',
+    'finance',
+    'portfolio',
+    'tracking',
 ]
 
 MIDDLEWARE = [
@@ -35,6 +82,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'tracking.middleware.ActivityMiddleware',
@@ -62,7 +111,9 @@ TEMPLATES = [{
 
 WSGI_APPLICATION = 'pritech.wsgi.application'
 
-# ─── DATABASE (PostgreSQL) ─────────────────────────────
+# -----------------------------------------------------------------------------
+# Database (PostgreSQL for production)
+# -----------------------------------------------------------------------------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -74,27 +125,59 @@ DATABASES = {
     }
 }
 
-# ─── AUTHENTICATION ────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Authentication & authorization
+# -----------------------------------------------------------------------------
 AUTHENTICATION_BACKENDS = [
-    'accounts.backends.EmailOrPhoneBackend',
     'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+    'accounts.backends.EmailOrPhoneBackend',   # Keep phone login
 ]
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# Allauth settings
+SITE_ID = 1
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_REQUIRED = True
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.SocialAccountAdapter'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    },
+    'linkedin_oauth2': {
+        'SCOPE': ['r_emailaddress', 'r_liteprofile'],
+        'PROFILE_FIELDS': ['id', 'first-name', 'last-name', 'email-address'],
+    }
+}
+
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}},
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# ─── I18N ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Internationalisation
+# -----------------------------------------------------------------------------
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Blantyre'
 USE_I18N = True
 USE_TZ = True
 
-# ─── STATIC & MEDIA FILES ──────────────────────────────
+# -----------------------------------------------------------------------------
+# Static & Media files
+# -----------------------------------------------------------------------------
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -103,12 +186,16 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ─── BUSINESS CONFIG ───────────────────────────────────
+# -----------------------------------------------------------------------------
+# Business configuration
+# -----------------------------------------------------------------------------
 VAT_RATE = 0.175
 CURRENCY = 'MWK'
 CURRENCY_SYMBOL = 'K'
 
-# ─── EMAIL (SMTP for production) ───────────────────────
+# -----------------------------------------------------------------------------
+# Email (SMTP for production, console for development)
+# -----------------------------------------------------------------------------
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
@@ -121,7 +208,64 @@ else:
     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
     DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
-# ═══════════════ UNFOLD CONFIGURATION ══════════════════
+# -----------------------------------------------------------------------------
+# Celery (background tasks)
+# -----------------------------------------------------------------------------
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    'generate-subscription-invoices': {
+        'task': 'finance.tasks.generate_subscription_invoices',
+        'schedule': crontab(day_of_month='1', hour=0, minute=0),
+    },
+    'check-sla-breaches': {
+        'task': 'tickets.tasks.check_sla_breaches',
+        'schedule': crontab(minute='*/30'),
+    },
+}
+
+# -----------------------------------------------------------------------------
+# Caching (database cache for rate limiting & PDF storage)
+# -----------------------------------------------------------------------------
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'ratelimit_cache',
+    }
+}
+# For high traffic, replace with Redis cache:
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': REDIS_URL,
+#         'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+#     }
+# }
+
+# -----------------------------------------------------------------------------
+# Security settings (HTTPS, cookies, HSTS)
+# -----------------------------------------------------------------------------
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+
+# -----------------------------------------------------------------------------
+# Unfold Admin Configuration
+# -----------------------------------------------------------------------------
 UNFOLD = {
     "SITE_TITLE": "PriTech Admin",
     "SITE_HEADER": "PriTech Dashboard",
@@ -137,7 +281,7 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": True,
-    "ENVIRONMENT": "Production",
+    "ENVIRONMENT": "Production" if not DEBUG else "Development",
     "COLORS": {
         "primary": {
             "50": "238 242 255", "100": "224 231 255", "200": "199 210 255",
@@ -182,7 +326,7 @@ UNFOLD = {
                 "separator": True,
                 "collapsible": True,
                 "items": [
-                    {"title": "Tickets", "icon": "support_agent", "link": reverse_lazy("admin:tickets_ticket_changelist"), "badge": "core.admin_badges.open_tickets"},
+                    {"title": "Tickets", "icon": "support_agent", "link": reverse_lazy("admin:tickets_ticket_changelist")},
                     {"title": "Attachments", "icon": "attach_file", "link": reverse_lazy("admin:tickets_ticketattachment_changelist")},
                     {"title": "SLAs", "icon": "timer", "link": reverse_lazy("admin:tickets_ticketsla_changelist")},
                 ],
@@ -195,6 +339,8 @@ UNFOLD = {
                     {"title": "Invoices", "icon": "receipt", "link": reverse_lazy("admin:finance_invoice_changelist")},
                     {"title": "Quotations", "icon": "description", "link": reverse_lazy("admin:finance_quotation_changelist")},
                     {"title": "Expenses", "icon": "money_off", "link": reverse_lazy("admin:finance_expense_changelist")},
+                    {"title": "Plans", "icon": "card_membership", "link": reverse_lazy("admin:finance_plan_changelist")},
+                    {"title": "Subscriptions", "icon": "subscriptions", "link": reverse_lazy("admin:finance_clientsubscription_changelist")},
                 ],
             },
             {
@@ -217,6 +363,10 @@ UNFOLD = {
                     {"title": "Roles", "icon": "badge", "link": reverse_lazy("admin:accounts_role_changelist")},
                     {"title": "Permissions", "icon": "lock", "link": reverse_lazy("admin:accounts_permission_changelist")},
                     {"title": "Audit Logs", "icon": "history", "link": reverse_lazy("admin:accounts_userauditlog_changelist")},
+                    {"title": "Email Verification Tokens", "icon": "mark_email_read", "link": reverse_lazy("admin:accounts_emailverificationtoken_changelist")},
+                    {"title": "Invitation Tokens", "icon": "email", "link": reverse_lazy("admin:accounts_invitationtoken_changelist")},
+                    {"title": "Social Applications", "icon": "share", "link": reverse_lazy("admin:socialaccount_socialapp_changelist")},
+                    {"title": "Social Accounts", "icon": "people", "link": reverse_lazy("admin:socialaccount_socialaccount_changelist")},
                 ],
             },
             {
@@ -233,7 +383,7 @@ UNFOLD = {
                 "separator": True,
                 "items": [
                     {"title": "Site Settings", "icon": "settings", "link": reverse_lazy("admin:core_siteconfig_changelist")},
-                    # Portfolio Settings already under Portfolio section, but you can also add here if desired
+                    {"title": "Sites", "icon": "language", "link": reverse_lazy("admin:sites_site_changelist")},
                 ],
             },
         ],
@@ -263,11 +413,13 @@ UNFOLD = {
             ],
         },
         {
-            "models": ["finance.invoice", "finance.quotation", "finance.expense"],
+            "models": ["finance.invoice", "finance.quotation", "finance.expense", "finance.plan", "finance.clientsubscription"],
             "items": [
                 {"title": "Invoices", "link": reverse_lazy("admin:finance_invoice_changelist")},
                 {"title": "Quotations", "link": reverse_lazy("admin:finance_quotation_changelist")},
                 {"title": "Expenses", "link": reverse_lazy("admin:finance_expense_changelist")},
+                {"title": "Plans", "link": reverse_lazy("admin:finance_plan_changelist")},
+                {"title": "Subscriptions", "link": reverse_lazy("admin:finance_clientsubscription_changelist")},
             ],
         },
         {
@@ -280,11 +432,36 @@ UNFOLD = {
             ],
         },
         {
-            "models": ["accounts.user", "accounts.role", "accounts.permission"],
+            "models": [
+                "accounts.user", "accounts.role", "accounts.permission",
+                "accounts.userrole", "accounts.rolepermission",
+                "accounts.emailverificationtoken", "accounts.invitationtoken",
+                "socialaccount.socialapp", "socialaccount.socialaccount"
+            ],
             "items": [
                 {"title": "Users", "link": reverse_lazy("admin:accounts_user_changelist")},
                 {"title": "Roles", "link": reverse_lazy("admin:accounts_role_changelist")},
                 {"title": "Permissions", "link": reverse_lazy("admin:accounts_permission_changelist")},
+                {"title": "User Roles", "link": reverse_lazy("admin:accounts_userrole_changelist")},
+                {"title": "Role Permissions", "link": reverse_lazy("admin:accounts_rolepermission_changelist")},
+                {"title": "Email Verification Tokens", "link": reverse_lazy("admin:accounts_emailverificationtoken_changelist")},
+                {"title": "Invitation Tokens", "link": reverse_lazy("admin:accounts_invitationtoken_changelist")},
+                {"title": "Social Apps", "link": reverse_lazy("admin:socialaccount_socialapp_changelist")},
+                {"title": "Social Accounts", "link": reverse_lazy("admin:socialaccount_socialaccount_changelist")},
+            ],
+        },
+        {
+            "models": ["tracking.useractivity", "tracking.pagevisit"],
+            "items": [
+                {"title": "User Activities", "link": reverse_lazy("admin:tracking_useractivity_changelist")},
+                {"title": "Page Visits", "link": reverse_lazy("admin:tracking_pagevisit_changelist")},
+            ],
+        },
+        {
+            "models": ["core.siteconfig", "sites.site"],
+            "items": [
+                {"title": "Site Settings", "link": reverse_lazy("admin:core_siteconfig_changelist")},
+                {"title": "Sites", "link": reverse_lazy("admin:sites_site_changelist")},
             ],
         },
     ],
@@ -299,7 +476,9 @@ UNFOLD = {
     ],
 }
 
-# ═══════════════ QUILL EDITOR CONFIG ══════════════════
+# -----------------------------------------------------------------------------
+# Quill Editor Configuration
+# -----------------------------------------------------------------------------
 QUILL_CONFIGS = {
     "default": {
         "theme": "snow",
