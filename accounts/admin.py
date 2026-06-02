@@ -1,9 +1,28 @@
 # accounts/admin.py
 from unfold.admin import ModelAdmin
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.admin import site as admin_site
 from allauth.socialaccount.models import SocialApp, SocialAccount, SocialToken
 from .models import User, Role, Permission, UserRole, RolePermission, UserAuditLog, EmailVerificationToken, InvitationToken
+
+
+# ========== Custom forms for user creation / changes ==========
+class CustomUserCreationForm(UserCreationForm):
+    """A form that creates a user, with no privileges, from the given email and password."""
+    class Meta:
+        model = User
+        fields = ("email", "username", "first_name", "last_name", "user_type", "client_role")
+
+
+class CustomUserChangeForm(UserChangeForm):
+    """A form for updating users. Includes all the fields on the user."""
+    class Meta:
+        model = User
+        fields = "__all__"
+        field_classes = {"email": None}  # keep email field as EmailField
+
 
 # ========== Unregister allauth default admins (to replace with Unfold) ==========
 try:
@@ -19,13 +38,17 @@ try:
 except admin.sites.NotRegistered:
     pass
 
-# ========== User admin (inherit only from Unfold ModelAdmin) ==========
+
+# ========== User admin (custom for Unfold and custom user model) ==========
 @admin.register(User)
-class UserAdmin(ModelAdmin):
+class UserAdmin(BaseUserAdmin, ModelAdmin):
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
     list_display = ('email', 'get_full_name', 'user_type', 'client_role', 'is_active', 'last_login')
     list_filter = ('user_type', 'client_role', 'is_active')
     search_fields = ('email', 'first_name', 'last_name', 'phone_number')
     readonly_fields = ('last_login', 'date_joined', 'last_login_ip')
+    ordering = ('email',)
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'physical_address')}),
@@ -39,7 +62,7 @@ class UserAdmin(ModelAdmin):
             'fields': ('email', 'username', 'first_name', 'last_name', 'password1', 'password2', 'user_type', 'client_role'),
         }),
     )
-    ordering = ('email',)
+
 
 # ========== Other accounts models ==========
 @admin.register(Role)
@@ -47,10 +70,12 @@ class RoleAdmin(ModelAdmin):
     list_display = ('code', 'name')
     search_fields = ('code', 'name')
 
+
 @admin.register(Permission)
 class PermissionAdmin(ModelAdmin):
     list_display = ('code', 'description')
     search_fields = ('code',)
+
 
 @admin.register(UserRole)
 class UserRoleAdmin(ModelAdmin):
@@ -58,11 +83,13 @@ class UserRoleAdmin(ModelAdmin):
     list_filter = ('role',)
     search_fields = ('user__email',)
 
+
 @admin.register(RolePermission)
 class RolePermissionAdmin(ModelAdmin):
     list_display = ('role', 'permission')
     list_filter = ('role',)
     search_fields = ('role__name', 'permission__code')
+
 
 @admin.register(UserAuditLog)
 class UserAuditLogAdmin(ModelAdmin):
@@ -70,6 +97,7 @@ class UserAuditLogAdmin(ModelAdmin):
     list_filter = ('timestamp',)
     search_fields = ('user__email', 'action')
     readonly_fields = ('user', 'action', 'ip_address', 'user_agent', 'timestamp')
+
 
 @admin.register(EmailVerificationToken)
 class EmailVerificationTokenAdmin(ModelAdmin):
@@ -79,6 +107,7 @@ class EmailVerificationTokenAdmin(ModelAdmin):
     def is_valid(self, obj):
         return obj.is_valid()
     is_valid.boolean = True
+
 
 @admin.register(InvitationToken)
 class InvitationTokenAdmin(ModelAdmin):
@@ -90,6 +119,7 @@ class InvitationTokenAdmin(ModelAdmin):
         return obj.is_valid()
     is_valid.boolean = True
 
+
 # ========== Allauth social models (registered with Unfold) ==========
 @admin.register(SocialApp)
 class SocialAppAdmin(ModelAdmin):
@@ -97,11 +127,13 @@ class SocialAppAdmin(ModelAdmin):
     search_fields = ('name', 'provider')
     list_filter = ('provider',)
 
+
 @admin.register(SocialAccount)
 class SocialAccountAdmin(ModelAdmin):
     list_display = ('user', 'provider', 'uid')
     search_fields = ('user__email', 'provider', 'uid')
     raw_id_fields = ('user',)
+
 
 @admin.register(SocialToken)
 class SocialTokenAdmin(ModelAdmin):
