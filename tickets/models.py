@@ -1,15 +1,41 @@
 # tickets/models.py
+"""
+Tickets App Models
+------------------
+Support tickets, comments, work logs, attachments, SLA, and canned responses.
+All Quill fields automatically convert plain text to the required JSON format
+(`{"html": "...", "delta": ""}`) on save.
+"""
+
 import json
+from decimal import Decimal
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.core.validators import MinValueValidator
 from django_quill.fields import QuillField
 from simple_history.models import HistoricalRecords
 
 
+# -----------------------------------------------------------------------------
+# Helper function to convert plain text to Quill JSON
+# -----------------------------------------------------------------------------
+def ensure_quill_json(value):
+    """Convert a plain text string to Quill JSON if it is not already JSON."""
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip().startswith('{'):
+        return json.dumps({"html": f"<p>{value}</p>", "delta": ""})
+    return value
+
+
+# -----------------------------------------------------------------------------
+# Ticket Model
+# -----------------------------------------------------------------------------
 class Ticket(models.Model):
     """
-    Support ticket model with full lifecycle tracking.
+    Support ticket with full lifecycle tracking.
     Includes SLA, comments, work logs, and attachments.
     """
     STATUS_CHOICES = [
@@ -43,7 +69,7 @@ class Ticket(models.Model):
         'clients.ClientOrganization',
         on_delete=models.CASCADE,
         related_name='tickets',
-        db_index=True  # Performance index
+        db_index=True
     )
     service = models.ForeignKey('services.Service', on_delete=models.SET_NULL, null=True, blank=True)
     assigned_to = models.ForeignKey(
@@ -79,12 +105,9 @@ class Ticket(models.Model):
         return f"{self.ticket_number} – {self.title}"
 
     def save(self, *args, **kwargs):
-        # Auto-convert plain text description to Quill JSON if needed
-        if self.description and isinstance(self.description, str) and not self.description.strip().startswith('{'):
-            self.description = json.dumps({
-                "html": f"<p>{self.description}</p>",
-                "delta": ""
-            })
+        # Auto-convert plain text description to Quill JSON
+        if self.description:
+            self.description = ensure_quill_json(self.description)
         # Generate ticket number if not set
         if not self.ticket_number:
             today = timezone.now().strftime('%Y%m%d')
@@ -105,6 +128,7 @@ class Ticket(models.Model):
 
     @property
     def status_color(self):
+        """Returns Bootstrap color class for status badge."""
         return {
             'open': 'primary', 'assigned': 'info', 'in_progress': 'warning',
             'resolved': 'success', 'closed': 'secondary', 'escalated': 'danger'
@@ -112,46 +136,64 @@ class Ticket(models.Model):
 
     @property
     def priority_color(self):
-        return {'low': 'secondary', 'medium': 'primary', 'high': 'warning', 'critical': 'danger'}.get(self.priority, 'secondary')
+        """Returns Bootstrap color class for priority badge."""
+        return {
+            'low': 'secondary', 'medium': 'primary', 'high': 'warning', 'critical': 'danger'
+        }.get(self.priority, 'secondary')
 
 
+# -----------------------------------------------------------------------------
+# TicketComment
+# -----------------------------------------------------------------------------
 class TicketComment(models.Model):
+    """Comment on a ticket – can be public or internal, and optionally marked as solution."""
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     content = QuillField()
     is_internal = models.BooleanField(default=False)
-    is_solution = models.BooleanField(default=False)  # Mark as solution
+    is_solution = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['created_at']
 
     def save(self, *args, **kwargs):
-        if self.content and isinstance(self.content, str) and not self.content.strip().startswith('{'):
-            self.content = json.dumps({
-                "html": f"<p>{self.content}</p>",
-                "delta": ""
-            })
+        # Auto-convert plain text content to Quill JSON
+        self.content = ensure_quill_json(self.content)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"Comment on {self.ticket.ticket_number} by {self.author}"
 
+
+# -----------------------------------------------------------------------------
+# TicketWorkLog
+# -----------------------------------------------------------------------------
 class TicketWorkLog(models.Model):
+    """Hours logged by a technician on a ticket."""
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='worklogs')
     technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
-    hours = models.DecimalField(max_digits=5, decimal_places=2)
+    hours = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.5'))]
+    )
     description = QuillField()
     logged_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if self.description and isinstance(self.description, str) and not self.description.strip().startswith('{'):
-            self.description = json.dumps({
-                "html": f"<p>{self.description}</p>",
-                "delta": ""
-            })
+        # Auto-convert plain text description to Quill JSON
+        self.description = ensure_quill_json(self.description)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.technician} – {self.hours}h on {self.ticket.ticket_number}"
 
+
+# -----------------------------------------------------------------------------
+# TicketAttachment
+# -----------------------------------------------------------------------------
 class TicketAttachment(models.Model):
+    """File attachment uploaded to a ticket."""
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments')
     file = models.FileField(upload_to='tickets/%Y/%m/')
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
@@ -165,7 +207,11 @@ class TicketAttachment(models.Model):
         return f"Attachment for {self.ticket.ticket_number}"
 
 
+# -----------------------------------------------------------------------------
+# TicketSLA
+# -----------------------------------------------------------------------------
 class TicketSLA(models.Model):
+    """SLA deadlines for response and resolution."""
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='sla')
     response_due = models.DateTimeField(null=True, blank=True)
     resolution_due = models.DateTimeField(null=True, blank=True)
@@ -175,6 +221,9 @@ class TicketSLA(models.Model):
         return f"SLA for {self.ticket.ticket_number}"
 
 
+# -----------------------------------------------------------------------------
+# CannedResponse
+# -----------------------------------------------------------------------------
 class CannedResponse(models.Model):
     """Predefined reply templates for technicians."""
     title = models.CharField(max_length=100)
