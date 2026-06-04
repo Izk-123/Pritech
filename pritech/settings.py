@@ -245,6 +245,9 @@ if not DEBUG:
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 1209600
 
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240
+DATA_UPLOAD_MAX_NUMBER_FILES = 100
+
 # -----------------------------------------------------------------------------
 # UNFOLD ADMIN CONFIGURATION (with full SIDEBAR and TABS)
 # -----------------------------------------------------------------------------
