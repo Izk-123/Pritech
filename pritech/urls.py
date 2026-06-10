@@ -25,4 +25,5 @@ urlpatterns = [
     path('services/', include('services.urls')),  # Service catalogue
     path('tickets/', include('tickets.urls')),    # Support tickets
     path('finance/', include('finance.urls')),    # Quotations, invoices, expenses, reports
+    path("tracking/", include("tracking.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
