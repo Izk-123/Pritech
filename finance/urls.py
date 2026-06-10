@@ -1,37 +1,32 @@
 # finance/urls.py
-"""
-Finance App URL Configuration
-----------------------------
-Defines all endpoints for quotations, invoices, expenses, financial reports,
-client-facing portals, subscription management, bulk actions, CSV export,
-and duplicate quotation.
-"""
-
 from django.urls import path
 from .views import (
-    # Quotations (staff)
+    # Quotations
     QuotationListView, QuotationCreateView, QuotationDetailView,
     QuotationUpdateView, QuotationSendView, QuotationConvertView, QuotationPDFView,
     DuplicateQuotationView,
-    # Invoices (staff)
+    # Export views
+    quotation_print_view, quotation_pdf_direct, quotation_word_export, quotation_excel_export,
+    # Invoices
     InvoiceListView, InvoiceCreateView, InvoiceDetailView,
     AddInvoiceItemView, RecordPaymentView, IssueInvoiceView, InvoicePDFView,
     BulkInvoiceActionView, ExportInvoiceCSVView,
-    # Expenses (staff)
+    # Expenses
     ExpenseListView, ExpenseCreateView, ApproveExpenseView, RejectExpenseView,
     # Reports
     ReportView,
-    # Client-facing
+    # Client‑facing
     ClientInvoiceListView, ClientInvoiceDetailView,
     ClientQuotationListView, ClientQuotationDetailView,
     ClientQuotationApproveView, ClientQuotationRejectView,
     ClientSubscriptionDetailView, ClientSubscriptionUpgradeView, ClientSubscriptionCancelView,
+    # HTMX
+    live_quotation_search, update_quotation_status,
+    live_invoice_search, dashboard_stats_partial,
 )
 
 urlpatterns = [
-    # =========================================================================
-    # Quotations (Staff only)
-    # =========================================================================
+    # Quotations
     path('quotations/', QuotationListView.as_view(), name='quotation_list'),
     path('quotations/new/', QuotationCreateView.as_view(), name='quotation_create'),
     path('quotations/<int:pk>/', QuotationDetailView.as_view(), name='quotation_detail'),
@@ -40,10 +35,12 @@ urlpatterns = [
     path('quotations/<int:pk>/convert/', QuotationConvertView.as_view(), name='quotation_convert'),
     path('quotations/<int:pk>/duplicate/', DuplicateQuotationView.as_view(), name='quotation_duplicate'),
     path('quotations/<int:pk>/pdf/', QuotationPDFView.as_view(), name='quotation_pdf'),
+    path('quotations/<int:pk>/pdf-direct/', quotation_pdf_direct, name='quotation_pdf_direct'),
+    path('quotations/<int:pk>/print/', quotation_print_view, name='quotation_print'),
+    path('quotations/<int:pk>/word/', quotation_word_export, name='quotation_word'),
+    path('quotations/<int:pk>/excel/', quotation_excel_export, name='quotation_excel'),
 
-    # =========================================================================
-    # Invoices (Staff only)
-    # =========================================================================
+    # Invoices
     path('invoices/', InvoiceListView.as_view(), name='invoice_list'),
     path('invoices/new/', InvoiceCreateView.as_view(), name='invoice_create'),
     path('invoices/<int:pk>/', InvoiceDetailView.as_view(), name='invoice_detail'),
@@ -54,22 +51,16 @@ urlpatterns = [
     path('invoices/bulk-action/', BulkInvoiceActionView.as_view(), name='invoice_bulk_action'),
     path('invoices/export/', ExportInvoiceCSVView.as_view(), name='invoice_export_csv'),
 
-    # =========================================================================
-    # Expenses (Staff only)
-    # =========================================================================
+    # Expenses
     path('expenses/', ExpenseListView.as_view(), name='expense_list'),
     path('expenses/new/', ExpenseCreateView.as_view(), name='expense_create'),
     path('expenses/<int:pk>/approve/', ApproveExpenseView.as_view(), name='expense_approve'),
     path('expenses/<int:pk>/reject/', RejectExpenseView.as_view(), name='expense_reject'),
 
-    # =========================================================================
-    # Financial Reports (Staff only)
-    # =========================================================================
+    # Reports
     path('reports/', ReportView.as_view(), name='finance_reports'),
 
-    # =========================================================================
-    # Client‑Facing Portal (read‑only + actions)
-    # =========================================================================
+    # Client portal
     path('client/invoices/', ClientInvoiceListView.as_view(), name='client_invoice_list'),
     path('client/invoices/<int:pk>/', ClientInvoiceDetailView.as_view(), name='client_invoice_detail'),
     path('client/quotations/', ClientQuotationListView.as_view(), name='client_quotation_list'),
@@ -77,10 +68,14 @@ urlpatterns = [
     path('client/quotations/<int:pk>/approve/', ClientQuotationApproveView.as_view(), name='client_quotation_approve'),
     path('client/quotations/<int:pk>/reject/', ClientQuotationRejectView.as_view(), name='client_quotation_reject'),
 
-    # =========================================================================
-    # Subscription Management (Client‑facing)
-    # =========================================================================
+    # Subscriptions
     path('client/subscription/', ClientSubscriptionDetailView.as_view(), name='client_subscription_detail'),
     path('client/subscription/change/', ClientSubscriptionUpgradeView.as_view(), name='client_subscription_change'),
     path('client/subscription/cancel/', ClientSubscriptionCancelView.as_view(), name='client_subscription_cancel'),
+
+    # HTMX
+    path('htmx/quotation-search/', live_quotation_search, name='live_quotation_search'),
+    path('htmx/quotation-status/<int:pk>/', update_quotation_status, name='update_quotation_status'),
+    path('htmx/invoice-search/', live_invoice_search, name='live_invoice_search'),
+    path('htmx/dashboard-stats/', dashboard_stats_partial, name='dashboard_stats_partial'),
 ]

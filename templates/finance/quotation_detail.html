@@ -1,107 +1,236 @@
 {% extends "base.html" %}
 {% load static %}
+
 {% block title %}{{ quotation.quotation_number }}{% endblock %}
 {% block page_title %}{{ quotation.quotation_number }}{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* ========== SCREEN STYLES ========== */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .status-draft     { background: var(--bg-tertiary); color: var(--text-muted); }
+  .status-sent      { background: #dbeafe; color: #1d4ed8; }
+  .status-approved  { background: #dcfce7; color: #15803d; }
+  .status-converted { background: #f3e8ff; color: #7e22ce; }
+  .status-rejected  { background: #fee2e2; color: #b91c1c; }
+  .status-expired   { background: #fef9c3; color: #92400e; }
+  [data-theme="dark"] .status-sent      { background: #1e3a5f; color: #93c5fd; }
+  [data-theme="dark"] .status-approved  { background: #14532d; color: #86efac; }
+  [data-theme="dark"] .status-converted { background: #3b0764; color: #d8b4fe; }
+  [data-theme="dark"] .status-rejected  { background: #7f1d1d; color: #fca5a5; }
+  [data-theme="dark"] .status-expired   { background: #451a03; color: #fcd34d; }
+
+  .feedback-alert {
+    border-left: 4px solid #f59e0b;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
-  <div>
-    <div class="page-breadcrumb"><a href="{% url 'quotation_list' %}">Quotations</a> / {{ quotation.quotation_number }}</div>
-    <h1>{{ quotation.quotation_number }}</h1>
-    <span class="badge bg-{% if quotation.status == 'approved' %}success{% elif quotation.status == 'sent' %}primary{% elif quotation.status == 'converted' %}secondary{% elif quotation.status == 'rejected' %}danger{% elif quotation.status == 'expired' %}warning{% else %}secondary{% endif %}">
-      {{ quotation.get_status_display }}
-    </span>
-  </div>
-  <div class="d-flex gap-2">
-    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> Print</button>
-    {% if quotation.status == 'draft' %}
-      <a href="{% url 'quotation_update' quotation.pk %}" class="btn btn-primary">Edit</a>
-      <form method="post" action="{% url 'quotation_send' quotation.pk %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-success">Send to Client</button>
-      </form>
-      <form method="post" action="{% url 'quotation_duplicate' quotation.pk %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-files"></i> Duplicate</button>
-      </form>
-    {% elif quotation.status == 'sent' %}
-      <form method="post" action="{% url 'quotation_send' quotation.pk %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-secondary" disabled>Already Sent</button>
-      </form>
-      {% if perms.finance.can_convert_quotation %}
-      <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline" onsubmit="return confirm('Convert this quotation to an invoice?');">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-warning">Convert to Invoice</button>
-      </form>
+<div class="container py-3 py-md-4">
+  
+  <!-- Header with breadcrumb, title, status, and actions -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 no-print">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'quotation_list' %}">Quotations</a></li>
+          <li class="breadcrumb-item active">{{ quotation.quotation_number }}</li>
+        </ol>
+      </nav>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <h1 class="h2 mb-0">{{ quotation.quotation_number }}</h1>
+        <span class="status-badge status-{{ quotation.status }}">
+          <i class="bi bi-{% if quotation.status == 'approved' %}check-circle{% elif quotation.status == 'sent' %}send{% elif quotation.status == 'converted' %}arrow-repeat{% elif quotation.status == 'rejected' %}x-circle{% elif quotation.status == 'expired' %}clock-history{% else %}pencil-square{% endif %}"></i>
+          {{ quotation.get_status_display }}
+        </span>
+      </div>
+    </div>
+    <div class="d-flex gap-2 action-buttons">
+      <!-- Export Dropdown -->
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{% url 'quotation_print' quotation.pk %}" target="_blank">
+            <i class="bi bi-printer me-2"></i> Print / Save as PDF (Browser)
+          </a></li>
+          <li><a class="dropdown-item" href="{% url 'quotation_pdf_direct' quotation.pk %}">
+            <i class="bi bi-file-pdf me-2"></i> Download PDF
+          </a></li>
+          <li><a class="dropdown-item" href="{% url 'quotation_word' quotation.pk %}">
+            <i class="bi bi-file-word me-2"></i> Download Word (.doc)
+          </a></li>
+          <li><a class="dropdown-item" href="{% url 'quotation_excel' quotation.pk %}">
+            <i class="bi bi-file-excel me-2"></i> Download Excel (.xlsx)
+          </a></li>
+        </ul>
+      </div>
+
+      {% if quotation.status == 'draft' %}
+        <a href="{% url 'quotation_update' quotation.pk %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-pencil"></i> Edit
+        </a>
+        <form method="post" action="{% url 'quotation_send' quotation.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-send"></i> Send
+          </button>
+        </form>
+        <form method="post" action="{% url 'quotation_duplicate' quotation.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-files"></i> Duplicate
+          </button>
+        </form>
+      {% elif quotation.status == 'sent' %}
+        <button class="btn btn-secondary btn-sm" disabled>Sent</button>
+        {% if perms.finance.can_convert_quotation %}
+          <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline"
+                onsubmit="return confirm('Convert this quotation to an invoice?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm">
+              <i class="bi bi-arrow-repeat"></i> Convert
+            </button>
+          </form>
+        {% endif %}
+      {% elif quotation.status == 'approved' and perms.finance.can_convert_quotation %}
+        <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-arrow-repeat"></i> Convert
+          </button>
+        </form>
       {% endif %}
-    {% elif quotation.status == 'approved' and perms.finance.can_convert_quotation %}
-      <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-success">Convert to Invoice</button>
-      </form>
-    {% endif %}
+    </div>
   </div>
-</div>
 
-{# Display client feedback if any #}
-{% if quotation.status == 'rejected' and quotation.client_feedback %}
-<div class="alert alert-warning">
-  <strong><i class="bi bi-chat-dots"></i> Client rejection reason / change request:</strong>
-  <div class="mt-2">{{ quotation.client_feedback|linebreaks }}</div>
-  <hr>
-  <small>Use the "Edit" button above to revise and send again.</small>
-</div>
-{% endif %}
+  <!-- Client rejection feedback (screen only) -->
+  {% if quotation.status == 'rejected' and quotation.client_feedback %}
+  <div class="feedback-alert mb-4 no-print">
+    <div class="d-flex gap-2">
+      <i class="bi bi-chat-dots-fill text-warning fs-5"></i>
+      <div>
+        <strong class="d-block">Client rejection reason / change request</strong>
+        <p class="mb-1">{{ quotation.client_feedback|linebreaksbr }}</p>
+        <small class="text-muted">Use the Edit button above to revise and resend.</small>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
-<div class="card" id="quotation-doc">
-  <div class="card-body p-4 p-md-5">
-    <div class="row mb-4">
-      <div class="col-sm-6">
-        <img src="{% static 'images/logo.png' %}" alt="{{ config.company_name }}" style="max-height:70px;">
-        <h2 class="fw-bold text-primary">{{ config.company_name }}</h2>
-        <!-- address, email, phone -->
+  <!-- Main quotation card (screen view) -->
+  <div class="card quotation-doc shadow-sm">
+    <div class="card-body p-3 p-md-5">
+      
+      <!-- Company header and title -->
+      <div class="row mb-4">
+        <div class="col-sm-6">
+          {% if site_config.logo %}
+            <img src="{{ site_config.logo.url }}" alt="{{ site_config.company_name }}" style="max-height: 60px; margin-bottom: 10px;">
+          {% else %}
+            <h2 class="fw-bold text-primary">{{ site_config.company_name }}</h2>
+          {% endif %}
+          {% if site_config.address %}<div class="small text-muted">{{ site_config.address|linebreaksbr }}</div>{% endif %}
+          {% if site_config.email %}<div class="small">{{ site_config.email }}</div>{% endif %}
+          {% if site_config.phone %}<div class="small">{{ site_config.phone }}</div>{% endif %}
+        </div>
+        <div class="col-sm-6 text-sm-end">
+          <div class="display-6 fw-bold text-primary">QUOTATION</div>
+          <div class="fs-5 fw-semibold">{{ quotation.quotation_number }}</div>
+        </div>
       </div>
-      <div class="col-sm-6 text-sm-end">
-        <div class="display-6 fw-bold text-primary">QUOTATION</div>
-        <div class="fs-5 fw-semibold">{{ quotation.quotation_number }}</div>
+
+      <!-- Client and date details -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="text-uppercase small fw-semibold text-muted mb-1">Prepared For</div>
+          <h5 class="fw-bold">{{ quotation.client.name }}</h5>
+          {% if quotation.client.address %}<div class="small">{{ quotation.client.address|linebreaksbr }}</div>{% endif %}
+          {% if quotation.client.email %}<div class="small">{{ quotation.client.email }}</div>{% endif %}
+          {% if quotation.client.phone %}<div class="small">{{ quotation.client.phone }}</div>{% endif %}
+        </div>
+        <div class="col-md-6 text-md-end">
+          <div class="text-uppercase small fw-semibold text-muted mb-1">Details</div>
+          <div class="d-flex justify-content-md-end gap-3 small"><span class="text-muted">Issue Date:</span><span class="fw-semibold">{{ quotation.issue_date }}</span></div>
+          <div class="d-flex justify-content-md-end gap-3 small"><span class="text-muted">Valid Until:</span><span class="fw-semibold {% if quotation.valid_until < today %}text-danger{% endif %}">{{ quotation.valid_until }}</span></div>
+        </div>
+      </div>
+
+      <!-- Line items table (responsive) -->
+      <div class="table-responsive mb-4">
+        <table class="table table-bordered align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Description</th>
+              <th class="text-end" style="width: 100px">Qty</th>
+              <th class="text-end" style="width: 130px">Unit Price</th>
+              <th class="text-end" style="width: 130px">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+            <tr>
+              <td>{{ item.description }}</td>
+              <td class="text-end">{{ item.quantity }}</td>
+              <td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+              <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-4 text-muted">No items added</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Totals block -->
+      <div class="row justify-content-end">
+        <div class="col-md-5 col-lg-4">
+          <div class="d-flex justify-content-between py-1">
+            <span>Subtotal</span>
+            <span class="fw-semibold">{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1 border-bottom">
+            <span>VAT ({{ config.vat_rate|floatformat:1 }}%)</span>
+            <span class="fw-semibold">{{ config.currency_symbol }}{{ quotation.tax_amount|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-2 fs-5 fw-bold">
+            <span>Total</span>
+            <span class="text-primary">{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      {% if quotation.notes %}
+      <div class="mt-4 p-3 bg-light rounded small">
+        <strong class="d-block mb-1">Notes</strong>
+        {{ quotation.notes }}
+      </div>
+      {% endif %}
+
+      <!-- Footer -->
+      <div class="mt-4 small text-muted text-center">
+        This quotation is valid until {{ quotation.valid_until }}. Prices and availability are subject to change after this date.
       </div>
     </div>
-    <!-- Bill to / details / items table / totals / notes -->
-    <div class="row mb-4">
-      <div class="col-sm-6">
-        <div class="text-uppercase small fw-semibold text-muted">Prepared For</div>
-        <h5 class="fw-bold">{{ quotation.client.name }}</h5>
-        {% if quotation.client.address %}<div class="small">{{ quotation.client.address|linebreaksbr }}</div>{% endif %}
-        {% if quotation.client.email %}<div class="small">{{ quotation.client.email }}</div>{% endif %}
-      </div>
-      <div class="col-sm-6 text-sm-end">
-        <div class="text-uppercase small fw-semibold text-muted">Details</div>
-        <div class="small">Issue Date: {{ quotation.issue_date }}</div>
-        <div class="small">Valid Until: {{ quotation.valid_until }}</div>
-      </div>
-    </div>
-    <div class="table-responsive mb-4">
-      <table class="table table-bordered">
-        <thead class="table-dark"><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr></thead>
-        <tbody>
-          {% for item in items %}
-          <tr><td>{{ item.description }}</td><td class="text-end">{{ item.quantity }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.unit_price|floatformat:2 }}</td><td class="text-end">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td></tr>
-          {% empty %}
-          <tr><td colspan="4">No items added</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="d-flex justify-content-end">
-      <div style="width: 300px;">
-        <div class="d-flex justify-content-between"><span>Subtotal</span><span>{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span></div>
-        <div class="d-flex justify-content-between border-bottom"><span>VAT</span><span>{{ config.currency_symbol }}{{ quotation.tax_amount|floatformat:2 }}</span></div>
-        <div class="d-flex justify-content-between fs-5 fw-bold"><span>Total</span><span>{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span></div>
-      </div>
-    </div>
-    {% if quotation.notes %}<div class="mt-4 p-3 bg-light">{{ quotation.notes }}</div>{% endif %}
-    <div class="mt-4 small text-muted">Valid until {{ quotation.valid_until }}.</div>
   </div>
 </div>
 {% endblock %}

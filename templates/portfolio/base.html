@@ -301,7 +301,16 @@
         {{ portfolio_settings.footer_copyright|default:'All Rights Reserved.' }}
       </p>
       <p class="footer-tech">Built with <span aria-hidden="true">❤️</span> in Malawi</p>
+      <div class="mt-2">
+        <a href="{% url 'tracking_opt_out' %}" class="text-muted small" style="color: var(--text-muted); text-decoration: none;">
+            <i class="fa-solid fa-shield-halved"></i> Opt out of tracking
+        </a>
     </div>
+    </div>
+
+    {# ── EXTRA FOOTER BLOCK (for GDPR links, custom content) ── #}
+    {% block extra_footer %}{% endblock %}
+
   </div>
 </footer>
 

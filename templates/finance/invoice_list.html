@@ -19,13 +19,28 @@
   </div>
 </div>
 
-<!-- Filter form -->
-<form method="get" id="filter-form" class="card mb-4">
+<!-- Real‑time filter bar (HTMX) -->
+<div class="card mb-4">
   <div class="card-body">
     <div class="row g-3 align-items-end">
       <div class="col-sm-6 col-md-auto">
+        <label class="form-label fw-semibold">Search</label>
+        <input type="text"
+               name="q"
+               class="form-control"
+               placeholder="Invoice # or client..."
+               hx-get="{% url 'live_invoice_search' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#invoice-table-container"
+               hx-indicator="#search-spinner">
+      </div>
+      <div class="col-sm-6 col-md-auto">
         <label class="form-label fw-semibold">Status</label>
-        <select name="status" class="form-select">
+        <select name="status"
+                class="form-select"
+                hx-get="{% url 'live_invoice_search' %}"
+                hx-trigger="change"
+                hx-target="#invoice-table-container">
           <option value="">All statuses</option>
           {% for val, label in status_choices %}
             <option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>
@@ -33,33 +48,45 @@
         </select>
       </div>
       <div class="col-sm-6 col-md-auto">
-        <label class="form-label fw-semibold">Issue date from</label>
-        <input type="date" name="issue_from" class="form-control" value="{{ issue_from }}">
+        <label class="form-label fw-semibold">Issue from</label>
+        <input type="date" name="issue_from" class="form-control" value="{{ issue_from }}"
+               hx-get="{% url 'live_invoice_search' %}"
+               hx-trigger="change"
+               hx-target="#invoice-table-container">
       </div>
       <div class="col-sm-6 col-md-auto">
-        <label class="form-label fw-semibold">Issue date to</label>
-        <input type="date" name="issue_to" class="form-control" value="{{ issue_to }}">
+        <label class="form-label fw-semibold">Issue to</label>
+        <input type="date" name="issue_to" class="form-control" value="{{ issue_to }}"
+               hx-get="{% url 'live_invoice_search' %}"
+               hx-trigger="change"
+               hx-target="#invoice-table-container">
       </div>
       <div class="col-sm-6 col-md-auto">
-        <label class="form-label fw-semibold">Due date from</label>
-        <input type="date" name="due_from" class="form-control" value="{{ due_from }}">
+        <label class="form-label fw-semibold">Due from</label>
+        <input type="date" name="due_from" class="form-control" value="{{ due_from }}"
+               hx-get="{% url 'live_invoice_search' %}"
+               hx-trigger="change"
+               hx-target="#invoice-table-container">
       </div>
       <div class="col-sm-6 col-md-auto">
-        <label class="form-label fw-semibold">Due date to</label>
-        <input type="date" name="due_to" class="form-control" value="{{ due_to }}">
+        <label class="form-label fw-semibold">Due to</label>
+        <input type="date" name="due_to" class="form-control" value="{{ due_to }}"
+               hx-get="{% url 'live_invoice_search' %}"
+               hx-trigger="change"
+               hx-target="#invoice-table-container">
       </div>
       <div class="col-sm-6 col-md-auto">
         <div class="d-flex gap-2">
-          <button type="submit" class="btn btn-primary">Filter</button>
           <a href="{% url 'invoice_list' %}" class="btn btn-outline-secondary">Clear</a>
+          <span id="search-spinner" class="htmx-indicator spinner-border spinner-border-sm" role="status"></span>
         </div>
       </div>
     </div>
   </div>
-</form>
+</div>
 
-<!-- Bulk action form -->
-<form method="post" action="{% url 'invoice_bulk_action' %}" id="bulk-action-form" class="mb-3">
+<!-- Bulk action form (wraps the table container) -->
+<form method="post" action="{% url 'invoice_bulk_action' %}" id="bulk-action-form">
   {% csrf_token %}
   <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
     <select name="action" class="form-select w-auto">
@@ -70,116 +97,13 @@
     <button type="submit" class="btn btn-sm btn-primary">Apply</button>
   </div>
 
-  <!-- Desktop table (visible on md and up) -->
-  <div class="card d-none d-md-block">
-    <div class="table-responsive">
-      <table class="modern-table mb-0">
-        <thead>
-          <tr>
-            <th style="width: 30px"><input type="checkbox" id="select-all"></th>
-            <th>Invoice #</th>
-            <th>Client</th>
-            <th>Issue Date</th>
-            <th>Due Date</th>
-            <th class="text-end">Total</th>
-            <th class="text-end">Paid</th>
-            <th class="text-end">Balance</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for inv in invoices %}
-          <tr>
-            <td><input type="checkbox" name="invoice_ids" value="{{ inv.pk }}" class="invoice-checkbox"></td>
-            <td><a href="{% url 'invoice_detail' inv.pk %}" class="fw-semibold">{{ inv.invoice_number }}</a></td>
-            <td>{{ inv.client.name }}</td>
-            <td class="small">{{ inv.issue_date }}</td>
-            <td class="small {% if inv.status == 'overdue' %}text-danger fw-semibold{% endif %}">{{ inv.due_date }}</td>
-            <td class="text-end fw-semibold">{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:2 }}</td>
-            <td class="text-end fw-semibold text-success">{{ site_config.currency_symbol }}{{ inv.amount_paid|floatformat:2 }}</td>
-            <td class="text-end fw-semibold {% if inv.balance_due > 0 %}text-danger{% endif %}">{{ site_config.currency_symbol }}{{ inv.balance_due|floatformat:2 }}</td>
-            <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
-            <td><a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-secondary">View</a></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="10" class="text-center py-4 text-muted">No invoices found.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        <tfoot class="table-light">
-          <tr>
-            <td colspan="5" class="text-end fw-bold">Totals:</td>
-            <td class="text-end fw-bold">{{ site_config.currency_symbol }}{{ total_amount_sum|floatformat:2 }}</td>
-            <td class="text-end fw-bold text-success">{{ site_config.currency_symbol }}{{ total_paid_sum|floatformat:2 }}</td>
-            <td class="text-end fw-bold text-danger">{{ site_config.currency_symbol }}{{ total_balance_sum|floatformat:2 }}</td>
-            <td colspan="2"></td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- Mobile card view (visible only on small screens) -->
-  <div class="d-md-none">
-    <div class="row g-3">
-      {% for inv in invoices %}
-      <div class="col-12">
-        <div class="card list-card">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <input type="checkbox" name="invoice_ids" value="{{ inv.pk }}" class="invoice-checkbox me-2">
-                <a href="{% url 'invoice_detail' inv.pk %}" class="list-card-title">{{ inv.invoice_number }}</a>
-              </div>
-              <span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span>
-            </div>
-            <div class="list-card-meta mb-2">
-              <span><strong>Client:</strong> {{ inv.client.name }}</span>
-              <span><strong>Issue:</strong> {{ inv.issue_date }}</span>
-              <span><strong>Due:</strong> {{ inv.due_date }}</span>
-            </div>
-            <div class="d-flex justify-content-between mt-2">
-              <div>
-                <div class="small text-muted">Total</div>
-                <div class="fw-semibold">{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:2 }}</div>
-              </div>
-              <div>
-                <div class="small text-muted">Paid</div>
-                <div class="fw-semibold text-success">{{ site_config.currency_symbol }}{{ inv.amount_paid|floatformat:2 }}</div>
-              </div>
-              <div>
-                <div class="small text-muted">Balance</div>
-                <div class="fw-semibold {% if inv.balance_due > 0 %}text-danger{% endif %}">{{ site_config.currency_symbol }}{{ inv.balance_due|floatformat:2 }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="card-footer bg-transparent d-flex justify-content-between">
-            <a href="{% url 'invoice_detail' inv.pk %}" class="btn btn-sm btn-outline-primary w-100">View Details</a>
-          </div>
-        </div>
-      </div>
-      {% empty %}
-      <div class="col-12">
-        <div class="alert alert-info text-center">No invoices found.</div>
-      </div>
-      {% endfor %}
-    </div>
-    {% if invoices %}
-    <div class="mt-3 p-2 bg-light rounded">
-      <div class="d-flex justify-content-between fw-bold">
-        <span>Totals:</span>
-        <span>Total: {{ site_config.currency_symbol }}{{ total_amount_sum|floatformat:2 }}</span>
-        <span>Paid: {{ site_config.currency_symbol }}{{ total_paid_sum|floatformat:2 }}</span>
-        <span>Balance: {{ site_config.currency_symbol }}{{ total_balance_sum|floatformat:2 }}</span>
-      </div>
-    </div>
-    {% endif %}
+  <!-- Container that will be replaced by HTMX -->
+  <div id="invoice-table-container">
+    {% include "finance/partials/invoice_rows.html" with invoices=invoices %}
   </div>
 </form>
 
-<!-- Pagination -->
+<!-- Pagination (if not using HTMX pagination – you can keep it simple) -->
 {% if is_paginated %}
 <div class="d-flex justify-content-between align-items-center mt-3">
   <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
@@ -195,14 +119,18 @@
 {% endif %}
 
 <script>
-  // Select all checkboxes
-  const selectAllCheckbox = document.getElementById('select-all');
-  if (selectAllCheckbox) {
-    selectAllCheckbox.addEventListener('change', function(e) {
+  // Select all checkboxes (works even after HTMX replacement)
+  document.body.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'select-all') {
       document.querySelectorAll('.invoice-checkbox').forEach(cb => cb.checked = e.target.checked);
-    });
-  }
-  // Ensure mobile checkboxes also toggle with "Select All" (they have same class)
-  // No additional code needed.
+    }
+  });
+  // Re-attach event listener after HTMX swap
+  document.body.addEventListener('htmx:afterSwap', function() {
+    const selectAll = document.getElementById('select-all');
+    if (selectAll) {
+      selectAll.checked = false;
+    }
+  });
 </script>
 {% endblock %}

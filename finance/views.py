@@ -2,54 +2,69 @@
 """
 Finance App Views
 -----------------
-Handles quotations, invoices, expenses, financial reports, client-facing portals,
-subscription management, and async PDF generation. Added enhancements:
-- Invoice list with date range filters, totals row, bulk actions (reminder/issue)
-- Duplicate quotation functionality
-- CSV export for invoices
+Complete set of views for financial management:
+- Quotations (CRUD, send, convert, duplicate, PDF, print, Word, Excel)
+- Invoices (CRUD, add items, record payment, issue, bulk actions, CSV export, PDF)
+- Expenses (list, create, approve, reject)
+- Financial Reports (income statement, aging, top clients, monthly trends)
+- Client portal (invoices, quotations, approve/reject, subscription management)
+- HTMX real‑time endpoints (live search, status updates, dashboard partials)
+
+All staff views enforce role‑based access using RoleRequiredMixin.
+Client views use standard LoginRequiredMixin with object‑level permissions.
 """
 
-import base64
 import csv
 import json
 import logging
+import base64
 from datetime import date, timedelta
+from pathlib import Path
 
-from django.views.generic import ListView, CreateView, DetailView, View, TemplateView, UpdateView
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, TemplateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from django.db import models, transaction
 from django.utils import timezone
-from django.conf import settings
 from django.core.cache import cache
 from django.utils.decorators import method_decorator
+from django.template.loader import render_to_string
+from django.template.response import TemplateResponse
+from django.db.models import Q
+from django.conf import settings
 
+# For Excel export
+import openpyxl
+from openpyxl.styles import Font, Alignment, Border, Side
+
+# Local imports
 from .models import Invoice, Expense, InvoiceItem, Quotation, QuotationItem, Plan, ClientSubscription
 from .forms import (
     InvoiceForm, InvoiceItemForm, PaymentForm, ExpenseForm,
-    QuotationForm, QuotationItemFormSet, SubscriptionChangeForm
+    QuotationForm, QuotationItemFormSet, SubscriptionChangeForm,
+    InvoiceFilterForm
 )
 from .services import InvoiceService, QuotationService
-from infrastructure.pdf_service import render_pdf, pdf_response, pdf_inline_response
-from core.models import SiteConfig
-from core.mixins import RoleRequiredMixin
 from .reports import ReportService
 from .tasks import generate_invoice_pdf, generate_quotation_pdf
 
+from core.models import SiteConfig
+from core.mixins import RoleRequiredMixin
+from infrastructure.pdf_service import render_pdf, pdf_response
 from infrastructure.pdf_sanitizer import sanitize_html, sanitize_plain_text
 from accounts.decorators import rate_limit, get_client_ip
 
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# Helper: Send payment reminder email
-# =============================================================================
+# -----------------------------------------------------------------------------
+# Helper Functions
+# -----------------------------------------------------------------------------
 def send_payment_reminder(invoice):
-    """Send an email reminder to the client about an overdue or outstanding invoice."""
+    """Send an email reminder to client for overdue or outstanding invoice."""
     try:
         from django.core.mail import send_mail
         config = SiteConfig.get()
@@ -77,7 +92,7 @@ def send_payment_reminder(invoice):
 # =============================================================================
 
 class QuotationListView(RoleRequiredMixin, ListView):
-    """List all quotations with filtering by status."""
+    """List all quotations with optional status filter."""
     model = Quotation
     template_name = 'finance/quotation_list.html'
     context_object_name = 'quotations'
@@ -85,7 +100,7 @@ class QuotationListView(RoleRequiredMixin, ListView):
     required_roles = ['FINANCE', 'ADMIN']
 
     def get_queryset(self):
-        qs = Quotation.objects.select_related('client')
+        qs = super().get_queryset().select_related('client')
         status = self.request.GET.get('status')
         if status:
             qs = qs.filter(status=status)
@@ -99,7 +114,7 @@ class QuotationListView(RoleRequiredMixin, ListView):
 
 
 class QuotationCreateView(RoleRequiredMixin, CreateView):
-    """Create a new quotation with inline line items."""
+    """Create a new quotation with dynamic line items formset."""
     model = Quotation
     form_class = QuotationForm
     template_name = 'finance/quotation_form.html'
@@ -123,12 +138,26 @@ class QuotationCreateView(RoleRequiredMixin, CreateView):
                 items.instance = self.object
                 items.save()
                 QuotationService.recalculate(self.object)
-        messages.success(self.request, 'Quotation created.')
+
+        # Check which action button was clicked
+        if self.request.POST.get('action') == 'send':
+            try:
+                QuotationService.send(self.object)
+                messages.success(self.request, 'Quotation sent to client.')
+            except ValueError as e:
+                messages.error(self.request, str(e))
+        else:
+            messages.success(self.request, 'Quotation saved as draft.')
+
         return redirect('quotation_detail', pk=self.object.pk)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Please correct errors in the quotation header.")
+        return self.render_to_response(self.get_context_data(form=form))
 
 
 class QuotationDetailView(RoleRequiredMixin, DetailView):
-    """View quotation details (staff side)."""
+    """Detailed view of a single quotation with items."""
     model = Quotation
     template_name = 'finance/quotation_detail.html'
     context_object_name = 'quotation'
@@ -142,7 +171,7 @@ class QuotationDetailView(RoleRequiredMixin, DetailView):
 
 
 class QuotationUpdateView(RoleRequiredMixin, UpdateView):
-    """Edit an existing quotation (only draft status)."""
+    """Edit an existing quotation (only allowed in 'draft' status)."""
     model = Quotation
     form_class = QuotationForm
     template_name = 'finance/quotation_form.html'
@@ -165,12 +194,25 @@ class QuotationUpdateView(RoleRequiredMixin, UpdateView):
                 items.instance = self.object
                 items.save()
                 QuotationService.recalculate(self.object)
-        messages.success(self.request, 'Quotation updated.')
+
+        if self.request.POST.get('action') == 'send':
+            try:
+                QuotationService.send(self.object)
+                messages.success(self.request, 'Quotation sent to client.')
+            except ValueError as e:
+                messages.error(self.request, str(e))
+        else:
+            messages.success(self.request, 'Quotation updated.')
+
         return redirect('quotation_detail', pk=self.object.pk)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Please correct errors in the quotation header.")
+        return self.render_to_response(self.get_context_data(form=form))
 
 
 class QuotationSendView(RoleRequiredMixin, View):
-    """Send quotation to client (changes status to 'sent')."""
+    """Simple view to change quotation status to 'sent'."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def post(self, request, pk):
@@ -184,7 +226,7 @@ class QuotationSendView(RoleRequiredMixin, View):
 
 
 class QuotationConvertView(RoleRequiredMixin, View):
-    """Convert an approved quotation into an invoice."""
+    """Convert an approved quotation into a draft invoice."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def post(self, request, pk):
@@ -199,7 +241,7 @@ class QuotationConvertView(RoleRequiredMixin, View):
 
 
 class DuplicateQuotationView(RoleRequiredMixin, View):
-    """Create a new draft quotation by copying an existing one."""
+    """Create a new draft quotation by duplicating an existing one."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def post(self, request, pk):
@@ -225,9 +267,144 @@ class DuplicateQuotationView(RoleRequiredMixin, View):
         return redirect('quotation_detail', pk=new_quotation.pk)
 
 
+# -----------------------------------------------------------------------------
+# Export Views (Print, PDF Direct, Word, Excel)
+# -----------------------------------------------------------------------------
+
+def quotation_print_view(request, pk):
+    """Dedicated print view – minimalist HTML, no sidebar, perfect for printing."""
+    quotation = get_object_or_404(Quotation, pk=pk)
+    items = quotation.items.all()
+    return TemplateResponse(request, 'finance/quotation_print.html', {
+        'quotation': quotation,
+        'items': items,
+        'site_config': SiteConfig.get(),
+        'config': SiteConfig.get(),
+    })
+
+
+def quotation_pdf_direct(request, pk):
+    """
+    Direct PDF generation (synchronous) – downloads immediately.
+    Uses WeasyPrint via render_pdf from infrastructure.
+    """
+    quotation = get_object_or_404(Quotation, pk=pk)
+    items = quotation.items.all()
+    config = SiteConfig.get()
+    vat_percent = float(config.vat_rate) * 100
+
+    # Build items data for template
+    items_data = []
+    for item in items:
+        items_data.append({
+            'description': sanitize_plain_text(item.description),
+            'quantity': item.quantity,
+            'unit_price': item.unit_price,
+            'total': item.total,
+        })
+
+    # Logo data URI (for PDF embedding)
+    logo_path = Path(settings.BASE_DIR) / 'static' / 'images' / 'logo.png'
+    logo_data_uri = ""
+    if logo_path.exists():
+        with open(logo_path, "rb") as f:
+            logo_bytes = f.read()
+            b64 = base64.b64encode(logo_bytes).decode('utf-8')
+            logo_data_uri = f"data:image/png;base64,{b64}"
+
+    pdf_bytes = render_pdf('finance/quotation_pdf.html', {
+        'quotation': quotation,
+        'items': items_data,
+        'config': config,
+        'vat_percent': f'{vat_percent:.1f}',
+        'static_logo_data_uri': logo_data_uri,
+        'notes_html': quotation.notes.html if quotation.notes else '',
+    })
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="quotation_{quotation.quotation_number}.pdf"'
+    return response
+
+
+def quotation_word_export(request, pk):
+    """Export quotation as Microsoft Word document (.doc)."""
+    quotation = get_object_or_404(Quotation, pk=pk)
+    items = quotation.items.all()
+    response = HttpResponse(content_type='application/msword')
+    response['Content-Disposition'] = f'attachment; filename="quotation_{quotation.quotation_number}.doc"'
+    template = render_to_string('finance/quotation_print.html', {
+        'quotation': quotation,
+        'items': items,
+        'site_config': SiteConfig.get(),
+        'config': SiteConfig.get(),
+    })
+    response.write(template)
+    return response
+
+
+def quotation_excel_export(request, pk):
+    """Export quotation as Excel (.xlsx) using openpyxl."""
+    quotation = get_object_or_404(Quotation, pk=pk)
+    items = quotation.items.all()
+    config = SiteConfig.get()
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Quotation"
+
+    # Title and header info
+    ws['A1'] = config.company_name
+    ws['A1'].font = Font(bold=True, size=14)
+    ws.merge_cells('A1:D1')
+    ws['A2'] = f"Quotation Number: {quotation.quotation_number}"
+    ws.merge_cells('A2:D2')
+    ws['A3'] = f"Client: {quotation.client.name}"
+    ws.merge_cells('A3:D3')
+    ws['A4'] = f"Issue Date: {quotation.issue_date}   Valid Until: {quotation.valid_until}"
+    ws.merge_cells('A4:D4')
+
+    # Headers
+    headers = ['Description', 'Quantity', 'Unit Price', 'Total']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=6, column=col, value=header)
+        cell.font = Font(bold=True)
+        cell.alignment = Alignment(horizontal='center')
+        cell.border = Border(bottom=Side(style='thin'), top=Side(style='thin'))
+
+    # Items
+    row = 7
+    for item in items:
+        ws.cell(row=row, column=1, value=item.description)
+        ws.cell(row=row, column=2, value=float(item.quantity))
+        ws.cell(row=row, column=3, value=float(item.unit_price))
+        ws.cell(row=row, column=4, value=float(item.total))
+        row += 1
+
+    # Totals
+    ws.cell(row=row+1, column=3, value="Subtotal").font = Font(bold=True)
+    ws.cell(row=row+1, column=4, value=float(quotation.subtotal))
+    ws.cell(row=row+2, column=3, value=f"VAT ({float(config.vat_rate)*100:.1f}%)").font = Font(bold=True)
+    ws.cell(row=row+2, column=4, value=float(quotation.tax_amount))
+    ws.cell(row=row+3, column=3, value="Total").font = Font(bold=True, size=12)
+    ws.cell(row=row+3, column=4, value=float(quotation.total_amount)).font = Font(bold=True, size=12)
+
+    # Notes
+    if quotation.notes:
+        ws.cell(row=row+5, column=1, value="Notes").font = Font(bold=True)
+        ws.merge_cells(f'A{row+5}:D{row+5}')
+        # Strip HTML tags for plain text notes
+        plain_notes = quotation.notes.html if hasattr(quotation.notes, 'html') else str(quotation.notes)
+        ws.cell(row=row+6, column=1, value=plain_notes).alignment = Alignment(wrap_text=True)
+        ws.merge_cells(f'A{row+6}:D{row+6}')
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="quotation_{quotation.quotation_number}.xlsx"'
+    wb.save(response)
+    return response
+
+
 @method_decorator(rate_limit(key_func=get_client_ip, rate='30/h', method='GET', block=True), name='dispatch')
 class QuotationPDFView(RoleRequiredMixin, View):
-    """Asynchronous PDF generation for quotations."""
+    """Serve quotation PDF – generated asynchronously (cache). Kept for compatibility."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def get(self, request, pk):
@@ -248,10 +425,7 @@ class QuotationPDFView(RoleRequiredMixin, View):
 # =============================================================================
 
 class InvoiceListView(RoleRequiredMixin, ListView):
-    """
-    List all invoices with filtering by status, issue date range, due date range.
-    Includes totals row and pagination.
-    """
+    """List all invoices with filters and totals."""
     model = Invoice
     template_name = 'finance/invoice_list.html'
     context_object_name = 'invoices'
@@ -259,19 +433,16 @@ class InvoiceListView(RoleRequiredMixin, ListView):
     required_roles = ['FINANCE', 'ADMIN']
 
     def get_queryset(self):
-        qs = Invoice.objects.select_related('client')
-        # Status filter
+        qs = super().get_queryset().select_related('client')
         status = self.request.GET.get('status')
         if status:
             qs = qs.filter(status=status)
-        # Issue date range
         issue_from = self.request.GET.get('issue_from')
         if issue_from:
             qs = qs.filter(issue_date__gte=issue_from)
         issue_to = self.request.GET.get('issue_to')
         if issue_to:
             qs = qs.filter(issue_date__lte=issue_to)
-        # Due date range
         due_from = self.request.GET.get('due_from')
         if due_from:
             qs = qs.filter(due_date__gte=due_from)
@@ -284,12 +455,10 @@ class InvoiceListView(RoleRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         ctx['status_choices'] = Invoice.STATUS_CHOICES
         ctx['current_status'] = self.request.GET.get('status', '')
-        # Preserve filter values in template
         ctx['issue_from'] = self.request.GET.get('issue_from', '')
         ctx['issue_to'] = self.request.GET.get('issue_to', '')
         ctx['due_from'] = self.request.GET.get('due_from', '')
         ctx['due_to'] = self.request.GET.get('due_to', '')
-        # Compute totals for the filtered queryset
         qs = self.get_queryset()
         ctx['total_amount_sum'] = qs.aggregate(total=models.Sum('total_amount'))['total'] or 0
         ctx['total_paid_sum'] = qs.aggregate(total=models.Sum('amount_paid'))['total'] or 0
@@ -302,12 +471,11 @@ class InvoiceCreateView(RoleRequiredMixin, CreateView):
     model = Invoice
     form_class = InvoiceForm
     template_name = 'finance/invoice_form.html'
-    success_url = reverse_lazy('invoice_list')
     required_roles = ['FINANCE', 'ADMIN']
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        messages.success(self.request, 'Invoice created. Add line items.')
+        messages.success(self.request, 'Invoice created. You can now add line items.')
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -315,7 +483,7 @@ class InvoiceCreateView(RoleRequiredMixin, CreateView):
 
 
 class InvoiceDetailView(RoleRequiredMixin, DetailView):
-    """Invoice detail page with items and payments."""
+    """Detailed view of an invoice with items, payments, and action forms."""
     model = Invoice
     template_name = 'finance/invoice_detail.html'
     context_object_name = 'invoice'
@@ -337,17 +505,24 @@ class AddInvoiceItemView(RoleRequiredMixin, View):
 
     def post(self, request, pk):
         invoice = get_object_or_404(Invoice, pk=pk)
+        if invoice.status != 'draft':
+            messages.error(request, 'Items can only be added to draft invoices.')
+            return redirect('invoice_detail', pk=pk)
+
         form = InvoiceItemForm(request.POST)
         if form.is_valid():
             item = form.save(commit=False)
             item.invoice = invoice
             item.save()
             InvoiceService.recalculate(invoice)
+            messages.success(request, 'Item added.')
+        else:
+            messages.error(request, 'Invalid item data.')
         return redirect('invoice_detail', pk=pk)
 
 
 class RecordPaymentView(RoleRequiredMixin, View):
-    """Record a payment against an invoice with idempotency lock."""
+    """Record a payment against an invoice. Includes idempotency lock."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def post(self, request, pk):
@@ -359,6 +534,11 @@ class RecordPaymentView(RoleRequiredMixin, View):
 
         form = PaymentForm(request.POST)
         if form.is_valid():
+            amount = form.cleaned_data['amount']
+            if amount > invoice.balance_due:
+                messages.error(request, f"Payment amount cannot exceed the outstanding balance ({invoice.balance_due}).")
+                return redirect('invoice_detail', pk=pk)
+
             cache.set(lock_key, True, timeout=5)
             InvoiceService.record_payment(
                 invoice=invoice,
@@ -372,14 +552,14 @@ class RecordPaymentView(RoleRequiredMixin, View):
 
 
 class IssueInvoiceView(RoleRequiredMixin, View):
-    """Change invoice status from draft to issued (after totals validation)."""
+    """Change invoice status from draft to issued (triggers email)."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def post(self, request, pk):
         invoice = get_object_or_404(Invoice, pk=pk)
         try:
             InvoiceService.issue(invoice)
-            messages.success(request, 'Invoice issued.')
+            messages.success(request, f'Invoice {invoice.invoice_number} issued.')
         except ValueError as e:
             messages.error(request, str(e))
         return redirect('invoice_detail', pk=pk)
@@ -418,7 +598,6 @@ class ExportInvoiceCSVView(RoleRequiredMixin, View):
     required_roles = ['FINANCE', 'ADMIN']
 
     def get(self, request):
-        # Apply same filters as InvoiceListView
         qs = Invoice.objects.select_related('client')
         status = request.GET.get('status')
         if status:
@@ -456,7 +635,7 @@ class ExportInvoiceCSVView(RoleRequiredMixin, View):
 
 @method_decorator(rate_limit(key_func=get_client_ip, rate='30/h', method='GET', block=True), name='dispatch')
 class InvoicePDFView(RoleRequiredMixin, View):
-    """Asynchronous PDF generation for invoices."""
+    """Serve invoice PDF – generated asynchronously."""
     required_roles = ['FINANCE', 'ADMIN']
 
     def get(self, request, pk):
@@ -486,7 +665,7 @@ class ExpenseListView(RoleRequiredMixin, ListView):
 
 
 class ExpenseCreateView(RoleRequiredMixin, CreateView):
-    """Create a new expense (pending approval by default)."""
+    """Create a new expense (status defaults to 'pending')."""
     model = Expense
     form_class = ExpenseForm
     template_name = 'finance/expense_form.html'
@@ -535,7 +714,7 @@ class RejectExpenseView(RoleRequiredMixin, View):
 # =============================================================================
 
 class ReportView(RoleRequiredMixin, TemplateView):
-    """Financial dashboard with charts, aging, and top clients."""
+    """Financial dashboard with income statement, aging, top clients, monthly charts."""
     template_name = 'finance/reports.html'
     required_roles = ['FINANCE', 'ADMIN']
 
@@ -565,7 +744,7 @@ class ReportView(RoleRequiredMixin, TemplateView):
 
 
 # =============================================================================
-# CLIENT-FACING VIEWS (with object‑level permissions)
+# CLIENT-FACING VIEWS (object‑level permissions)
 # =============================================================================
 
 class ClientInvoiceListView(LoginRequiredMixin, ListView):
@@ -644,7 +823,7 @@ class ClientQuotationDetailView(LoginRequiredMixin, DetailView):
 
 
 class ClientQuotationApproveView(LoginRequiredMixin, View):
-    """Client approves a sent quotation, automatically creating an invoice."""
+    """Client approves a sent quotation, automatically converting to invoice."""
     def post(self, request, pk):
         quotation = get_object_or_404(Quotation, pk=pk, client=request.user.client_organization)
         if quotation.status != 'sent':
@@ -665,7 +844,7 @@ class ClientQuotationApproveView(LoginRequiredMixin, View):
 
 
 class ClientQuotationRejectView(LoginRequiredMixin, View):
-    """Client rejects a sent quotation with a reason (stored as feedback)."""
+    """Client rejects a sent quotation with a reason (stored as client_feedback)."""
     def post(self, request, pk):
         quotation = get_object_or_404(Quotation, pk=pk, client=request.user.client_organization)
         if quotation.status != 'sent':
@@ -681,7 +860,7 @@ class ClientQuotationRejectView(LoginRequiredMixin, View):
         quotation.client_feedback = reason
         quotation.save(update_fields=['status', 'client_feedback'])
 
-        # Optional email notification to finance
+        # Notify finance team (optional)
         try:
             from django.core.mail import send_mail
             config = SiteConfig.get()
@@ -700,7 +879,7 @@ class ClientQuotationRejectView(LoginRequiredMixin, View):
 
 
 class ClientSubscriptionDetailView(LoginRequiredMixin, DetailView):
-    """Display client's current subscription details."""
+    """Display client's current subscription details and available plans."""
     template_name = 'finance/client_subscription_detail.html'
     context_object_name = 'subscription'
 
@@ -733,12 +912,10 @@ class ClientSubscriptionUpgradeView(LoginRequiredMixin, UpdateView):
         new_plan = form.cleaned_data['plan']
         subscription = self.get_object()
         if new_plan.monthly_price > subscription.plan.monthly_price:
-            # Upgrade immediately
             subscription.plan = new_plan
             subscription.save()
             messages.success(self.request, f"Plan upgraded to {new_plan.name}.")
         else:
-            # Downgrade at period end
             subscription.cancel_at_period_end = True
             subscription.save()
             messages.info(self.request, f"Plan will downgrade to {new_plan.name} at the end of current period.")
@@ -757,3 +934,84 @@ class ClientSubscriptionCancelView(LoginRequiredMixin, View):
         subscription.save()
         messages.warning(request, "Your subscription will be cancelled at the end of the current billing period.")
         return redirect('client_subscription_detail')
+
+
+# =============================================================================
+# HTMX REAL‑TIME ENDPOINTS
+# =============================================================================
+
+def live_quotation_search(request):
+    """HTMX endpoint – returns filtered quotation table rows."""
+    query = request.GET.get('q', '')
+    status = request.GET.get('status', '')
+    quotations = Quotation.objects.select_related('client').all()
+    if query:
+        quotations = quotations.filter(
+            Q(quotation_number__icontains=query) |
+            Q(client__name__icontains=query)
+        )
+    if status:
+        quotations = quotations.filter(status=status)
+    html = render_to_string('finance/partials/quotation_rows.html', {
+        'quotations': quotations,
+        'site_config': SiteConfig.get(),
+    })
+    return HttpResponse(html)
+
+
+def update_quotation_status(request, pk):
+    """HTMX endpoint – update quotation status (draft ↔ sent)."""
+    quotation = get_object_or_404(Quotation, pk=pk)
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in ['draft', 'sent'] and quotation.status != 'converted':
+            quotation.status = new_status
+            quotation.save()
+            if new_status == 'sent':
+                QuotationService.send(quotation)
+    badge_map = {
+        'draft': 'secondary',
+        'sent': 'primary',
+        'approved': 'success',
+        'converted': 'secondary',
+        'rejected': 'danger',
+        'expired': 'warning',
+    }
+    badge_class = badge_map.get(quotation.status, 'secondary')
+    return HttpResponse(
+        f'<span class="badge bg-{badge_class}">{quotation.get_status_display()}</span>'
+    )
+
+
+def live_invoice_search(request):
+    """HTMX endpoint – returns filtered invoice table rows."""
+    query = request.GET.get('q', '')
+    status = request.GET.get('status', '')
+    invoices = Invoice.objects.select_related('client').all()
+    if query:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=query) |
+            Q(client__name__icontains=query)
+        )
+    if status:
+        invoices = invoices.filter(status=status)
+    html = render_to_string('finance/partials/invoice_rows.html', {
+        'invoices': invoices,
+        'site_config': SiteConfig.get(),
+    })
+    return HttpResponse(html)
+
+
+def dashboard_stats_partial(request):
+    """HTMX endpoint – returns financial summary stats for dashboard."""
+    from .reports import ReportService
+    start = date.today().replace(day=1)
+    end = date.today()
+    income = ReportService.income_statement(start, end)
+    aging = ReportService.accounts_receivable_aging()
+    html = render_to_string('finance/partials/dashboard_stats.html', {
+        'income': income,
+        'aging': aging,
+        'site_config': SiteConfig.get(),
+    })
+    return HttpResponse(html)

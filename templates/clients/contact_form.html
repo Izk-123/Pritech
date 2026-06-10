@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Contact{% else %}New Contact{% endif %} · Pritech PIMS{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Contact{% else %}Add Contact{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ========== VIEWPORT-FITTED FORM – MINIMAL SCROLL ========== */
+  .fit-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .fit-screen .container {
+    margin: 0 auto;
+    padding: 0;
+  }
+  .contact-hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    border-radius: 1.25rem 1.25rem 1.25rem 0;
+  }
+  .modern-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 1.25rem;
+  }
+  /* Compact but visible form groups */
+  .form-group-visible {
+    margin-bottom: 1rem;
+  }
+  .form-group-visible label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+  }
+  .form-group-visible input,
+  .form-group-visible select,
+  .form-group-visible textarea {
+    width: 100%;
+    padding: 0.55rem 0.9rem;
+    background: var(--bg-input);
+    border: 2px solid #cbd5e1;
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: all 0.15s;
+  }
+  [data-theme="dark"] .form-group-visible input,
+  [data-theme="dark"] .form-group-visible select,
+  [data-theme="dark"] .form-group-visible textarea {
+    border-color: #475569;
+  }
+  .form-group-visible input:focus,
+  .form-group-visible select:focus,
+  .form-group-visible textarea:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(65,84,241,0.3);
+  }
+  /* Checkbox wrapper – compact */
+  .checkbox-wrapper {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.4rem 0.8rem;
+  }
+  .checkbox-visible {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .checkbox-visible input {
+    width: 1.1rem;
+    height: 1.1rem;
+    accent-color: var(--primary);
+    margin: 0;
+  }
+  .checkbox-visible label {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+  /* Error message */
+  .error-visible {
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+    color: #dc2626;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(220,38,38,0.1);
+    padding: 0.15rem 0.7rem;
+    border-radius: 2rem;
+  }
+  /* Buttons – compact */
+  .btn-visible {
+    border-radius: 2rem;
+    padding: 0.45rem 1.2rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .btn-primary-visible {
+    background: linear-gradient(105deg, var(--primary), var(--primary-dark));
+    border: none;
+    color: white;
+  }
+  .btn-primary-visible:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(65,84,241,0.3);
+  }
+  .btn-outline-visible {
+    background: transparent;
+    border: 2px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .btn-outline-visible:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .fit-screen { padding: 0.5rem; }
+    .contact-hero { padding: 0.8rem 1rem !important; margin-bottom: 0.75rem !important; }
+    .contact-hero h2 { font-size: 1.3rem !important; }
+    .modern-card { padding: 0.8rem !important; }
+    .form-group-visible { margin-bottom: 0.75rem; }
+    .form-group-visible label { font-size: 0.75rem; }
+    .form-group-visible input,
+    .form-group-visible select,
+    .form-group-visible textarea { padding: 0.45rem 0.7rem; font-size: 0.85rem; }
+    .checkbox-wrapper { padding: 0.3rem 0.7rem; }
+    .btn-visible { padding: 0.4rem 1rem; font-size: 0.8rem; }
+    .gap-2 { gap: 0.5rem !important; }
+  }
+  @media (max-height: 700px) {
+    .fit-screen { align-items: flex-start; padding-top: 0.5rem; }
+    .contact-hero { margin-bottom: 0.5rem; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-up {
+    animation: slideUp 0.3s ease-out;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fit-screen">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+        <!-- Hero header -->
+        <div class="contact-hero p-3 p-md-4 mb-3 text-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="badge bg-white text-primary rounded-pill px-2 py-1 mb-1">
+                <i class="bi bi-person-badge me-1"></i> Contact
+              </div>
+              <h3 class="fw-bold mb-0">
+                {% if form.instance.pk %}Edit{% else %}New{% endif %} Contact
+              </h3>
+              {% if client %}
+                <small class="text-white-50">{{ client.name }}</small>
+              {% endif %}
+            </div>
+            <i class="bi bi-people-fill fs-1 opacity-50"></i>
+          </div>
+        </div>
+
+        <!-- Form card -->
+        <div class="modern-card p-3 p-md-4 animate-up">
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% for field in form %}
+              <div class="form-group-visible">
+                <label for="{{ field.id_for_label }}">
+                  {{ field.label }}
+                  {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+
+                {% if field.field.widget.input_type == 'checkbox' %}
+                  <div class="checkbox-wrapper">
+                    <div class="checkbox-visible">
+                      {{ field }}
+                      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    </div>
+                  </div>
+                {% else %}
+                  {{ field }}
+                {% endif %}
+
+                {% if field.help_text %}
+                  <small class="text-muted d-block mt-1 small">{{ field.help_text }}</small>
+                {% endif %}
+                {% if field.errors %}
+                  <div class="error-visible">
+                    <i class="bi bi-exclamation-triangle-fill"></i> {{ field.errors|join:", " }}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+
+            <div class="d-flex gap-2 justify-content-end mt-3">
+              <a href="{% url 'client_detail' client.pk %}" class="btn btn-outline-visible btn-visible">
+                <i class="bi bi-x-lg me-1"></i> Cancel
+              </a>
+              <button type="submit" class="btn btn-primary-visible btn-visible">
+                <i class="bi bi-check-lg me-1"></i>
+                {% if form.instance.pk %}Update{% else %}Create{% endif %}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="text-center mt-2 small text-muted">
+          <i class="bi bi-shield-check"></i> Encrypted & audited
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.form-group-visible input, .form-group-visible select, .form-group-visible textarea').forEach(el => {
+      if (el.type !== 'checkbox') el.classList.add('form-control');
+    });
+  });
+</script>
+{% endblock %}

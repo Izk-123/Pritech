@@ -1,196 +1,276 @@
 {# finance/templates/finance/quotation_pdf.html #}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>{{ quotation.quotation_number }}</title>
-    <style>
-        body {
-            font-family: 'DejaVu Sans', 'Helvetica', 'Arial', sans-serif;
-            font-size: 10pt;
-            line-height: 1.4;
-            color: #1f2937;
-            margin: 0;
-            padding: 1.5cm;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 24px;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 16px;
-        }
-        .logo-area {
-            max-width: 200px;
-        }
-        .logo {
-            max-height: 70px;
-            object-fit: contain;
-        }
-        .company-details {
-            text-align: right;
-        }
-        .company-name {
-            font-size: 18pt;
-            font-weight: bold;
-            color: #4154f1;
-            margin: 0;
-        }
-        .title {
-            font-size: 28pt;
-            font-weight: bold;
-            color: #4154f1;
-            margin-top: 8px;
-        }
-        .prepared-for, .details {
-            margin-bottom: 24px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        th, td {
-            border: 1px solid #d1d5db;
-            padding: 8px 10px;
-            text-align: left;
-            vertical-align: top;
-        }
-        th {
-            background-color: #f3f4f6;
-            font-weight: 600;
-        }
-        .text-end {
-            text-align: right;
-        }
-        .summary {
-            width: 300px;
-            margin-left: auto;
-            margin-top: 20px;
-        }
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-        }
-        .summary-total {
-            font-size: 12pt;
-            font-weight: bold;
-            border-top: 2px solid #000;
-            margin-top: 8px;
-            padding-top: 8px;
-        }
-        .notes {
-            margin-top: 30px;
-            padding: 12px;
-            background: #f9fafb;
-            font-size: 9pt;
-            border-radius: 4px;
-        }
-        .footer {
-            margin-top: 40px;
-            text-align: center;
-            font-size: 8pt;
-            color: #6b7280;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 12px;
-        }
-        .validity {
-            margin-top: 24px;
-            font-size: 9pt;
-            background: #fef9c3;
-            padding: 8px;
-            text-align: center;
-            border-radius: 4px;
-        }
-    </style>
+  <meta charset="utf-8">
+  <title>{{ quotation.quotation_number }}</title>
+  <style>
+    /* ── Quotation PDF – Clean Print Layout ── */
+
+    @page {
+      size: A4;
+      margin: 1.8cm 1.6cm;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #ffffff;
+    }
+
+    /* ---- Header ---- */
+    .doc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      padding-bottom: 18px;
+      border-bottom: 2px solid #4154f1;
+    }
+    .header-brand {}
+    .logo { max-height: 56px; object-fit: contain; display: block; margin-bottom: 6px; }
+    .company-name { font-size: 13pt; font-weight: 700; color: #1e293b; margin: 0; }
+    .company-sub  { font-size: 8pt; color: #64748b; margin-top: 2px; }
+    .header-doc { text-align: right; }
+    .doc-type {
+      font-size: 22pt;
+      font-weight: 800;
+      color: #4154f1;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .doc-number { font-size: 10pt; font-weight: 600; color: #475569; margin-top: 4px; }
+
+    /* ---- Parties ---- */
+    .parties-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 24px;
+    }
+    .party { flex: 1; }
+    .party-label {
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      margin-bottom: 5px;
+    }
+    .party-name { font-size: 11pt; font-weight: 700; color: #1e293b; margin-bottom: 3px; }
+    .party-detail { font-size: 8.5pt; color: #475569; line-height: 1.6; }
+    .dates-block { text-align: right; min-width: 160px; }
+    .date-item { margin-bottom: 6px; }
+    .date-label { font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; }
+    .date-value { font-size: 9.5pt; font-weight: 600; color: #1e293b; }
+
+    /* ---- Items table ---- */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+    thead tr { background: #4154f1; color: #fff; }
+    thead th {
+      padding: 9px 12px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: left;
+    }
+    thead th.text-right { text-align: right; }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody td {
+      padding: 9px 12px;
+      font-size: 9pt;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+      color: #1e293b;
+    }
+    tbody td.text-right { text-align: right; color: #334155; }
+    tbody td.amount-cell { font-weight: 600; text-align: right; }
+    tbody tr:last-child td { border-bottom: none; }
+    .item-desc { font-weight: 500; }
+
+    /* ---- Totals ---- */
+    .totals-outer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+      margin-bottom: 20px;
+    }
+    .totals-block { width: 240px; }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 9pt;
+    }
+    .total-row:last-child { border-bottom: none; }
+    .total-label { color: #64748b; font-weight: 500; }
+    .total-value { font-weight: 600; color: #1e293b; }
+    .total-grand {
+      background: #4154f1;
+      color: #fff;
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11pt;
+      font-weight: 800;
+      margin-top: 8px;
+      border-bottom: none;
+    }
+    .total-grand .total-label,
+    .total-grand .total-value { color: #fff; }
+
+    /* ---- Notes ---- */
+    .notes-block {
+      background: #f8fafc;
+      border-left: 3px solid #4154f1;
+      border-radius: 0 8px 8px 0;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      font-size: 8.5pt;
+      color: #475569;
+      line-height: 1.6;
+    }
+    .notes-label {
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    /* ---- Validity notice ---- */
+    .validity-block {
+      text-align: center;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 8.5pt;
+      color: #78350f;
+      margin-bottom: 20px;
+    }
+
+    /* ---- Footer ---- */
+    .doc-footer {
+      text-align: center;
+      font-size: 7.5pt;
+      color: #94a3b8;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+      margin-top: auto;
+    }
+    .doc-footer strong { color: #64748b; }
+  </style>
 </head>
 <body>
-<div class="invoice-container">
-    <!-- Header with logo -->
-    <div class="header">
-        <div class="logo-area">
-            {% if static_logo_data_uri %}
-                <img src="{{ static_logo_data_uri }}" class="logo" alt="Company Logo">
-            {% else %}
-                <h2 class="company-name">{{ config.company_name }}</h2>
-            {% endif %}
-        </div>
-        <div class="company-details">
-            <div class="title">QUOTATION</div>
-            <div class="quotation-number">{{ quotation.quotation_number }}</div>
-        </div>
-    </div>
 
-    <!-- Prepared For & Dates -->
-    <div class="prepared-for">
-        <strong>Prepared For:</strong><br>
-        {{ quotation.client.name }}<br>
-        {% if quotation.client.address %}{{ quotation.client.address|linebreaksbr }}<br>{% endif %}
-        {% if quotation.client.email %}Email: {{ quotation.client.email }}<br>{% endif %}
-        {% if quotation.client.phone %}Phone: {{ quotation.client.phone }}{% endif %}
+  <!-- Header -->
+  <div class="doc-header">
+    <div class="header-brand">
+      {% if static_logo_data_uri %}
+        <img src="{{ static_logo_data_uri }}" class="logo" alt="{{ config.company_name }}">
+      {% endif %}
+      <p class="company-name">{{ config.company_name }}</p>
+      {% if config.address %}<p class="company-sub">{{ config.address }}</p>{% endif %}
     </div>
-    <div class="details" style="text-align: right;">
-        <strong>Issue Date:</strong> {{ quotation.issue_date }}<br>
-        <strong>Valid Until:</strong> {{ quotation.valid_until }}
+    <div class="header-doc">
+      <div class="doc-type">QUOTATION</div>
+      <div class="doc-number">{{ quotation.quotation_number }}</div>
     </div>
+  </div>
 
-    <!-- Line Items Table -->
-    <table>
-        <thead>
-            <tr>
-                <th>Description</th>
-                <th class="text-end">Qty</th>
-                <th class="text-end">Unit Price</th>
-                <th class="text-end">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ item.description }}</td>
-                <td class="text-end">{{ item.quantity }}</td>
-                <td class="text-end">{{ config.currency_symbol }} {{ item.unit_price|floatformat:2 }}</td>
-                <td class="text-end">{{ config.currency_symbol }} {{ item.total|floatformat:2 }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="4" class="text-center">No items added</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Totals -->
-    <div class="summary">
-        <div class="summary-row">
-            <span>Subtotal</span>
-            <span>{{ config.currency_symbol }} {{ quotation.subtotal|floatformat:2 }}</span>
-        </div>
-        <div class="summary-row">
-            <span>VAT ({{ vat_percent|default:'16.5' }}%)</span>
-            <span>{{ config.currency_symbol }} {{ quotation.tax_amount|floatformat:2 }}</span>
-        </div>
-        <div class="summary-row summary-total">
-            <span>Total</span>
-            <span>{{ config.currency_symbol }} {{ quotation.total_amount|floatformat:2 }}</span>
-        </div>
+  <!-- Parties & Dates -->
+  <div class="parties-row">
+    <div class="party">
+      <div class="party-label">Prepared For</div>
+      <div class="party-name">{{ quotation.client.name }}</div>
+      <div class="party-detail">
+        {% if quotation.client.address %}{{ quotation.client.address }}<br>{% endif %}
+        {% if quotation.client.email %}{{ quotation.client.email }}<br>{% endif %}
+        {% if quotation.client.phone %}{{ quotation.client.phone }}{% endif %}
+      </div>
     </div>
-
-    <!-- Notes (rich text) -->
-    {% if quotation.notes %}
-    <div class="notes">
-        {{ quotation.notes.html|safe }}
+    <div class="dates-block">
+      <div class="date-item">
+        <div class="date-label">Issue Date</div>
+        <div class="date-value">{{ quotation.issue_date }}</div>
+      </div>
+      <div class="date-item">
+        <div class="date-label">Valid Until</div>
+        <div class="date-value">{{ quotation.valid_until }}</div>
+      </div>
     </div>
-    {% endif %}
+  </div>
 
-    <!-- Validity notice -->
-    <div class="validity">
-        This quotation is valid until {{ quotation.valid_until }}. Prices and availability are subject to change after this date.
-    </div>
+  <!-- Line Items -->
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="text-right" style="width:60px;">Qty</th>
+        <th class="text-right" style="width:100px;">Unit Price</th>
+        <th class="text-right" style="width:100px;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td><span class="item-desc">{{ item.description }}</span></td>
+        <td class="text-right">{{ item.quantity }}</td>
+        <td class="text-right">{{ config.currency_symbol }} {{ item.unit_price|floatformat:2 }}</td>
+        <td class="amount-cell">{{ config.currency_symbol }} {{ item.total|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:16px;">No items added</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
-    <!-- Footer -->
-    <div class="footer">
-        {{ config.invoice_footer|default:"Thank you for considering our proposal." }}
+  <!-- Totals -->
+  <div class="totals-outer">
+    <div class="totals-block">
+      <div class="total-row">
+        <span class="total-label">Subtotal</span>
+        <span class="total-value">{{ config.currency_symbol }} {{ quotation.subtotal|floatformat:2 }}</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">VAT ({{ vat_percent|default:"16.5" }}%)</span>
+        <span class="total-value">{{ config.currency_symbol }} {{ quotation.tax_amount|floatformat:2 }}</span>
+      </div>
+      <div class="total-row total-grand">
+        <span class="total-label">Total</span>
+        <span class="total-value">{{ config.currency_symbol }} {{ quotation.total_amount|floatformat:2 }}</span>
+      </div>
     </div>
-</div>
+  </div>
+
+  <!-- Notes -->
+  {% if quotation.notes %}
+  <div class="notes-block">
+    <div class="notes-label">Notes</div>
+    {{ quotation.notes.html|safe }}
+  </div>
+  {% endif %}
+
+  <!-- Validity -->
+  <div class="validity-block">
+    This quotation is valid until <strong>{{ quotation.valid_until }}</strong>.
+    Prices and availability are subject to change after this date.
+  </div>
+
+  <!-- Footer -->
+  <div class="doc-footer">
+    <strong>{{ config.company_name }}</strong> &nbsp;·&nbsp;
+    {{ config.invoice_footer|default:"Thank you for considering our proposal." }}
+  </div>
+
 </body>
 </html>

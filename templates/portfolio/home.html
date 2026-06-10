@@ -6,14 +6,15 @@
 
 {% block content %}
 
-<!-- {# ══════════════════════════════════════════════════════ HERO SECTION══════════════════════════════════════════════════════ #} -->
+<!-- ============================================================ -->
+<!-- HERO SECTION                                                -->
+<!-- ============================================================ -->
 <section class="hero" id="home" aria-labelledby="hero-heading">
   <div class="container">
     <div class="hero-content">
 
-      {# Text side #}
+      <!-- Text side -->
       <div class="hero-text">
-
         <div class="hero-eyebrow reveal">
           <i class="fa-solid fa-bolt" aria-hidden="true"></i>
           Malawi's Leading ICT Partner
@@ -38,7 +39,7 @@
           </a>
         </div>
 
-        {# Key metrics #}
+        <!-- Key metrics (animated counters) -->
         <div class="hero-metrics reveal reveal-delay-4">
           <div class="metric">
             <span class="metric-value" data-count="{{ portfolio_settings.projects_count|default:150 }}">0</span>
@@ -59,7 +60,7 @@
         </div>
       </div>
 
-      <!-- {# Dashboard visual #} -->
+      <!-- Dashboard visual (right side, hidden on mobile) -->
       <div class="hero-visual" aria-hidden="true">
         <div class="hero-dashboard">
           <div class="hero-dash-header">
@@ -68,45 +69,16 @@
             <span class="dash-dot"></span>
             <span class="hero-dash-title">Client Dashboard</span>
           </div>
-
           <div class="hero-stat-grid">
-            <div class="hero-stat-card">
-              <div class="hero-stat-num">48</div>
-              <div class="hero-stat-label">Open Tickets</div>
-            </div>
-            <div class="hero-stat-card">
-              <div class="hero-stat-num" style="color:var(--success)">99.9%</div>
-              <div class="hero-stat-label">Uptime</div>
-            </div>
-            <div class="hero-stat-card">
-              <div class="hero-stat-num" style="color:var(--accent2)">12</div>
-              <div class="hero-stat-label">Active Projects</div>
-            </div>
-            <div class="hero-stat-card">
-              <div class="hero-stat-num" style="color:var(--warning)">3</div>
-              <div class="hero-stat-label">Pending Invoices</div>
-            </div>
+            <div class="hero-stat-card"><div class="hero-stat-num">48</div><div class="hero-stat-label">Open Tickets</div></div>
+            <div class="hero-stat-card"><div class="hero-stat-num" style="color:var(--success)">99.9%</div><div class="hero-stat-label">Uptime</div></div>
+            <div class="hero-stat-card"><div class="hero-stat-num" style="color:var(--accent2)">12</div><div class="hero-stat-label">Active Projects</div></div>
+            <div class="hero-stat-card"><div class="hero-stat-num" style="color:var(--warning)">3</div><div class="hero-stat-label">Pending Invoices</div></div>
           </div>
-
           <div class="hero-bar-list">
-            <div class="hero-bar-item">
-              <div class="hero-bar-label"><span>Network Health</span><span>94%</span></div>
-              <div class="hero-bar-track">
-                <div class="hero-bar-fill" style="width:94%;background:var(--success)"></div>
-              </div>
-            </div>
-            <div class="hero-bar-item">
-              <div class="hero-bar-label"><span>Storage Used</span><span>67%</span></div>
-              <div class="hero-bar-track">
-                <div class="hero-bar-fill" style="width:67%;background:var(--accent)"></div>
-              </div>
-            </div>
-            <div class="hero-bar-item">
-              <div class="hero-bar-label"><span>Ticket Resolution</span><span>89%</span></div>
-              <div class="hero-bar-track">
-                <div class="hero-bar-fill" style="width:89%;background:var(--accent2)"></div>
-              </div>
-            </div>
+            <div class="hero-bar-item"><div class="hero-bar-label"><span>Network Health</span><span>94%</span></div><div class="hero-bar-track"><div class="hero-bar-fill" style="width:94%;background:var(--success)"></div></div></div>
+            <div class="hero-bar-item"><div class="hero-bar-label"><span>Storage Used</span><span>67%</span></div><div class="hero-bar-track"><div class="hero-bar-fill" style="width:67%;background:var(--accent)"></div></div></div>
+            <div class="hero-bar-item"><div class="hero-bar-label"><span>Ticket Resolution</span><span>89%</span></div><div class="hero-bar-track"><div class="hero-bar-fill" style="width:89%;background:var(--accent2)"></div></div></div>
           </div>
         </div>
       </div>
@@ -114,37 +86,26 @@
     </div>
   </div>
 
-  <!-- {# Scroll indicator #} -->
+  <!-- Scroll indicator -->
   <a href="#services" class="scroll-indicator" style="position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-muted);font-size:.75rem;text-decoration:none;animation:bounce 2s ease infinite;">
     <span>Scroll</span>
     <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
   </a>
-
-  <style>
-    @keyframes bounce {
-      0%,100% { transform: translateX(-50%) translateY(0); }
-      50% { transform: translateX(-50%) translateY(6px); }
-    }
-  </style>
 </section>
 
-<!-- 
-{# ══════════════════════════════════════════════════════
-   SERVICES SECTION
-══════════════════════════════════════════════════════ #} -->
+
+<!-- ============================================================ -->
+<!-- SERVICES SECTION                                            -->
+<!-- ============================================================ -->
 <section class="section services" id="services" aria-labelledby="services-heading">
   <div class="container">
-
     <div class="section-header reveal">
-      <span class="section-tag">
-        <i class="fa-solid fa-gears" aria-hidden="true"></i>
-        What We Do
-      </span>
+      <span class="section-tag"><i class="fa-solid fa-gears" aria-hidden="true"></i> What We Do</span>
       <h2 id="services-heading">Comprehensive ICT Services</h2>
-      <p>From infrastructure to innovation — end-to-end technology solutions tailored for your business needs.</p>
+      <p>From infrastructure to innovation — end‑to‑end technology solutions tailored for your business needs.</p>
     </div>
 
-    {# Category filter tabs #}
+    <!-- Category filter tabs -->
     {% if categories %}
     <div class="service-tabs reveal reveal-delay-1" role="tablist" aria-label="Service categories">
       <button class="service-tab active" data-category="all" role="tab" aria-selected="true">All Services</button>
@@ -154,60 +115,40 @@
     </div>
     {% endif %}
 
-    {# Services grid #}
+    <!-- Services grid with graceful empty state -->
     <div class="services-grid">
-      {% for service in services %}
-      <article class="card service-card reveal reveal-delay-{{ forloop.counter|divisibleby:3|yesno:'3,2,1' }}"
-               data-category="{{ service.category.pk|default:'uncategorized' }}"
-               aria-label="{{ service.name }}">
-        <div class="service-icon" aria-hidden="true">
-          {% if service.icon %}
-            <i class="{{ service.icon }}"></i>
-          {% else %}
-            <i class="fa-solid fa-microchip"></i>
-          {% endif %}
+      {% if services %}
+        {% for service in services %}
+        <article class="card service-card reveal reveal-delay-{{ forloop.counter|divisibleby:3|yesno:'3,2,1' }}"
+                 data-category="{{ service.category.pk|default:'uncategorized' }}"
+                 aria-label="{{ service.name }}">
+          <div class="service-icon" aria-hidden="true">
+            <i class="{{ service.icon|default:'fa-solid fa-microchip' }}"></i>
+          </div>
+          <h3 class="service-name">{{ service.name }}</h3>
+          <p class="service-desc">{{ service.short_description|default:service.description|truncatewords:20|striptags }}</p>
+          <span class="service-arrow" aria-hidden="true">Learn more <i class="fa-solid fa-arrow-right fa-xs"></i></span>
+        </article>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" style="grid-column:1/-1; text-align:center; padding:3rem;">
+          <i class="fa-solid fa-cogs" style="font-size:3rem; opacity:0.5; margin-bottom:1rem; display:block;"></i>
+          <p>Our service catalogue is being updated. Please check back soon.</p>
         </div>
-        <h3 class="service-name">{{ service.name }}</h3>
-        <p class="service-desc">{{ service.short_description|default:service.description|truncatewords:20|striptags }}</p>
-        <span class="service-arrow" aria-hidden="true">
-          Learn more <i class="fa-solid fa-arrow-right fa-xs"></i>
-        </span>
-      </article>
-      {% empty %}
-      {# Placeholder cards when no services in DB — FIXED: added data-category="all" #}
-      {% for item in "123456789"|make_list %}
-      <article class="card service-card reveal reveal-delay-{{ forloop.counter }}"
-               data-category="all"
-               aria-label="Service placeholder">
-        <div class="service-icon" aria-hidden="true">
-          <i class="fa-solid {% cycle 'fa-server' 'fa-code' 'fa-shield-halved' 'fa-cloud' 'fa-wifi' 'fa-headset' 'fa-database' 'fa-mobile-screen' 'fa-chart-line' %}"></i>
-        </div>
-        <h3 class="service-name">{% cycle 'Managed IT Support' 'Custom Software Dev' 'Cybersecurity' 'Cloud Solutions' 'Network Infrastructure' '24/7 Helpdesk' 'Data Management' 'Mobile Applications' 'IT Consulting' %}</h3>
-        <p class="service-desc">{% cycle 'End-to-end IT management so you can focus on your business.' 'Bespoke software engineered for your exact requirements.' 'Protect your business with enterprise-grade security.' 'Scalable cloud infrastructure for modern businesses.' 'Reliable, fast networks built for growth.' 'Round-the-clock support from certified technicians.' 'Secure backup, recovery, and analytics solutions.' 'Cross-platform apps for iOS and Android.' 'Strategic technology roadmaps for long-term success.' %}</p>
-        <span class="service-arrow" aria-hidden="true">
-          Learn more <i class="fa-solid fa-arrow-right fa-xs"></i>
-        </span>
-      </article>
-      {% endfor %}
-      {% endfor %}
+      {% endif %}
     </div>
-
   </div>
 </section>
 
-<!-- 
-{# ══════════════════════════════════════════════════════
-   PORTFOLIO SECTION
-══════════════════════════════════════════════════════ #} -->
+
+<!-- ============================================================ -->
+<!-- PORTFOLIO SECTION (only if projects exist)                  -->
+<!-- ============================================================ -->
 {% if projects %}
 <section class="section" id="portfolio" aria-labelledby="portfolio-heading">
   <div class="container">
-
     <div class="section-header reveal">
-      <span class="section-tag">
-        <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
-        Our Work
-      </span>
+      <span class="section-tag"><i class="fa-solid fa-briefcase" aria-hidden="true"></i> Our Work</span>
       <h2 id="portfolio-heading">Featured Projects</h2>
       <p>A selection of solutions we've delivered for clients across industries.</p>
     </div>
@@ -215,73 +156,49 @@
     <div class="portfolio-grid">
       {% for project in projects %}
       <article class="project-card reveal reveal-delay-{{ forloop.counter }}" aria-label="{{ project.title }}">
-
         <div class="project-img-wrap">
           {% if project.image %}
-            <img src="{{ project.image.url }}"
-                 alt="{{ project.title }}"
-                 loading="lazy"
-                 width="600" height="375" />
+            <img src="{{ project.image.url }}" alt="{{ project.title }}" loading="lazy" width="600" height="375" />
           {% else %}
-            <div class="project-img-placeholder" aria-hidden="true">
-              <i class="fa-solid fa-laptop-code" style="color:var(--accent);opacity:.5;"></i>
-            </div>
+            <div class="project-img-placeholder" aria-hidden="true"><i class="fa-solid fa-laptop-code" style="color:var(--accent);opacity:.5;"></i></div>
           {% endif %}
-          <div class="project-overlay" aria-hidden="true">
-            <span class="badge badge-accent">View Project</span>
-          </div>
+          <div class="project-overlay" aria-hidden="true"><span class="badge badge-accent">View Project</span></div>
         </div>
-
         <div class="project-body">
           <div class="project-meta">
             {% if project.client_name %}
-            <span class="project-client">
-              <i class="fa-solid fa-building fa-xs" aria-hidden="true"></i>
-              {{ project.client_name }}
-            </span>
+            <span class="project-client"><i class="fa-solid fa-building fa-xs" aria-hidden="true"></i> {{ project.client_name }}</span>
             {% endif %}
           </div>
           <h3 class="project-title">{{ project.title }}</h3>
           {% if project.technologies %}
-          <p class="project-tech">
-            <i class="fa-solid fa-tags fa-xs" aria-hidden="true"></i>
-            {{ project.technologies }}
-          </p>
+          <p class="project-tech"><i class="fa-solid fa-tags fa-xs" aria-hidden="true"></i> {{ project.technologies }}</p>
           {% endif %}
         </div>
       </article>
       {% endfor %}
     </div>
-
   </div>
 </section>
 {% endif %}
 
-<!-- {# ══════════════════════════════════════════════════════
-   ABOUT SECTION
-══════════════════════════════════════════════════════ #} -->
+
+<!-- ============================================================ -->
+<!-- ABOUT SECTION                                               -->
+<!-- ============================================================ -->
 <section class="section" id="about" style="background:var(--bg-secondary);" aria-labelledby="about-heading">
   <div class="container">
     <div class="about-grid">
-
-      {# Image column #}
+      <!-- Image column -->
       <div class="reveal">
         <div class="about-img-wrap">
           {% if portfolio_settings.about_image %}
-            <img src="{{ portfolio_settings.about_image.url }}"
-                 alt="Pritech team at work"
-                 loading="lazy"
-                 width="600" height="450" />
+            <img src="{{ portfolio_settings.about_image.url }}" alt="Pritech team at work" loading="lazy" width="600" height="450" />
           {% else %}
-            {# Decorative placeholder #}
             <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--card-grad);">
-              <div style="text-align:center;padding:2rem;">
-                <div style="font-size:5rem;margin-bottom:1rem;opacity:.4;">🖥️</div>
-                <p style="color:var(--text-muted);font-size:.9rem;">Add your about image in settings</p>
-              </div>
+              <div style="text-align:center;padding:2rem;"><div style="font-size:5rem;margin-bottom:1rem;opacity:.4;">🖥️</div><p style="color:var(--text-muted);font-size:.9rem;">Add your about image in settings</p></div>
             </div>
           {% endif %}
-
           <div class="about-img-badge glass">
             <strong>{{ portfolio_settings.years_experience|default:12 }}+</strong>
             <span>Years of Excellence</span>
@@ -289,297 +206,150 @@
         </div>
       </div>
 
-      {# Text column #}
+      <!-- Text column -->
       <div class="reveal reveal-delay-2">
-        <span class="section-tag">
-          <i class="fa-solid fa-users" aria-hidden="true"></i>
-          About Us
-        </span>
+        <span class="section-tag"><i class="fa-solid fa-users" aria-hidden="true"></i> About Us</span>
         <h2 id="about-heading" style="margin-bottom:1rem;">{{ portfolio_settings.about_title|default:"Your Trusted Technology Partner" }}</h2>
         <p style="margin-bottom:1.5rem;line-height:1.8;">{{ portfolio_settings.about_text|default:"We are a team of passionate engineers, developers, and support specialists dedicated to solving business problems with technology." }}</p>
-
-        {# Feature points #}
+        
         <ul style="list-style:none;display:flex;flex-direction:column;gap:.75rem;margin-bottom:2rem;">
-          {% for point in "123"|make_list %}
-          <li style="display:flex;align-items:flex-start;gap:.75rem;">
-            <span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;">
-              <i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i>
-            </span>
-            <span style="color:var(--text-secondary);">{% cycle 'Certified ICT professionals with 12+ years in the field' 'Transparent communication and regular project updates' 'Post-delivery support and ongoing maintenance included' %}</span>
-          </li>
-          {% endfor %}
+          <li style="display:flex;align-items:flex-start;gap:.75rem;"><span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i></span><span style="color:var(--text-secondary);">Certified ICT professionals with 12+ years in the field</span></li>
+          <li style="display:flex;align-items:flex-start;gap:.75rem;"><span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i></span><span style="color:var(--text-secondary);">Transparent communication and regular project updates</span></li>
+          <li style="display:flex;align-items:flex-start;gap:.75rem;"><span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i></span><span style="color:var(--text-secondary);">Post‑delivery support and ongoing maintenance included</span></li>
         </ul>
 
-        <a href="#contact" class="btn btn-primary">
-          <i class="fa-solid fa-handshake" aria-hidden="true"></i>
-          Work With Us
-        </a>
+        <a href="#contact" class="btn btn-primary"><i class="fa-solid fa-handshake" aria-hidden="true"></i> Work With Us</a>
 
-        {# Stats bento #}
+        <!-- Stats bento -->
         <div class="stats-bento">
-          <div class="stat-card">
-            <span class="stat-num" data-count="{{ portfolio_settings.projects_count|default:150 }}">0</span>
-            <span class="stat-label">Projects Completed</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-num" data-count="{{ portfolio_settings.satisfaction_percent|default:98 }}">0</span>
-            <span class="stat-label">% Satisfaction Rate</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-num" data-count="{{ portfolio_settings.support_hours|default:24 }}">0</span>
-            <span class="stat-label">Hour Support</span>
-          </div>
-          <div class="stat-card">
-            <span class="stat-num" data-count="{{ portfolio_settings.years_experience|default:12 }}">0</span>
-            <span class="stat-label">Years Experience</span>
-          </div>
+          <div class="stat-card"><span class="stat-num" data-count="{{ portfolio_settings.projects_count|default:150 }}">0</span><span class="stat-label">Projects Completed</span></div>
+          <div class="stat-card"><span class="stat-num" data-count="{{ portfolio_settings.satisfaction_percent|default:98 }}">0</span><span class="stat-label">% Satisfaction Rate</span></div>
+          <div class="stat-card"><span class="stat-num" data-count="{{ portfolio_settings.support_hours|default:24 }}">0</span><span class="stat-label">Hour Support</span></div>
+          <div class="stat-card"><span class="stat-num" data-count="{{ portfolio_settings.years_experience|default:12 }}">0</span><span class="stat-label">Years Experience</span></div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- 
-{# ══════════════════════════════════════════════════════
-   CONTACT / INQUIRY SECTION
-══════════════════════════════════════════════════════ #} -->
+
+<!-- ============================================================ -->
+<!-- CONTACT / INQUIRY SECTION                                   -->
+<!-- ============================================================ -->
 <section class="section" id="contact" aria-labelledby="contact-heading">
   <div class="container">
-
     <div class="section-header reveal">
-      <span class="section-tag">
-        <i class="fa-solid fa-envelope" aria-hidden="true"></i>
-        Contact Us
-      </span>
+      <span class="section-tag"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Contact Us</span>
       <h2 id="contact-heading">Let's Build Something Together</h2>
       <p>Tell us about your project or challenge — we'll get back within 24 hours.</p>
     </div>
 
     <div class="contact-grid">
-
-      {# Contact info #}
+      <!-- Contact info card -->
       <div class="reveal">
         <div class="contact-info-card">
-
           {% if site_config.phone %}
-          <div class="contact-item">
-            <div class="contact-item-icon" aria-hidden="true">
-              <i class="fa-solid fa-phone"></i>
-            </div>
-            <div>
-              <div class="contact-item-label">Phone</div>
-              <a href="tel:{{ site_config.phone }}" class="contact-item-value">{{ site_config.phone }}</a>
-            </div>
-          </div>
+          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-phone"></i></div><div><div class="contact-item-label">Phone</div><a href="tel:{{ site_config.phone }}" class="contact-item-value">{{ site_config.phone }}</a></div></div>
           {% endif %}
-
           {% if site_config.email %}
-          <div class="contact-item">
-            <div class="contact-item-icon" aria-hidden="true">
-              <i class="fa-solid fa-envelope"></i>
-            </div>
-            <div>
-              <div class="contact-item-label">Email</div>
-              <a href="mailto:{{ site_config.email }}" class="contact-item-value">{{ site_config.email }}</a>
-            </div>
-          </div>
+          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></div><div><div class="contact-item-label">Email</div><a href="mailto:{{ site_config.email }}" class="contact-item-value">{{ site_config.email }}</a></div></div>
           {% endif %}
-
           {% if site_config.address %}
-          <div class="contact-item">
-            <div class="contact-item-icon" aria-hidden="true">
-              <i class="fa-solid fa-location-dot"></i>
-            </div>
-            <div>
-              <div class="contact-item-label">Office</div>
-              <span class="contact-item-value">{{ site_config.address }}</span>
-            </div>
-          </div>
+          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></div><div><div class="contact-item-label">Office</div><span class="contact-item-value">{{ site_config.address }}</span></div></div>
           {% endif %}
-
-          <div class="contact-item">
-            <div class="contact-item-icon" aria-hidden="true">
-              <i class="fa-solid fa-clock"></i>
-            </div>
-            <div>
-              <div class="contact-item-label">Support Hours</div>
-              <span class="contact-item-value">24/7 — Always Available</span>
-            </div>
-          </div>
-
+          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></div><div><div class="contact-item-label">Support Hours</div><span class="contact-item-value">24/7 — Always Available</span></div></div>
           {% if portfolio_settings.whatsapp_number %}
-          <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20Pritech%2C%20I%20would%20like%20to%20discuss%20a%20project."
-             class="btn btn-whatsapp"
-             target="_blank"
-             rel="noopener noreferrer"
-             aria-label="Start WhatsApp chat with Pritech">
-            <i class="fa-brands fa-whatsapp fa-lg" aria-hidden="true"></i>
-            Chat on WhatsApp
-          </a>
+          <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20Pritech%2C%20I%20would%20like%20to%20discuss%20a%20project." class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp fa-lg" aria-hidden="true"></i> Chat on WhatsApp</a>
           {% endif %}
-
         </div>
       </div>
 
-      {# Inquiry form #}
+      <!-- Inquiry form – action changed to 'home' (the same view handles POST) -->
       <div class="reveal reveal-delay-2">
         <div class="inquiry-form">
           <h3 style="margin-bottom:1.5rem;font-size:1.2rem;">Send us a Message</h3>
-
-          <form method="post" action="{% url 'inquiry' %}" novalidate aria-label="Contact inquiry form">
+          <form method="post" action="{% url 'home' %}" novalidate>
             {% csrf_token %}
+            {{ inquiry_form.honeypot }}
 
             <div class="form-row" style="margin-bottom:1rem;">
-
               <div class="form-group">
-                <label class="form-label" for="id_name">
-                  Full Name <span class="required-star" aria-label="required">*</span>
-                </label>
-                <input type="text"
-                       class="form-control{% if inquiry_form.name.errors %} error{% endif %}"
-                       id="id_name"
-                       name="name"
-                       placeholder="Your full name"
-                       required
-                       autocomplete="name"
-                       value="{{ inquiry_form.name.value|default:'' }}"
-                       aria-required="true"
-                       aria-describedby="name-error" />
-                {% if inquiry_form.name.errors %}
-                <span class="form-error" id="name-error" role="alert">{{ inquiry_form.name.errors.0 }}</span>
-                {% else %}
-                <span class="form-error" id="name-error" aria-live="polite"></span>
-                {% endif %}
+                <label for="{{ inquiry_form.name.id_for_label }}">Full Name <span class="required-star">*</span></label>
+                {{ inquiry_form.name }}
+                {{ inquiry_form.name.errors }}
               </div>
-
               <div class="form-group">
-                <label class="form-label" for="id_email">
-                  Email Address <span class="required-star" aria-label="required">*</span>
-                </label>
-                <input type="email"
-                       class="form-control{% if inquiry_form.email.errors %} error{% endif %}"
-                       id="id_email"
-                       name="email"
-                       placeholder="your@email.com"
-                       required
-                       autocomplete="email"
-                       value="{{ inquiry_form.email.value|default:'' }}"
-                       aria-required="true"
-                       aria-describedby="email-error" />
-                {% if inquiry_form.email.errors %}
-                <span class="form-error" id="email-error" role="alert">{{ inquiry_form.email.errors.0 }}</span>
-                {% else %}
-                <span class="form-error" id="email-error" aria-live="polite"></span>
-                {% endif %}
+                <label for="{{ inquiry_form.email.id_for_label }}">Email <span class="required-star">*</span></label>
+                {{ inquiry_form.email }}
+                {{ inquiry_form.email.errors }}
               </div>
-
             </div>
 
             <div class="form-row" style="margin-bottom:1rem;">
-
               <div class="form-group">
-                <label class="form-label" for="id_phone">Phone Number</label>
-                <input type="tel"
-                       class="form-control"
-                       id="id_phone"
-                       name="phone"
-                       placeholder="+265 XXX XXX XXX"
-                       autocomplete="tel"
-                       value="{{ inquiry_form.phone.value|default:'' }}"
-                       aria-describedby="phone-error" />
-                <span class="form-error" id="phone-error" aria-live="polite"></span>
+                <label for="{{ inquiry_form.phone.id_for_label }}">Phone Number</label>
+                {{ inquiry_form.phone }}
               </div>
-
               <div class="form-group">
-                <label class="form-label" for="id_subject">
-                  Subject <span class="required-star" aria-label="required">*</span>
-                </label>
-                <input type="text"
-                       class="form-control{% if inquiry_form.subject.errors %} error{% endif %}"
-                       id="id_subject"
-                       name="subject"
-                       placeholder="How can we help?"
-                       required
-                       value="{{ inquiry_form.subject.value|default:'' }}"
-                       aria-required="true"
-                       aria-describedby="subject-error" />
-                {% if inquiry_form.subject.errors %}
-                <span class="form-error" id="subject-error" role="alert">{{ inquiry_form.subject.errors.0 }}</span>
-                {% else %}
-                <span class="form-error" id="subject-error" aria-live="polite"></span>
-                {% endif %}
+                <label for="{{ inquiry_form.subject.id_for_label }}">Subject <span class="required-star">*</span></label>
+                {{ inquiry_form.subject }}
+                {{ inquiry_form.subject.errors }}
               </div>
-
             </div>
 
             <div class="form-group form-group--full" style="margin-bottom:1.5rem;">
-              <label class="form-label" for="id_message">
-                Message <span class="required-star" aria-label="required">*</span>
-              </label>
-              <textarea class="form-control{% if inquiry_form.message.errors %} error{% endif %}"
-                        id="id_message"
-                        name="message"
-                        placeholder="Tell us about your project or requirements..."
-                        required
-                        rows="5"
-                        aria-required="true"
-                        aria-describedby="message-error">{{ inquiry_form.message.value|default:'' }}</textarea>
-              {% if inquiry_form.message.errors %}
-              <span class="form-error" id="message-error" role="alert">{{ inquiry_form.message.errors.0 }}</span>
-              {% else %}
-              <span class="form-error" id="message-error" aria-live="polite"></span>
-              {% endif %}
+              <label for="{{ inquiry_form.message.id_for_label }}">Message <span class="required-star">*</span></label>
+              {{ inquiry_form.message }}
+              {{ inquiry_form.message.errors }}
             </div>
 
             <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
-              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-              Send Message
+              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send Message
             </button>
           </form>
         </div>
       </div>
-
     </div>
-
   </div>
 </section>
 
-<!-- 
-{# ══════════════════════════════════════════════════════
-   NEWSLETTER SECTION (FULL-WIDTH FIX)
-══════════════════════════════════════════════════════ #} -->
+
+<!-- ============================================================ -->
+<!-- NEWSLETTER FULL WIDTH (GDPR compliant with consent)        -->
+<!-- ============================================================ -->
 <div class="newsletter-fullwidth">
   <div class="container">
     <div class="newsletter-section reveal" role="complementary" aria-labelledby="newsletter-heading">
       <span class="section-tag" style="background:rgba(255,255,255,.2);color:white;border-color:rgba(255,255,255,.3);">
-        <i class="fa-solid fa-bell" aria-hidden="true"></i>
-        Stay Updated
+        <i class="fa-solid fa-bell" aria-hidden="true"></i> Stay Updated
       </span>
       <h2 id="newsletter-heading" style="margin-top:.75rem;">Get ICT Tips & Updates</h2>
       <p>Subscribe to our newsletter for tech insights, service updates, and exclusive offers.</p>
 
-      <form method="post" action="{% url 'newsletter_subscribe' %}" class="newsletter-form" aria-label="Newsletter subscription">
+      <form method="post" action="{% url 'newsletter_subscribe' %}" class="newsletter-form">
         {% csrf_token %}
-        <label for="newsletter-email" class="sr-only">Email address</label>
-        <input type="email"
-               id="newsletter-email"
-               name="email"
-               class="newsletter-input"
-               placeholder="Enter your email address"
-               required
-               autocomplete="email"
-               aria-required="true" />
-        <button type="submit" class="newsletter-btn" aria-label="Subscribe to newsletter">
-          Subscribe
-        </button>
+        {{ newsletter_form.email }}
+        <div style="display:flex; align-items:center; gap:0.5rem; margin:0.5rem 0;">
+          {{ newsletter_form.consent }}
+          <label for="{{ newsletter_form.consent.id_for_label }}" style="font-size:0.8rem;">I agree to receive marketing emails</label>
+        </div>
+        <button type="submit" class="newsletter-btn">Subscribe</button>
       </form>
 
-      <p style="color:rgba(255,255,255,.6);font-size:.8rem;margin-top:1rem;">
-        <i class="fa-solid fa-lock fa-xs" aria-hidden="true"></i>
-        No spam, ever. Unsubscribe at any time.
+      <p style="color:rgba(255,255,255,.6); font-size:0.8rem; margin-top:1rem;">
+        <i class="fa-solid fa-lock fa-xs" aria-hidden="true"></i> No spam. Unsubscribe anytime.
       </p>
     </div>
   </div>
 </div>
 
+{% endblock %}
+
+<!-- GDPR links in footer (extra_footer block) -->
+{% block extra_footer %}
+<div style="text-align:center; margin-top:1rem; margin-bottom:1rem;">
+  <a href="{% url 'gdpr_export' %}" style="color:var(--text-muted); font-size:0.8rem; margin:0 0.5rem;">📥 Data Export</a> |
+  <a href="{% url 'gdpr_delete' %}" style="color:var(--text-muted); font-size:0.8rem; margin:0 0.5rem;">🗑️ Request Deletion</a> |
+  <a href="{% url 'privacy_policy' %}" style="color:var(--text-muted); font-size:0.8rem; margin:0 0.5rem;">🔒 Privacy Policy</a>
+</div>
 {% endblock %}

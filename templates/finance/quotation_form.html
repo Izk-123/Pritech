@@ -1,110 +1,536 @@
-{% extends "generic/form.html" %}
-{% block title %}{% if form.instance.pk %}Edit Quotation{% else %}New Quotation{% endif %}{% endblock %}
-{% block form_title %}Quotation{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Quotation{% else %}New Quotation{% endif %} – Pritech Finance{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Quotation{% else %}Create Quotation{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Quotation Form – Mobile‑First, One Table ── */
+  .qform-wrap {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* Cards */
+  .qform-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .qform-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+  }
+  .qform-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .qform-card-title i { color: var(--primary); font-size: 1rem; }
+  .qform-card-body { padding: 1.25rem; }
+
+  /* Field groups */
+  .field-group { margin-bottom: 1rem; }
+  .field-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+  .field-group .form-control,
+  .field-group .form-select {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field-group .form-control:focus,
+  .field-group .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65,84,241,0.12);
+    outline: none;
+  }
+  .field-error {
+    font-size: 0.78rem;
+    color: var(--danger);
+    margin-top: 0.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  /* Items table – responsive (scroll on small screens) */
+  .items-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .items-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 580px;
+  }
+  .items-table th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 0.7rem 1rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+  .items-table td {
+    padding: 0.7rem 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+  }
+  .items-table tbody tr:last-child td { border-bottom: none; }
+  .items-table input.form-control {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.88rem;
+    width: 100%;
+  }
+  .items-table input.form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65,84,241,0.1);
+    outline: none;
+  }
+  .item-total-cell {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 0.92rem;
+    text-align: right;
+    min-width: 90px;
+  }
+  .item-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .item-remove-btn:hover { color: var(--danger); }
+
+  /* Add item button */
+  .add-item-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: none;
+    border: 2px dashed var(--border-color);
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    padding: 0.7rem 1.25rem;
+    width: calc(100% - 2rem);
+    margin: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .add-item-btn:hover { background: var(--active-bg); border-color: var(--primary); }
+
+  /* Financial summary */
+  .financial-summary {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--border-color);
+    font-size: 0.9rem;
+  }
+  .summary-row:last-child { border-bottom: none; }
+  .summary-label { color: var(--text-muted); font-weight: 500; }
+  .summary-value { font-weight: 600; color: var(--text-primary); }
+  .summary-total { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+
+  /* Notes textarea */
+  .notes-field textarea {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    width: 100%;
+    min-height: 100px;
+    resize: vertical;
+  }
+  .notes-field textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65,84,241,0.12);
+    outline: none;
+  }
+
+  /* Footer actions */
+  .qform-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 1rem 0 0.5rem;
+  }
+
+  /* Empty state */
+  .items-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+  }
+  .items-empty i { font-size: 2.2rem; opacity: 0.4; display: block; margin-bottom: 0.6rem; }
+
+  /* Responsive tweaks */
+  @media (max-width: 576px) {
+    .qform-footer { flex-direction: column; }
+    .qform-footer .btn { width: 100%; text-align: center; }
+    .qform-card-body { padding: 1rem; }
+    .items-table th, .items-table td { padding: 0.5rem; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-10">
-    <div class="page-header">
-      <div>
-        <div class="page-breadcrumb">
-          <a href="{% url 'quotation_list' %}">Quotations</a> /
-          {% if form.instance.pk %}Edit {{ form.instance.quotation_number }}{% else %}New Quotation{% endif %}
+<div class="qform-wrap">
+
+  <!-- Header with back button -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+    <div>
+      <div class="page-breadcrumb">
+        <a href="{% url 'quotation_list' %}">Quotations</a> /
+        {% if form.instance.pk %}Edit {{ form.instance.quotation_number }}{% else %}New Quotation{% endif %}
+      </div>
+      <h1 class="h3 mb-0">{% if form.instance.pk %}Edit Quotation{% else %}Create Quotation{% endif %}</h1>
+    </div>
+    <a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+  </div>
+
+  <form method="post" id="quotation-form" novalidate>
+    {% csrf_token %}
+
+    <!-- Client & Dates row -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-6">
+        <div class="qform-card">
+          <div class="qform-card-header">
+            <h5 class="qform-card-title"><i class="bi bi-building"></i>Client</h5>
+          </div>
+          <div class="qform-card-body">
+            <div class="field-group">
+              <label class="field-label" for="{{ form.client.id_for_label }}">Select client *</label>
+              {{ form.client }}
+              {% if form.client.errors %}
+                <div class="field-error"><i class="bi bi-exclamation-circle"></i>{{ form.client.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          </div>
         </div>
-        <h1>{% if form.instance.pk %}Edit Quotation{% else %}Create Quotation{% endif %}</h1>
+      </div>
+      <div class="col-md-6">
+        <div class="qform-card">
+          <div class="qform-card-header">
+            <h5 class="qform-card-title"><i class="bi bi-calendar3"></i>Dates</h5>
+          </div>
+          <div class="qform-card-body">
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="field-group">
+                  <label class="field-label" for="{{ form.issue_date.id_for_label }}">Issue Date *</label>
+                  {{ form.issue_date }}
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="field-group">
+                  <label class="field-label" for="{{ form.valid_until.id_for_label }}">Valid Until *</label>
+                  {{ form.valid_until }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <form method="post" id="quotation-form">
-      {% csrf_token %}
-      <div class="row g-4">
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header"><h5 class="mb-0">Quotation Details</h5></div>
-            <div class="card-body">
-              {% for field in form %}
-                <div class="mb-3">
-                  <label class="form-label fw-semibold">{{ field.label }}</label>
-                  {{ field }}
-                  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
-          </div>
+    <!-- Line Items Card -->
+    <div class="qform-card">
+      <div class="qform-card-header">
+        <h5 class="qform-card-title"><i class="bi bi-list-ul"></i>Line Items</h5>
+      </div>
+
+      {{ items.management_form }}
+
+      <!-- Responsive table (mobile scroll) -->
+      <div class="items-table-wrap">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="min-width: 200px;">Description</th>
+              <th style="width: 100px;">Qty</th>
+              <th style="width: 130px;">Unit Price</th>
+              <th style="width: 110px;">Total</th>
+              <th style="width: 50px;"></th>
+            </tr>
+          </thead>
+          <tbody id="items-body">
+            {% for item_form in items %}
+            <tr class="item-row" data-form-index="{{ forloop.counter0 }}">
+              {{ item_form.id }}
+              <td>{{ item_form.description }}</td>
+              <td>{{ item_form.quantity }}</td>
+              <td>{{ item_form.unit_price }}</td>
+              <td class="item-total-cell item-total">0.00</td>
+              <td class="text-center">
+                {% if item_form.instance.pk %}
+                  <label class="item-remove-btn" style="display:inline-flex;">{{ item_form.DELETE }}<i class="bi bi-trash3"></i></label>
+                {% else %}
+                  <button type="button" class="item-remove-btn remove-item" title="Remove item">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr id="empty-msg">
+              <td colspan="5" class="items-empty">
+                <i class="bi bi-receipt"></i>
+                <p>No items yet. Click "Add Item" to start.</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add item button -->
+      <button type="button" class="add-item-btn" id="add-item-btn">
+        <i class="bi bi-plus-circle"></i> Add Item
+      </button>
+
+      <!-- Financial summary -->
+      <div class="financial-summary">
+        <div class="summary-row">
+          <span class="summary-label">Subtotal</span>
+          <span class="summary-value" id="subtotal-display">{{ site_config.currency_symbol }} 0.00</span>
         </div>
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">Line Items</h5>
-              <button type="button" class="btn btn-sm btn-outline-primary" id="add-item"><i class="bi bi-plus-lg"></i> Add Item</button>
-            </div>
-            <div class="card-body p-0">
-              {{ items.management_form }}
-              <table class="table table-borderless mb-0" id="items-table">
-                <thead><tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Total</th><th></th></tr></thead>
-                <tbody id="items-body">
-                  {% for item_form in items %}
-                    <tr class="item-row">
-                      <td>{{ item_form.description }}</td>
-                      <td>{{ item_form.quantity }}</td>
-                      <td>{{ item_form.unit_price }}</td>
-                      <td class="item-total">0.00</td>
-                      <td>{% if item_form.instance.pk %}{{ item_form.DELETE }}{% endif %}</td>
-                    </tr>
-                  {% empty %}
-                    <tr id="empty-items-message"><td colspan="5" class="text-center py-4 text-muted">No items added yet.</td></tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <div class="summary-row">
+          <span class="summary-label">VAT ({{ site_config.vat_rate|floatformat:1 }}%)</span>
+          <span class="summary-value" id="tax-display">{{ site_config.currency_symbol }} 0.00</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label fw-bold">Total</span>
+          <span class="summary-total" id="total-display">{{ site_config.currency_symbol }} 0.00</span>
         </div>
       </div>
-      <div class="mt-4 d-flex gap-2">
-        <button type="submit" class="btn btn-primary px-4">Save Quotation</button>
-        <a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+
+    <!-- Notes -->
+    <div class="qform-card">
+      <div class="qform-card-header">
+        <h5 class="qform-card-title"><i class="bi bi-chat-left-text"></i>Notes <span class="text-muted small">(optional)</span></h5>
       </div>
-    </form>
-  </div>
+      <div class="qform-card-body notes-field">
+        {{ form.notes }}
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="qform-footer">
+      <a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      <button type="submit" name="action" value="draft" class="btn btn-outline-primary">
+        <i class="bi bi-save"></i> Save as Draft
+      </button>
+      <button type="submit" name="action" value="send" class="btn btn-primary">
+        <i class="bi bi-envelope-paper"></i> Save & Send
+      </button>
+    </div>
+
+  </form>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const tbody = document.getElementById('items-body');
-  const addBtn = document.getElementById('add-item');
-  const totalForms = document.querySelector('#id_items-TOTAL_FORMS');
-  const emptyMsg = document.getElementById('empty-items-message');
+  (function() {
+    "use strict";
 
-  function updateRowTotals() {
-    document.querySelectorAll('.item-row').forEach(row => {
-      const qty = row.querySelector('input[id$="-quantity"]')?.value || 0;
-      const price = row.querySelector('input[id$="-unit_price"]')?.value || 0;
-      const totalCell = row.querySelector('.item-total');
-      if (totalCell) totalCell.textContent = (qty * price).toFixed(2);
-    });
-  }
+    // DOM elements
+    const totalFormsInput = document.querySelector('[name="items-TOTAL_FORMS"]');
+    const itemsBody = document.getElementById('items-body');
+    const addBtn = document.getElementById('add-item-btn');
+    const emptyMsg = document.getElementById('empty-msg');
+    const VAT_RATE = {{ site_config.vat_rate|default:0.165 }};
+    const CURRENCY = "{{ site_config.currency_symbol }}";
 
-  if (addBtn) {
-    addBtn.addEventListener('click', function() {
-      if (emptyMsg) emptyMsg.remove();
-      const formCount = parseInt(totalForms.value);
-      const newRow = document.createElement('tr');
-      newRow.className = 'item-row';
-      newRow.innerHTML = `
-        <td><input type="text" name="items-${formCount}-description" class="form-control form-control-sm" placeholder="Description" id="id_items-${formCount}-description"></td>
-        <td><input type="number" name="items-${formCount}-quantity" value="1" step="0.01" class="form-control form-control-sm" id="id_items-${formCount}-quantity"></td>
-        <td><input type="number" name="items-${formCount}-unit_price" value="0.00" step="0.01" class="form-control form-control-sm" id="id_items-${formCount}-unit_price"></td>
-        <td class="item-total">0.00</td>
-        <td></td>
+    // Helper: update all row totals and financial summary
+    function updateAllTotals() {
+      let subtotal = 0;
+      document.querySelectorAll('#items-body .item-row').forEach(row => {
+        const qty = parseFloat(row.querySelector('input[name$="-quantity"]')?.value) || 0;
+        const price = parseFloat(row.querySelector('input[name$="-unit_price"]')?.value) || 0;
+        const total = qty * price;
+        subtotal += total;
+        row.querySelectorAll('.item-total').forEach(el => el.textContent = total.toFixed(2));
+      });
+      const tax = subtotal * VAT_RATE;
+      const grand = subtotal + tax;
+      document.getElementById('subtotal-display').textContent = `${CURRENCY} ${subtotal.toFixed(2)}`;
+      document.getElementById('tax-display').textContent = `${CURRENCY} ${tax.toFixed(2)}`;
+      document.getElementById('total-display').textContent = `${CURRENCY} ${grand.toFixed(2)}`;
+    }
+
+    // Reindex all rows: rename input names and update TOTAL_FORMS
+    function reindexRows() {
+      const rows = document.querySelectorAll('#items-body .item-row');
+      rows.forEach((row, idx) => {
+        ['id','description','quantity','unit_price','DELETE'].forEach(field => {
+          const input = row.querySelector(`input[name*="-${field}"], textarea[name*="-${field}"]`);
+          if (input) input.name = `items-${idx}-${field}`;
+        });
+        row.setAttribute('data-form-index', idx);
+      });
+      if (totalFormsInput) totalFormsInput.value = rows.length;
+    }
+
+    // Build a new table row for a given index
+    function buildTableRow(idx) {
+      const tr = document.createElement('tr');
+      tr.className = 'item-row';
+      tr.innerHTML = `
+        <input type="hidden" name="items-${idx}-id" value="">
+        <td><input type="text" name="items-${idx}-description" class="form-control" placeholder="e.g. Web Development, Hosting"></td>
+        <td><input type="number" name="items-${idx}-quantity" class="form-control item-qty" value="1" step="0.01" min="0.01"></td>
+        <td><input type="number" name="items-${idx}-unit_price" class="form-control item-price" value="0.00" step="0.01" min="0"></td>
+        <td class="item-total-cell item-total">0.00</td>
+        <td class="text-center">
+          <button type="button" class="item-remove-btn remove-item" title="Remove item"><i class="bi bi-x-circle"></i></button>
+        </td>
       `;
-      tbody.appendChild(newRow);
-      totalForms.value = formCount + 1;
-      updateRowTotals();
-    });
-  }
+      return tr;
+    }
 
-  tbody.addEventListener('input', updateRowTotals);
-  updateRowTotals();
-});
+    // Add a new row
+    function addNewRow() {
+      if (emptyMsg) emptyMsg.remove();
+      const currentIdx = parseInt(totalFormsInput?.value || 0);
+      const newRow = buildTableRow(currentIdx);
+      itemsBody.appendChild(newRow);
+      if (totalFormsInput) totalFormsInput.value = currentIdx + 1;
+      updateAllTotals();
+    }
+
+    // Remove a row (or mark DELETE for existing records)
+    function removeRow(row) {
+      const delCheck = row.querySelector('input[name$="-DELETE"]');
+      if (delCheck) {
+        delCheck.checked = true;
+        row.style.display = 'none';
+      } else {
+        row.remove();
+      }
+      reindexRows();
+      updateAllTotals();
+    }
+
+    // Attach remove handlers (delegation for dynamic rows)
+    document.body.addEventListener('click', (e) => {
+      const btn = e.target.closest('.remove-item');
+      if (!btn) return;
+      const row = btn.closest('.item-row');
+      if (row) removeRow(row);
+    });
+
+    // Real‑time total update on quantity/price change
+    itemsBody.addEventListener('input', (e) => {
+      if (e.target.classList.contains('item-qty') || e.target.classList.contains('item-price')) {
+        updateAllTotals();
+      }
+    });
+
+    // Add button click
+    addBtn.addEventListener('click', addNewRow);
+
+    // Pre‑fill existing rows with DELETE checkboxes: convert to visual buttons
+    document.querySelectorAll('#items-body .item-row').forEach(row => {
+      const delCheck = row.querySelector('input[name$="-DELETE"]');
+      if (delCheck) {
+        const cell = row.querySelector('td:last-child');
+        if (cell) {
+          const existingBtn = cell.querySelector('.item-remove-btn');
+          if (!existingBtn) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'item-remove-btn';
+            btn.innerHTML = '<i class="bi bi-trash3"></i>';
+            btn.title = 'Remove item';
+            btn.addEventListener('click', () => removeRow(row));
+            cell.innerHTML = '';
+            cell.appendChild(btn);
+          }
+        }
+      }
+    });
+
+    // Form submit: reindex, remove empty rows, validate at least one item
+    const form = document.getElementById('quotation-form');
+    form.addEventListener('submit', (e) => {
+      reindexRows();
+      const rows = [...document.querySelectorAll('#items-body .item-row')].filter(r => r.style.display !== 'none');
+      let hasValidItem = false;
+      rows.forEach(row => {
+        const desc = row.querySelector('input[name$="-description"]');
+        if (!desc || !desc.value.trim()) {
+          row.remove();
+        } else {
+          hasValidItem = true;
+        }
+      });
+      reindexRows();  // after removal, re‑index again
+      if (!hasValidItem && rows.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one line item before saving.');
+      }
+    });
+
+    // Initial totals calculation and auto‑add empty row if brand new
+    updateAllTotals();
+    if (document.querySelectorAll('#items-body .item-row').length === 0 && !emptyMsg) {
+      addNewRow();
+    }
+  })();
 </script>
 {% endblock %}

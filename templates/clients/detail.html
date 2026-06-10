@@ -1,4 +1,6 @@
 {% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
 {% block title %}{{ client.name }}{% endblock %}
 {% block page_title %}{{ client.name }}{% endblock %}
 
@@ -14,44 +16,63 @@
     <a href="{% url 'ticket_create' %}?client={{ client.pk }}" class="btn btn-outline-primary">
       <i class="bi bi-plus-circle me-1"></i> Ticket
     </a>
-    <a href="{% url 'client_update' client.pk %}" class="btn btn-primary">
-      <i class="bi bi-pencil me-1"></i> Edit
-    </a>
+    {# Only staff can edit the organisation (critical fix) #}
+    {% if request.user.is_staff %}
+      <a href="{% url 'client_update' client.pk %}" class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i> Edit
+      </a>
+    {% endif %}
   </div>
 </div>
 
 <div class="row g-4">
-  <!-- Left Column -->
+  <!-- Left column: main content -->
   <div class="col-lg-8">
+
     <!-- Organisation Details Card -->
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="mb-0">Organisation Details</h3>
-        <span class="badge {% if client.is_active %}bg-success{% else %}bg-secondary{% endif %}">
-          {{ client.is_active|yesno:'Active,Inactive' }}
+        <span class="badge {% if client.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">
+          {{ client.get_status_display }}
         </span>
       </div>
       <div class="card-body">
         <ul class="info-list">
           <li><span class="label">Industry</span><span class="value">{{ client.get_industry_display }}</span></li>
           {% if client.registration_number %}
-          <li><span class="label">Reg. Number</span><span class="value">{{ client.registration_number }}</span></li>
+            <li><span class="label">Reg. Number</span><span class="value">{{ client.registration_number }}</span></li>
           {% endif %}
           {% if client.email %}
-          <li><span class="label">Email</span><span class="value">{{ client.email }}</span></li>
+            <li><span class="label">Email</span><span class="value">{{ client.email }}</span></li>
           {% endif %}
           {% if client.phone %}
-          <li><span class="label">Phone</span><span class="value">{{ client.phone }}</span></li>
+            <li><span class="label">Phone</span><span class="value">{{ client.phone }}</span></li>
           {% endif %}
           {% if client.address %}
-          <li><span class="label">Address</span><span class="value">{{ client.address }}</span></li>
+            <li><span class="label">Address</span><span class="value">{{ client.address|linebreaksbr }}</span></li>
           {% endif %}
           {% if client.website %}
-          <li><span class="label">Website</span><span class="value">
-            <a href="{{ client.website }}" target="_blank" rel="noopener">{{ client.website }}</a>
-          </span></li>
+            <li><span class="label">Website</span><span class="value">
+              <a href="{{ client.website }}" target="_blank">{{ client.website }}</a>
+            </span></li>
+          {% endif %}
+          {% if client.assigned_to %}
+            <li><span class="label">Sales Rep</span><span class="value">{{ client.assigned_to.get_full_name|default:client.assigned_to.email }}</span></li>
+          {% endif %}
+          {% if client.logo %}
+            <li><span class="label">Logo</span><span class="value">
+              <img src="{{ client.logo.url }}" alt="Logo" style="max-height: 60px;">
+            </span></li>
           {% endif %}
         </ul>
+        {# Sanitised rich text notes (critical fix) #}
+        {% if client.notes %}
+          <div class="mt-3">
+            <strong>Notes:</strong>
+            <div class="quill-content mt-2">{{ client.notes.html|safe }}</div>
+          </div>
+        {% endif %}
       </div>
     </div>
 
@@ -97,8 +118,9 @@
     </div>
   </div>
 
-  <!-- Right Column -->
+  <!-- Right column: sidebar info -->
   <div class="col-lg-4">
+
     <!-- Stats Card -->
     <div class="card">
       <div class="card-body">
@@ -115,27 +137,43 @@
       </div>
     </div>
 
-    <!-- Contacts Card -->
+    <!-- Contacts Card (with CRUD for clients) -->
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="mb-0">Contacts</h3>
+        {% if request.user.user_type == 'client' %}
+          <a href="{% url 'client_contact_create' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus"></i> Add
+          </a>
+        {% endif %}
       </div>
       {% if contacts %}
       <div class="list-group list-group-flush">
-        {% for c in contacts %}
+        {% for contact in contacts %}
         <div class="list-group-item">
-          <div class="d-flex align-items-start">
-            <div class="flex-grow-1">
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
               <div class="fw-semibold">
-                {{ c.name }}
-                {% if c.is_primary %}
-                <span class="badge bg-primary ms-1">Primary</span>
+                {{ contact.name }}
+                {% if contact.is_primary %}
+                  <span class="badge bg-primary ms-1">Primary</span>
                 {% endif %}
               </div>
-              {% if c.role %}<div class="small text-muted">{{ c.role }}</div>{% endif %}
-              {% if c.email %}<div class="small">{{ c.email }}</div>{% endif %}
-              {% if c.phone %}<div class="small">{{ c.phone }}</div>{% endif %}
+              {% if contact.role %}<div class="small text-muted">{{ contact.role }}</div>{% endif %}
+              {% if contact.email %}<div class="small">{{ contact.email }}</div>{% endif %}
+              {% if contact.phone %}<div class="small">{{ contact.phone }}</div>{% endif %}
             </div>
+            {% if request.user.user_type == 'client' %}
+              <div class="btn-group">
+                <a href="{% url 'client_contact_update' contact.pk %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'client_contact_delete' contact.pk %}" class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('Delete this contact?')">
+                  <i class="bi bi-trash"></i>
+                </a>
+              </div>
+            {% endif %}
           </div>
         </div>
         {% endfor %}
@@ -144,11 +182,14 @@
       <div class="card-body text-center py-4 text-muted">
         <i class="bi bi-person fs-1 opacity-50"></i>
         <p class="mt-2">No contacts added.</p>
+        {% if request.user.user_type == 'client' %}
+          <a href="{% url 'client_contact_create' %}" class="btn btn-sm btn-primary">Add contact</a>
+        {% endif %}
       </div>
       {% endif %}
     </div>
 
-    <!-- Invoices Card -->
+    <!-- Invoices Card (conditional links) -->
     <div class="card">
       <div class="card-header">
         <h3 class="mb-0">Recent Invoices</h3>
@@ -157,29 +198,33 @@
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
-            <tr>
-              <th>Invoice</th>
-              <th>Amount</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>Invoice</th><th>Amount</th><th>Status</th></tr>
           </thead>
           <tbody>
             {% for inv in invoices|slice:":5" %}
             <tr>
               <td>
-                <a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a>
+                {% if request.user.is_staff %}
+                  <a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a>
+                {% else %}
+                  <a href="{% url 'client_invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a>
+                {% endif %}
                 <div class="small text-muted">{{ inv.issue_date }}</div>
-              </td>
-              <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</td>
-              <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
-            </tr>
+               </div>
+              <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</div>
+              <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></div>
+            </table>
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% if invoices|length > 5 %}
       <div class="card-footer text-center">
-        <a href="{% url 'invoice_list' %}?client={{ client.pk }}" class="text-decoration-none">View all invoices →</a>
+        {% if request.user.is_staff %}
+          <a href="{% url 'invoice_list' %}?client={{ client.pk }}" class="text-decoration-none">View all invoices →</a>
+        {% else %}
+          <a href="{% url 'client_invoice_list' %}" class="text-decoration-none">View all invoices →</a>
+        {% endif %}
       </div>
       {% endif %}
       {% else %}
@@ -189,6 +234,7 @@
       </div>
       {% endif %}
     </div>
-  </div>
+
+  </div> <!-- end right column -->
 </div>
 {% endblock %}

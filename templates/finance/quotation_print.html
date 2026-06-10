@@ -1,0 +1,352 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ quotation.quotation_number }} – {{ site_config.company_name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 2rem 1rem;
+    }
+
+    /* Print‑only styles – hide buttons, use black text, A4 margins */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 1.5cm;
+      }
+      .print-actions {
+        display: none;
+      }
+      .quotation-container {
+        box-shadow: none;
+        border: none;
+      }
+      .header, .parties, table, .totals, .notes, .footer {
+        page-break-inside: avoid;
+      }
+      .company-name, .section-label, .title {
+        color: black !important;
+      }
+      .tech-blue {
+        color: black !important;
+      }
+    }
+
+    /* Main container */
+    .quotation-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+
+    /* Print actions bar (visible on screen only) */
+    .print-actions {
+      background: #f1f5f9;
+      padding: 1rem 1.5rem;
+      text-align: right;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .btn-print {
+      background: #4154f1;
+      color: white;
+      border: none;
+      padding: 0.5rem 1.25rem;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s;
+    }
+    .btn-print:hover {
+      background: #2f45c5;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 2rem 2rem 1.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      background: white;
+    }
+    .logo img {
+      max-height: 60px;
+      width: auto;
+    }
+    .company-details {
+      text-align: right;
+    }
+    .company-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #4154f1;  /* tech blue */
+      margin-bottom: 0.25rem;
+    }
+    .title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #4154f1;
+      margin-top: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    /* Parties and dates */
+    .parties {
+      display: flex;
+      justify-content: space-between;
+      padding: 1.5rem 2rem;
+      background: #f9fafb;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .prepared-for, .dates {
+      width: 48%;
+    }
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #4154f1;  /* tech blue */
+      margin-bottom: 0.5rem;
+    }
+    .party-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .party-detail {
+      font-size: 0.85rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .date-item {
+      margin-bottom: 0.5rem;
+    }
+    .date-value {
+      font-weight: 600;
+    }
+
+    /* Items table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+    .items-table th {
+      background: #f1f5f9;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #1e293b;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .items-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 0.9rem;
+      vertical-align: top;
+    }
+    .text-right {
+      text-align: right;
+    }
+    .item-total {
+      font-weight: 700;
+    }
+
+    /* Totals block */
+    .totals {
+      display: flex;
+      justify-content: flex-end;
+      padding: 1rem 2rem;
+      background: white;
+    }
+    .totals-inner {
+      width: 280px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      font-size: 0.9rem;
+    }
+    .total-row.border-top {
+      border-top: 1px solid #e2e8f0;
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+    }
+    .grand-total {
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: #4154f1;
+    }
+
+    /* Notes */
+    .notes {
+      background: #fefce8;
+      margin: 0 2rem 1.5rem 2rem;
+      padding: 1rem 1.25rem;
+      border-left: 4px solid #4154f1;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #334155;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 1.25rem 2rem;
+      border-top: 1px solid #e2e8f0;
+      font-size: 0.75rem;
+      color: #64748b;
+      background: #f9fafb;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .company-details {
+        text-align: left;
+      }
+      .parties {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .prepared-for, .dates {
+        width: 100%;
+      }
+      .totals {
+        justify-content: flex-start;
+      }
+      .items-table th, .items-table td {
+        padding: 0.5rem;
+      }
+      .items-table {
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="quotation-container">
+  <!-- Screen‑only print button -->
+  <div class="print-actions">
+    <button class="btn-print" onclick="window.print();">
+      <i>🖨️</i> Print / Save as PDF
+    </button>
+  </div>
+
+  <div class="header">
+    <div class="logo">
+      {% if site_config.logo %}
+        <img src="{{ site_config.logo.url }}" alt="{{ site_config.company_name }}">
+      {% else %}
+        <div class="company-name" style="font-size:1.2rem;">{{ site_config.company_name }}</div>
+      {% endif %}
+    </div>
+    <div class="company-details">
+      <div class="company-name">{{ site_config.company_name }}</div>
+      <div>{{ site_config.address|default:"" }}</div>
+      <div>{{ site_config.email|default:"" }} | {{ site_config.phone|default:"" }}</div>
+      <div class="title">QUOTATION</div>
+      <div class="quotation-num">{{ quotation.quotation_number }}</div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="prepared-for">
+      <div class="section-label">Prepared For</div>
+      <div class="party-name">{{ quotation.client.name }}</div>
+      <div class="party-detail">
+        {% if quotation.client.address %}{{ quotation.client.address|linebreaksbr }}<br>{% endif %}
+        {% if quotation.client.email %}{{ quotation.client.email }}<br>{% endif %}
+        {% if quotation.client.phone %}{{ quotation.client.phone }}{% endif %}
+      </div>
+    </div>
+    <div class="dates">
+      <div class="section-label">Details</div>
+      <div class="date-item"><strong>Issue Date:</strong> {{ quotation.issue_date }}</div>
+      <div class="date-item"><strong>Valid Until:</strong> {{ quotation.valid_until }}</div>
+    </div>
+  </div>
+
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="text-right">Qty</th>
+        <th class="text-right">Unit Price</th>
+        <th class="text-right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td class="text-right">{{ item.quantity }}</td>
+        <td class="text-right">{{ site_config.currency_symbol }} {{ item.unit_price|floatformat:2 }}</td>
+        <td class="text-right item-total">{{ site_config.currency_symbol }} {{ item.total|floatformat:2 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="text-center">No items added</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-inner">
+      <div class="total-row">
+        <span>Subtotal</span>
+        <span>{{ site_config.currency_symbol }} {{ quotation.subtotal|floatformat:2 }}</span>
+      </div>
+      <div class="total-row">
+        <span>VAT ({{ site_config.vat_rate|floatformat:1 }}%)</span>
+        <span>{{ site_config.currency_symbol }} {{ quotation.tax_amount|floatformat:2 }}</span>
+      </div>
+      <div class="total-row border-top grand-total">
+        <span>Total</span>
+        <span>{{ site_config.currency_symbol }} {{ quotation.total_amount|floatformat:2 }}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if quotation.notes %}
+  <div class="notes">
+    <strong>Notes</strong><br>
+    {{ quotation.notes }}
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    {{ site_config.invoice_footer|default:"Thank you for your business." }}<br>
+    This quotation is valid until {{ quotation.valid_until }}.
+  </div>
+</div>
+</body>
+</html>
