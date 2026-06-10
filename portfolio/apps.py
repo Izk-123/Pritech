@@ -2,4 +2,9 @@ from django.apps import AppConfig
 
 
 class PortfolioConfig(AppConfig):
-    name = 'portfolio'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "portfolio"
+
+    def ready(self):
+        # Import signals to register cache invalidation
+        import portfolio.signals  # noqa: F401
