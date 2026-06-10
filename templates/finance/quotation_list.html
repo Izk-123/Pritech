@@ -12,274 +12,138 @@
 
 {% block extra_css %}
 <style>
-/* ── Quotation List – Mobile-First ── */
+  /* Mobile-first adjustments */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .filter-bar .filter-search-wrap {
+    flex: 1 1 200px;
+  }
+  .filter-bar select {
+    flex: 1 1 150px;
+  }
+  @media (max-width: 576px) {
+    .filter-bar {
+      flex-direction: column;
+    }
+    .filter-bar .filter-search-wrap,
+    .filter-bar select {
+      width: 100%;
+    }
+  }
 
-/* ---- Search / filter bar ---- */
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
-  align-items: center;
-}
-.filter-search-wrap {
-  position: relative;
-  flex: 1 1 200px;
-  min-width: 180px;
-}
-.filter-search-wrap .search-icon {
-  position: absolute;
-  left: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  pointer-events: none;
-}
-.filter-search-wrap input {
-  padding-left: 2.2rem;
-  border-radius: 10px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  font-size: 0.88rem;
-  width: 100%;
-  height: 38px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.filter-search-wrap input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(65,84,241,0.12);
-  outline: none;
-}
-.filter-select {
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 0.88rem;
-  padding: 0 0.85rem;
-  transition: border-color 0.15s;
-  min-width: 150px;
-}
-.filter-select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(65,84,241,0.12);
-  outline: none;
-}
+  /* Status badges */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 30px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .status-draft     { background: #e2e8f0; color: #475569; }
+  .status-sent      { background: #dbeafe; color: #1d4ed8; }
+  .status-approved  { background: #dcfce7; color: #15803d; }
+  .status-converted { background: #f3e8ff; color: #7e22ce; }
+  .status-rejected  { background: #fee2e2; color: #b91c1c; }
+  .status-expired   { background: #fef9c3; color: #92400e; }
 
-/* ---- Summary chips ---- */
-.status-chips {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.15s;
-  text-decoration: none;
-}
-.status-chip.all     { background: var(--bg-tertiary); color: var(--text-secondary); border-color: var(--border-color); }
-.status-chip.draft   { background: #f1f5f9; color: #64748b; }
-.status-chip.sent    { background: #dbeafe; color: #1d4ed8; }
-.status-chip.approved{ background: #dcfce7; color: #15803d; }
-.status-chip.rejected{ background: #fee2e2; color: #b91c1c; }
-.status-chip.expired { background: #fef9c3; color: #92400e; }
-.status-chip.converted{ background: #f3e8ff; color: #7e22ce; }
-.status-chip:hover, .status-chip.active { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-[data-theme="dark"] .status-chip.sent     { background: #1e3a5f; color: #93c5fd; }
-[data-theme="dark"] .status-chip.approved { background: #14532d; color: #86efac; }
-[data-theme="dark"] .status-chip.rejected { background: #7f1d1d; color: #fca5a5; }
-[data-theme="dark"] .status-chip.expired  { background: #451a03; color: #fcd34d; }
-[data-theme="dark"] .status-chip.converted{ background: #3b0764; color: #d8b4fe; }
-
-/* ---- Desktop table ---- */
-.q-table { width: 100%; border-collapse: collapse; }
-.q-table th {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  padding: 0.65rem 1rem;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
-}
-.q-table th:first-child { border-radius: 12px 0 0 0; }
-.q-table th:last-child  { border-radius: 0 12px 0 0; }
-.q-table td {
-  padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  vertical-align: middle;
-  font-size: 0.88rem;
-  color: var(--text-primary);
-}
-.q-table tbody tr:last-child td { border-bottom: none; }
-.q-table tbody tr {
-  transition: background 0.1s;
-}
-.q-table tbody tr:hover { background: var(--hover-bg); }
-.q-table .q-num a {
-  font-weight: 700;
-  color: var(--primary);
-  text-decoration: none;
-  font-size: 0.9rem;
-}
-.q-table .q-num a:hover { text-decoration: underline; }
-.q-table .q-amount { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; }
-.q-expired { color: var(--danger) !important; font-weight: 600; }
-.q-table .q-actions { text-align: right; white-space: nowrap; }
-
-/* ---- Status badge ---- */
-.q-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.q-badge.draft     { background: var(--bg-tertiary); color: var(--text-muted); }
-.q-badge.sent      { background: #dbeafe; color: #1d4ed8; }
-.q-badge.approved  { background: #dcfce7; color: #15803d; }
-.q-badge.converted { background: #f3e8ff; color: #7e22ce; }
-.q-badge.rejected  { background: #fee2e2; color: #b91c1c; }
-.q-badge.expired   { background: #fef9c3; color: #92400e; }
-[data-theme="dark"] .q-badge.sent     { background: #1e3a5f; color: #93c5fd; }
-[data-theme="dark"] .q-badge.approved { background: #14532d; color: #86efac; }
-[data-theme="dark"] .q-badge.rejected { background: #7f1d1d; color: #fca5a5; }
-[data-theme="dark"] .q-badge.expired  { background: #451a03; color: #fcd34d; }
-[data-theme="dark"] .q-badge.converted{ background: #3b0764; color: #d8b4fe; }
-
-/* ---- Status select in table ---- */
-.status-select {
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 0.2rem 1.8rem 0.2rem 0.65rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  transition: border-color 0.15s;
-}
-.status-select:focus { border-color: var(--primary); outline: none; }
-
-/* ---- Mobile cards ---- */
-.q-card-list { display: flex; flex-direction: column; gap: 0.75rem; }
-.q-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: 1rem 1.1rem;
-  transition: all 0.15s;
-  animation: slideUpFade 0.4s ease forwards;
-}
-.q-card:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-.q-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.6rem;
-}
-.q-card-num a {
-  font-weight: 700;
-  color: var(--primary);
-  font-size: 0.95rem;
-  text-decoration: none;
-}
-.q-card-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem 0.75rem;
-  margin-bottom: 0.75rem;
-}
-.q-meta-item { display: flex; flex-direction: column; }
-.q-meta-label { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-.q-meta-value { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
-.q-meta-value.amount { font-size: 1rem; font-weight: 800; color: var(--text-primary); }
-.q-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 0.65rem;
-  border-top: 1px solid var(--border-color);
-  gap: 0.5rem;
-}
-
-/* ---- Empty state ---- */
-.q-empty {
-  text-align: center;
-  padding: 3rem 1.5rem;
-  color: var(--text-muted);
-}
-.q-empty-icon { font-size: 2.5rem; opacity: 0.4; display: block; margin-bottom: 0.75rem; }
-.q-empty-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-secondary); }
-
-/* ---- Table wrapper card ---- */
-.q-table-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-@media (max-width: 768px) {
-  .filter-bar { flex-direction: column; align-items: stretch; }
-  .filter-search-wrap { min-width: 0; }
-  .filter-select { width: 100%; }
-}
+  /* Mobile cards */
+  .quotation-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  .quotation-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1rem;
+    transition: all 0.2s;
+  }
+  .quotation-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.6rem;
+  }
+  .card-number {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--primary);
+  }
+  .card-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 0.8rem;
+    margin: 0.75rem 0;
+  }
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .meta-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+  }
+  .meta-value {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .meta-value.amount {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .card-footer-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--border-color);
+  }
+  .status-select-mobile {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    background: var(--bg-primary);
+  }
 </style>
 {% endblock %}
 
 {% block filters %}
-<!-- Filter Bar -->
 <div class="filter-bar">
   <div class="filter-search-wrap">
-    <i class="bi bi-search search-icon"></i>
     <input type="text"
            name="q"
-           placeholder="Search # or client…"
+           class="form-control form-control-sm"
+           placeholder="Search # or client..."
            value="{{ request.GET.q }}"
            hx-get="{% url 'live_quotation_search' %}"
            hx-trigger="keyup changed delay:300ms"
-           hx-target="#quotation-table-body"
+           hx-target="#quotation-results"
            hx-indicator="#search-spinner"
            autocomplete="off">
   </div>
   <select name="status"
-          class="filter-select"
+          class="form-select form-select-sm"
           hx-get="{% url 'live_quotation_search' %}"
           hx-trigger="change"
-          hx-target="#quotation-table-body">
+          hx-target="#quotation-results">
     <option value="">All statuses</option>
     {% for val, label in status_choices %}
-    <option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>
+      <option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
   <span id="search-spinner" class="htmx-indicator spinner-border spinner-border-sm text-primary" role="status"></span>
@@ -287,29 +151,17 @@
 {% endblock %}
 
 {% block table_head %}
-<tr>
-  <th>Quotation #</th>
-  <th>Client</th>
-  <th>Issue Date</th>
-  <th>Valid Until</th>
-  <th class="text-end">Total</th>
-  <th>Status</th>
-  <th></th>
-</tr>
-{% endblock %}
-
-{% block table_row %}
-<!-- Desktop table -->
-<div class="q-table-card d-none d-md-block">
+<!-- Desktop table (hidden on mobile) -->
+<div class="d-none d-md-block">
   <div class="table-responsive">
-    <table class="q-table">
-      <thead>
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
         <tr>
           <th>Quotation #</th>
           <th>Client</th>
           <th>Issue Date</th>
           <th>Valid Until</th>
-          <th style="text-align:right;">Total</th>
+          <th class="text-end">Total</th>
           <th>Status</th>
           <th></th>
         </tr>
@@ -318,76 +170,61 @@
         {% for obj in object_list %}
           {% include "finance/partials/quotation_rows.html" with q=obj %}
         {% empty %}
-        <tr>
-          <td colspan="7">
-            <div class="q-empty">
-              <i class="bi bi-file-earmark-text q-empty-icon"></i>
-              <div class="q-empty-title">No quotations found</div>
-              <div style="font-size:0.82rem;">Try adjusting your search or create a new quotation.</div>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
+        <tr><td colspan="7" class="text-center py-4 text-muted">No quotations found.{% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- Mobile card list -->
-<div class="q-card-list d-md-none" id="quotation-card-body">
-  {% for obj in object_list %}
-  <div class="q-card stagger-item">
-    <div class="q-card-top">
-      <div class="q-card-num">
-        <a href="{% url 'quotation_detail' obj.pk %}">{{ obj.quotation_number }}</a>
+<!-- Mobile cards (visible on small screens) -->
+<div id="quotation-results" class="d-md-none">
+  <div class="quotation-card-list">
+    {% for obj in object_list %}
+      <div class="quotation-card">
+        <div class="card-header-flex">
+          <a href="{% url 'quotation_detail' obj.pk %}" class="card-number">{{ obj.quotation_number }}</a>
+          <span class="status-badge status-{{ obj.status }}">{{ obj.get_status_display }}</span>
+        </div>
+        <div class="card-meta-grid">
+          <div class="meta-item">
+            <span class="meta-label">Client</span>
+            <span class="meta-value">{{ obj.client.name|truncatechars:30 }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Total</span>
+            <span class="meta-value amount">{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Issue Date</span>
+            <span class="meta-value">{{ obj.issue_date }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Valid Until</span>
+            <span class="meta-value {% if obj.valid_until < today %}text-danger{% endif %}">{{ obj.valid_until }}</span>
+          </div>
+        </div>
+        <div class="card-footer-actions">
+          <select class="form-select form-select-sm status-select-mobile w-auto"
+                  data-url="{% url 'update_quotation_status' obj.pk %}">
+            {% for val, label in obj.STATUS_CHOICES %}
+              <option value="{{ val }}" {% if obj.status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <a href="{% url 'quotation_detail' obj.pk %}" class="btn btn-sm btn-outline-primary">View →</a>
+        </div>
       </div>
-      <span class="q-badge {{ obj.status }}">{{ obj.get_status_display }}</span>
-    </div>
-    <div class="q-card-meta">
-      <div class="q-meta-item">
-        <span class="q-meta-label">Client</span>
-        <span class="q-meta-value">{{ obj.client.name }}</span>
-      </div>
-      <div class="q-meta-item">
-        <span class="q-meta-label">Total</span>
-        <span class="q-meta-value amount">{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</span>
-      </div>
-      <div class="q-meta-item">
-        <span class="q-meta-label">Issue Date</span>
-        <span class="q-meta-value">{{ obj.issue_date }}</span>
-      </div>
-      <div class="q-meta-item">
-        <span class="q-meta-label">Valid Until</span>
-        <span class="q-meta-value {% if obj.valid_until < today %}q-expired{% endif %}">{{ obj.valid_until }}</span>
-      </div>
-    </div>
-    <div class="q-card-footer">
-      <select class="status-select"
-              data-url="{% url 'update_quotation_status' obj.pk %}">
-        {% for val, label in obj.STATUS_CHOICES %}
-          <option value="{{ val }}" {% if obj.status == val %}selected{% endif %}>{{ label }}</option>
-        {% endfor %}
-      </select>
-      <a href="{% url 'quotation_detail' obj.pk %}" class="btn btn-sm btn-outline-primary">
-        View <i class="bi bi-arrow-right ms-1"></i>
-      </a>
-    </div>
+    {% empty %}
+      <div class="text-center py-4 text-muted">No quotations found.</div>
+    {% endfor %}
   </div>
-  {% empty %}
-  <div class="q-empty">
-    <i class="bi bi-file-earmark-text q-empty-icon"></i>
-    <div class="q-empty-title">No quotations found</div>
-    <div style="font-size:0.82rem;">Try adjusting your search or <a href="{% url 'quotation_create' %}">create a new one</a>.</div>
-  </div>
-  {% endfor %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Status change via AJAX
+  // Status change via AJAX (works for both desktop select and mobile select)
   document.body.addEventListener('change', function(e) {
-    if (e.target.classList.contains('status-select')) {
+    if (e.target.classList.contains('status-select-mobile') || e.target.classList.contains('status-select')) {
       const select = e.target;
       const url = select.dataset.url;
       if (!url) return;
@@ -400,7 +237,11 @@
         body: `status=${select.value}`
       })
       .then(r => r.text())
-      .then(html => { select.outerHTML = html; })
+      .then(html => {
+        // Replace select with badge (or keep as select? better to show badge)
+        const badgeHtml = `<span class="status-badge status-${select.value}">${select.options[select.selectedIndex].text}</span>`;
+        select.outerHTML = badgeHtml;
+      })
       .catch(err => console.error('Status update failed:', err));
     }
   });

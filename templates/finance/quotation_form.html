@@ -1,282 +1,217 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if form.instance.pk %}Edit Quotation{% else %}New Quotation{% endif %} – Pritech Finance{% endblock %}
+{% block title %}{% if form.instance.pk %}Edit Quotation{% else %}New Quotation{% endif %}{% endblock %}
 {% block page_title %}{% if form.instance.pk %}Edit Quotation{% else %}Create Quotation{% endif %}{% endblock %}
 
 {% block extra_css %}
 <style>
-  /* ── Quotation Form – Mobile‑First, One Table ── */
-  .qform-wrap {
-    max-width: 860px;
+  /* ── Responsive Form Styles ── */
+  .form-container {
+    max-width: 1000px;
     margin: 0 auto;
   }
-
-  /* Cards */
-  .qform-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    overflow: hidden;
+  .card {
     margin-bottom: 1.25rem;
-    box-shadow: var(--shadow-sm);
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
-  .qform-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.9rem 1.25rem;
-    border-bottom: 1px solid var(--border-color);
+  .card-header {
     background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    font-weight: 600;
   }
-  .qform-card-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
+  .card-body {
+    padding: 1rem;
   }
-  .qform-card-title i { color: var(--primary); font-size: 1rem; }
-  .qform-card-body { padding: 1.25rem; }
-
-  /* Field groups */
-  .field-group { margin-bottom: 1rem; }
-  .field-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    display: block;
-    margin-bottom: 0.4rem;
-  }
-  .field-group .form-control,
-  .field-group .form-select {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    width: 100%;
-    transition: border-color 0.15s, box-shadow 0.15s;
-  }
-  .field-group .form-control:focus,
-  .field-group .form-select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(65,84,241,0.12);
-    outline: none;
-  }
-  .field-error {
-    font-size: 0.78rem;
-    color: var(--danger);
-    margin-top: 0.3rem;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
+  @media (min-width: 768px) {
+    .card-body {
+      padding: 1.25rem;
+    }
   }
 
-  /* Items table – responsive (scroll on small screens) */
-  .items-table-wrap {
+  /* Items table – horizontal scroll on mobile */
+  .items-table-wrapper {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
   .items-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 580px;
+    min-width: 550px;
   }
-  .items-table th {
-    font-size: 0.72rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    padding: 0.7rem 1rem;
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-  }
+  .items-table th,
   .items-table td {
-    padding: 0.7rem 0.75rem;
+    padding: 0.6rem 0.5rem;
     border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
   }
-  .items-table tbody tr:last-child td { border-bottom: none; }
-  .items-table input.form-control {
+  .items-table th {
+    background: var(--bg-tertiary);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-muted);
+  }
+  .items-table input {
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 0.45rem 0.6rem;
-    font-size: 0.88rem;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
     width: 100%;
   }
-  .items-table input.form-control:focus {
+  .items-table input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(65,84,241,0.1);
     outline: none;
+    box-shadow: 0 0 0 2px rgba(65,84,241,0.1);
   }
-  .item-total-cell {
+  .item-total {
     font-weight: 700;
     color: var(--primary);
-    font-size: 0.92rem;
     text-align: right;
-    min-width: 90px;
   }
-  .item-remove-btn {
+  .remove-item {
     background: none;
     border: none;
     color: var(--text-muted);
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     cursor: pointer;
-    padding: 0;
-    transition: color 0.15s;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
+    transition: color 0.2s;
   }
-  .item-remove-btn:hover { color: var(--danger); }
+  .remove-item:hover {
+    color: var(--danger);
+  }
 
   /* Add item button */
   .add-item-btn {
+    background: var(--bg-tertiary);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 0.6rem;
+    width: calc(100% - 2rem);
+    margin: 0.75rem 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: none;
-    border: 2px dashed var(--border-color);
     color: var(--primary);
     font-weight: 600;
-    font-size: 0.85rem;
-    border-radius: 10px;
-    padding: 0.7rem 1.25rem;
-    width: calc(100% - 2rem);
-    margin: 0.75rem 1rem;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.2s;
   }
-  .add-item-btn:hover { background: var(--active-bg); border-color: var(--primary); }
+  .add-item-btn:hover {
+    background: var(--active-bg);
+    border-color: var(--primary);
+  }
 
-  /* Financial summary */
-  .financial-summary {
-    padding: 1rem 1.25rem;
-    border-top: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
-  }
+  /* Footer summary */
   .summary-row {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    padding: 0.4rem 0;
-    border-bottom: 1px dashed var(--border-color);
+    padding: 0.3rem 0;
     font-size: 0.9rem;
   }
-  .summary-row:last-child { border-bottom: none; }
-  .summary-label { color: var(--text-muted); font-weight: 500; }
-  .summary-value { font-weight: 600; color: var(--text-primary); }
-  .summary-total { font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+  .summary-total {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--primary);
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+  }
 
-  /* Notes textarea */
-  .notes-field textarea {
+  /* Action buttons – stack on mobile */
+  .action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+  @media (max-width: 576px) {
+    .action-buttons .btn {
+      flex: 1;
+      text-align: center;
+    }
+  }
+
+  /* Field styles */
+  .field-group {
+    margin-bottom: 0.75rem;
+  }
+  .field-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+    display: block;
+  }
+  select.form-control, input.form-control {
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 10px;
-    padding: 0.75rem 0.9rem;
-    font-size: 0.9rem;
-    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
     width: 100%;
-    min-height: 100px;
-    resize: vertical;
-  }
-  .notes-field textarea:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(65,84,241,0.12);
-    outline: none;
-  }
-
-  /* Footer actions */
-  .qform-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    padding: 1rem 0 0.5rem;
-  }
-
-  /* Empty state */
-  .items-empty {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--text-muted);
-  }
-  .items-empty i { font-size: 2.2rem; opacity: 0.4; display: block; margin-bottom: 0.6rem; }
-
-  /* Responsive tweaks */
-  @media (max-width: 576px) {
-    .qform-footer { flex-direction: column; }
-    .qform-footer .btn { width: 100%; text-align: center; }
-    .qform-card-body { padding: 1rem; }
-    .items-table th, .items-table td { padding: 0.5rem; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="qform-wrap">
-
-  <!-- Header with back button -->
+<div class="form-container py-3">
+  <!-- Header -->
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
     <div>
-      <div class="page-breadcrumb">
-        <a href="{% url 'quotation_list' %}">Quotations</a> /
-        {% if form.instance.pk %}Edit {{ form.instance.quotation_number }}{% else %}New Quotation{% endif %}
-      </div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'quotation_list' %}">Quotations</a></li>
+          <li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}New{% endif %}</li>
+        </ol>
+      </nav>
       <h1 class="h3 mb-0">{% if form.instance.pk %}Edit Quotation{% else %}Create Quotation{% endif %}</h1>
     </div>
     <a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i>Back
+      <i class="bi bi-arrow-left"></i> Back
     </a>
   </div>
 
   <form method="post" id="quotation-form" novalidate>
     {% csrf_token %}
 
-    <!-- Client & Dates row -->
+    <!-- Client & Dates -->
     <div class="row g-3 mb-3">
       <div class="col-md-6">
-        <div class="qform-card">
-          <div class="qform-card-header">
-            <h5 class="qform-card-title"><i class="bi bi-building"></i>Client</h5>
-          </div>
-          <div class="qform-card-body">
+        <div class="card">
+          <div class="card-header">Client Information</div>
+          <div class="card-body">
             <div class="field-group">
-              <label class="field-label" for="{{ form.client.id_for_label }}">Select client *</label>
+              <label class="field-label">Client *</label>
               {{ form.client }}
               {% if form.client.errors %}
-                <div class="field-error"><i class="bi bi-exclamation-circle"></i>{{ form.client.errors|join:", " }}</div>
+                <div class="text-danger small mt-1">{{ form.client.errors|join:", " }}</div>
               {% endif %}
             </div>
           </div>
         </div>
       </div>
       <div class="col-md-6">
-        <div class="qform-card">
-          <div class="qform-card-header">
-            <h5 class="qform-card-title"><i class="bi bi-calendar3"></i>Dates</h5>
-          </div>
-          <div class="qform-card-body">
+        <div class="card">
+          <div class="card-header">Dates</div>
+          <div class="card-body">
             <div class="row g-2">
               <div class="col-6">
                 <div class="field-group">
-                  <label class="field-label" for="{{ form.issue_date.id_for_label }}">Issue Date *</label>
+                  <label class="field-label">Issue Date *</label>
                   {{ form.issue_date }}
                 </div>
               </div>
               <div class="col-6">
                 <div class="field-group">
-                  <label class="field-label" for="{{ form.valid_until.id_for_label }}">Valid Until *</label>
+                  <label class="field-label">Valid Until *</label>
                   {{ form.valid_until }}
                 </div>
               </div>
@@ -286,90 +221,91 @@
       </div>
     </div>
 
-    <!-- Line Items Card -->
-    <div class="qform-card">
-      <div class="qform-card-header">
-        <h5 class="qform-card-title"><i class="bi bi-list-ul"></i>Line Items</h5>
+    <!-- Line Items -->
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Line Items</span>
+        <button type="button" class="btn btn-sm btn-primary" id="add-item-btn">
+          <i class="bi bi-plus-lg"></i> Add item
+        </button>
       </div>
-
-      {{ items.management_form }}
-
-      <!-- Responsive table (mobile scroll) -->
-      <div class="items-table-wrap">
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th style="min-width: 200px;">Description</th>
-              <th style="width: 100px;">Qty</th>
-              <th style="width: 130px;">Unit Price</th>
-              <th style="width: 110px;">Total</th>
-              <th style="width: 50px;"></th>
-            </tr>
-          </thead>
-          <tbody id="items-body">
-            {% for item_form in items %}
-            <tr class="item-row" data-form-index="{{ forloop.counter0 }}">
-              {{ item_form.id }}
-              <td>{{ item_form.description }}</td>
-              <td>{{ item_form.quantity }}</td>
-              <td>{{ item_form.unit_price }}</td>
-              <td class="item-total-cell item-total">0.00</td>
-              <td class="text-center">
-                {% if item_form.instance.pk %}
-                  <label class="item-remove-btn" style="display:inline-flex;">{{ item_form.DELETE }}<i class="bi bi-trash3"></i></label>
-                {% else %}
-                  <button type="button" class="item-remove-btn remove-item" title="Remove item">
-                    <i class="bi bi-x-circle"></i>
-                  </button>
-                {% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr id="empty-msg">
-              <td colspan="5" class="items-empty">
-                <i class="bi bi-receipt"></i>
-                <p>No items yet. Click "Add Item" to start.</p>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Add item button -->
-      <button type="button" class="add-item-btn" id="add-item-btn">
-        <i class="bi bi-plus-circle"></i> Add Item
-      </button>
-
-      <!-- Financial summary -->
-      <div class="financial-summary">
-        <div class="summary-row">
-          <span class="summary-label">Subtotal</span>
-          <span class="summary-value" id="subtotal-display">{{ site_config.currency_symbol }} 0.00</span>
+      <div class="card-body p-0">
+        {{ items.management_form }}
+        <div class="items-table-wrapper">
+          <table class="items-table" id="items-table">
+            <thead>
+              <tr>
+                <th style="min-width: 180px;">Description</th>
+                <th style="width: 90px;">Qty</th>
+                <th style="width: 120px;">Unit Price</th>
+                <th style="width: 110px;">Total</th>
+                <th style="width: 50px;"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body">
+              {% for item_form in items %}
+                <tr class="item-row" data-form-index="{{ forloop.counter0 }}">
+                  {{ item_form.id }}
+                  <td>{{ item_form.description }}</td>
+                  <td>{{ item_form.quantity }}</td>
+                  <td>{{ item_form.unit_price }}</td>
+                  <td class="item-total">0.00</td>
+                  <td class="text-center">
+                    {% if item_form.instance.pk %}
+                      <label class="remove-item" style="cursor: pointer;">
+                        {{ item_form.DELETE }} <i class="bi bi-trash3"></i>
+                      </label>
+                    {% else %}
+                      <button type="button" class="remove-item" title="Remove item">
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr id="empty-msg">
+                  <td colspan="5" class="text-center py-4 text-muted">
+                    <i class="bi bi-receipt fs-4"></i>
+                    <div>No items yet. Click "Add item" to start.</div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-        <div class="summary-row">
-          <span class="summary-label">VAT ({{ site_config.vat_rate|floatformat:1 }}%)</span>
-          <span class="summary-value" id="tax-display">{{ site_config.currency_symbol }} 0.00</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label fw-bold">Total</span>
-          <span class="summary-total" id="total-display">{{ site_config.currency_symbol }} 0.00</span>
+
+        <button type="button" class="add-item-btn" id="add-item-btn-bottom">
+          <i class="bi bi-plus-circle"></i> Add item
+        </button>
+
+        <!-- Totals summary -->
+        <div class="p-3 border-top">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span id="subtotal-display">{{ site_config.currency_symbol }} 0.00</span>
+          </div>
+          <div class="summary-row">
+            <span>VAT ({{ site_config.vat_rate|floatformat:1 }}%)</span>
+            <span id="tax-display">{{ site_config.currency_symbol }} 0.00</span>
+          </div>
+          <div class="summary-total d-flex justify-content-between">
+            <span>Total</span>
+            <span id="total-display">{{ site_config.currency_symbol }} 0.00</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Notes -->
-    <div class="qform-card">
-      <div class="qform-card-header">
-        <h5 class="qform-card-title"><i class="bi bi-chat-left-text"></i>Notes <span class="text-muted small">(optional)</span></h5>
-      </div>
-      <div class="qform-card-body notes-field">
+    <div class="card">
+      <div class="card-header">Notes (optional)</div>
+      <div class="card-body">
         {{ form.notes }}
       </div>
     </div>
 
     <!-- Action buttons -->
-    <div class="qform-footer">
+    <div class="action-buttons">
       <a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary">Cancel</a>
       <button type="submit" name="action" value="draft" class="btn btn-outline-primary">
         <i class="bi bi-save"></i> Save as Draft
@@ -378,12 +314,9 @@
         <i class="bi bi-envelope-paper"></i> Save & Send
       </button>
     </div>
-
   </form>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
   (function() {
     "use strict";
@@ -391,34 +324,39 @@
     // DOM elements
     const totalFormsInput = document.querySelector('[name="items-TOTAL_FORMS"]');
     const itemsBody = document.getElementById('items-body');
-    const addBtn = document.getElementById('add-item-btn');
+    const addButtons = document.querySelectorAll('#add-item-btn, #add-item-btn-bottom');
     const emptyMsg = document.getElementById('empty-msg');
-    const VAT_RATE = {{ site_config.vat_rate|default:0.165 }};
-    const CURRENCY = "{{ site_config.currency_symbol }}";
+    const vatRate = parseFloat("{{ site_config.vat_rate }}") || 0.165;
+    const currency = "{{ site_config.currency_symbol }}";
 
-    // Helper: update all row totals and financial summary
-    function updateAllTotals() {
+    // Helper: update all row totals and summary
+    function updateTotals() {
       let subtotal = 0;
       document.querySelectorAll('#items-body .item-row').forEach(row => {
-        const qty = parseFloat(row.querySelector('input[name$="-quantity"]')?.value) || 0;
-        const price = parseFloat(row.querySelector('input[name$="-unit_price"]')?.value) || 0;
-        const total = qty * price;
-        subtotal += total;
-        row.querySelectorAll('.item-total').forEach(el => el.textContent = total.toFixed(2));
+        const qtyInput = row.querySelector('input[name$="-quantity"]');
+        const priceInput = row.querySelector('input[name$="-unit_price"]');
+        const totalCell = row.querySelector('.item-total');
+        if (qtyInput && priceInput && totalCell) {
+          const qty = parseFloat(qtyInput.value) || 0;
+          const price = parseFloat(priceInput.value) || 0;
+          const total = qty * price;
+          totalCell.textContent = total.toFixed(2);
+          subtotal += total;
+        }
       });
-      const tax = subtotal * VAT_RATE;
+      const tax = subtotal * vatRate;
       const grand = subtotal + tax;
-      document.getElementById('subtotal-display').textContent = `${CURRENCY} ${subtotal.toFixed(2)}`;
-      document.getElementById('tax-display').textContent = `${CURRENCY} ${tax.toFixed(2)}`;
-      document.getElementById('total-display').textContent = `${CURRENCY} ${grand.toFixed(2)}`;
+      document.getElementById('subtotal-display').innerHTML = `${currency} ${subtotal.toFixed(2)}`;
+      document.getElementById('tax-display').innerHTML = `${currency} ${tax.toFixed(2)}`;
+      document.getElementById('total-display').innerHTML = `${currency} ${grand.toFixed(2)}`;
     }
 
-    // Reindex all rows: rename input names and update TOTAL_FORMS
+    // Renumber rows sequentially and update TOTAL_FORMS
     function reindexRows() {
       const rows = document.querySelectorAll('#items-body .item-row');
       rows.forEach((row, idx) => {
-        ['id','description','quantity','unit_price','DELETE'].forEach(field => {
-          const input = row.querySelector(`input[name*="-${field}"], textarea[name*="-${field}"]`);
+        ['id', 'description', 'quantity', 'unit_price', 'DELETE'].forEach(field => {
+          const input = row.querySelector(`input[name*="-${field}"]`);
           if (input) input.name = `items-${idx}-${field}`;
         });
         row.setAttribute('data-form-index', idx);
@@ -426,19 +364,17 @@
       if (totalFormsInput) totalFormsInput.value = rows.length;
     }
 
-    // Build a new table row for a given index
-    function buildTableRow(idx) {
+    // Create a new row (HTML string, then attach)
+    function createNewRow(index) {
       const tr = document.createElement('tr');
       tr.className = 'item-row';
       tr.innerHTML = `
-        <input type="hidden" name="items-${idx}-id" value="">
-        <td><input type="text" name="items-${idx}-description" class="form-control" placeholder="e.g. Web Development, Hosting"></td>
-        <td><input type="number" name="items-${idx}-quantity" class="form-control item-qty" value="1" step="0.01" min="0.01"></td>
-        <td><input type="number" name="items-${idx}-unit_price" class="form-control item-price" value="0.00" step="0.01" min="0"></td>
-        <td class="item-total-cell item-total">0.00</td>
-        <td class="text-center">
-          <button type="button" class="item-remove-btn remove-item" title="Remove item"><i class="bi bi-x-circle"></i></button>
-        </td>
+        <input type="hidden" name="items-${index}-id" value="">
+        <td><input type="text" name="items-${index}-description" class="form-control" placeholder="Description"></td>
+        <td><input type="number" name="items-${index}-quantity" class="form-control" value="1" step="0.01" min="0.01"></td>
+        <td><input type="number" name="items-${index}-unit_price" class="form-control" value="0.00" step="0.01" min="0"></td>
+        <td class="item-total">0.00</td>
+        <td class="text-center"><button type="button" class="remove-item" title="Remove item"><i class="bi bi-x-circle"></i></button></td>
       `;
       return tr;
     }
@@ -446,88 +382,82 @@
     // Add a new row
     function addNewRow() {
       if (emptyMsg) emptyMsg.remove();
-      const currentIdx = parseInt(totalFormsInput?.value || 0);
-      const newRow = buildTableRow(currentIdx);
+      const currentCount = parseInt(totalFormsInput.value);
+      const newRow = createNewRow(currentCount);
       itemsBody.appendChild(newRow);
-      if (totalFormsInput) totalFormsInput.value = currentIdx + 1;
-      updateAllTotals();
+      totalFormsInput.value = currentCount + 1;
+      updateTotals();
     }
 
-    // Remove a row (or mark DELETE for existing records)
+    // Remove a row (or mark DELETE for existing)
     function removeRow(row) {
-      const delCheck = row.querySelector('input[name$="-DELETE"]');
-      if (delCheck) {
-        delCheck.checked = true;
+      const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
+      if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
         row.style.display = 'none';
       } else {
         row.remove();
       }
       reindexRows();
-      updateAllTotals();
+      updateTotals();
     }
 
-    // Attach remove handlers (delegation for dynamic rows)
-    document.body.addEventListener('click', (e) => {
-      const btn = e.target.closest('.remove-item');
-      if (!btn) return;
-      const row = btn.closest('.item-row');
+    // Event: Add button clicks
+    addButtons.forEach(btn => btn.addEventListener('click', addNewRow));
+
+    // Event: Remove item (delegation)
+    document.body.addEventListener('click', function(e) {
+      const target = e.target.closest('.remove-item');
+      if (!target) return;
+      const row = target.closest('.item-row');
       if (row) removeRow(row);
     });
 
-    // Real‑time total update on quantity/price change
-    itemsBody.addEventListener('input', (e) => {
-      if (e.target.classList.contains('item-qty') || e.target.classList.contains('item-price')) {
-        updateAllTotals();
+    // Event: real‑time recalc on input changes
+    itemsBody.addEventListener('input', function(e) {
+      if (e.target.matches('input[name$="-quantity"], input[name$="-unit_price"]')) {
+        updateTotals();
       }
     });
 
-    // Add button click
-    addBtn.addEventListener('click', addNewRow);
-
-    // Pre‑fill existing rows with DELETE checkboxes: convert to visual buttons
+    // Prepare existing rows with DELETE checkboxes: replace with visual button
     document.querySelectorAll('#items-body .item-row').forEach(row => {
       const delCheck = row.querySelector('input[name$="-DELETE"]');
       if (delCheck) {
-        const cell = row.querySelector('td:last-child');
-        if (cell) {
-          const existingBtn = cell.querySelector('.item-remove-btn');
-          if (!existingBtn) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'item-remove-btn';
-            btn.innerHTML = '<i class="bi bi-trash3"></i>';
-            btn.title = 'Remove item';
-            btn.addEventListener('click', () => removeRow(row));
-            cell.innerHTML = '';
-            cell.appendChild(btn);
-          }
+        const actionCell = row.querySelector('td:last-child');
+        if (actionCell) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'remove-item';
+          btn.innerHTML = '<i class="bi bi-trash3"></i>';
+          btn.title = 'Remove item';
+          btn.addEventListener('click', () => removeRow(row));
+          actionCell.innerHTML = '';
+          actionCell.appendChild(btn);
         }
       }
     });
 
-    // Form submit: reindex, remove empty rows, validate at least one item
+    // Form submit: reindex and validate
     const form = document.getElementById('quotation-form');
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', function(e) {
       reindexRows();
-      const rows = [...document.querySelectorAll('#items-body .item-row')].filter(r => r.style.display !== 'none');
-      let hasValidItem = false;
-      rows.forEach(row => {
+      const visibleRows = [...document.querySelectorAll('#items-body .item-row')].filter(r => r.style.display !== 'none');
+      let hasDescription = false;
+      visibleRows.forEach(row => {
         const desc = row.querySelector('input[name$="-description"]');
-        if (!desc || !desc.value.trim()) {
-          row.remove();
-        } else {
-          hasValidItem = true;
-        }
+        if (desc && desc.value.trim()) hasDescription = true;
       });
-      reindexRows();  // after removal, re‑index again
-      if (!hasValidItem && rows.length === 0) {
+      if (!hasDescription) {
         e.preventDefault();
-        alert('Please add at least one line item before saving.');
+        alert('Please add at least one line item with a description.');
       }
     });
 
-    // Initial totals calculation and auto‑add empty row if brand new
-    updateAllTotals();
+    // Initial totals
+    updateTotals();
+
+    // If completely empty, add one row automatically
     if (document.querySelectorAll('#items-body .item-row').length === 0 && !emptyMsg) {
       addNewRow();
     }
