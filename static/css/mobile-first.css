@@ -864,3 +864,23 @@ body {
 .w-100 { width: 100%; }
 img, video, iframe, embed, object { max-width: 100%; height: auto; }
 *, *::before, *::after { box-sizing: border-box; }
+
+/* Finance forms */
+.card {
+  transition: all 0.2s ease;
+}
+input, select, textarea {
+  border-radius: 12px !important;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border: none;
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(65,84,241,0.3);
+}
+.table-light {
+  background-color: var(--bg-tertiary);
+}
