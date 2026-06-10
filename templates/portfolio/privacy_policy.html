@@ -1,0 +1,17 @@
+{% extends "portfolio/base.html" %}
+{% block title %}Privacy Policy – Pritech ICT Solutions{% endblock %}
+{% block content %}
+<div class="container" style="padding: 4rem 1rem;">
+    <h1>Privacy Policy</h1>
+    <p>Last updated: {% now "F j, Y" %}</p>
+    <p>Your privacy is important to us. This policy explains how we collect, use, and protect your personal data.</p>
+    <h2>Information We Collect</h2>
+    <p>When you contact us via the inquiry form or subscribe to our newsletter, we collect your name, email address, phone number (optional), and IP address.</p>
+    <h2>How We Use Your Data</h2>
+    <p>We use your data only to respond to inquiries, send newsletters, and improve our services. We do not sell or share your data with third parties.</p>
+    <h2>Your Rights</h2>
+    <p>You can request a copy of your data or ask for deletion via the <a href="{% url 'gdpr_export' %}">Data Export</a> and <a href="{% url 'gdpr_delete' %}">Request Deletion</a> links in our footer.</p>
+    <p>For any questions, contact us at {{ site_config.email }}.</p>
+    <p><a href="{% url 'home' %}">← Back to Home</a></p>
+</div>
+{% endblock %}

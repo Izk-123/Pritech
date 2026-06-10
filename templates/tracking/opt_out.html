@@ -1,0 +1,19 @@
+{% extends "portfolio/base.html" %}
+{% load static %}
+
+{% block title %}Opt out of tracking – {{ site_config.company_name|default:"Pritech" }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 4rem 1rem; max-width: 600px; margin: 0 auto;">
+    <h1>Tracking Opt‑Out</h1>
+    <p>We use anonymised page visit tracking to improve our services. You can withdraw your consent at any time.</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Opt out of tracking</button>
+    </form>
+    <p class="mt-3">
+        <small>If you opt out, no new visits will be logged. Existing data will be deleted after 30 days.</small>
+    </p>
+    <p><a href="{% url 'home' %}" class="btn btn-outline">← Back to Home</a></p>
+</div>
+{% endblock %}

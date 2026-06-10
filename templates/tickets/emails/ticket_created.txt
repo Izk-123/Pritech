@@ -1,0 +1,17 @@
+Ticket #{{ ticket.ticket_number }} created
+
+Dear {{ ticket.client.name }},
+
+A new support ticket has been created:
+
+Title: {{ ticket.title }}
+Priority: {{ ticket.get_priority_display }}
+Status: {{ ticket.get_status_display }}
+
+You can view the ticket at:
+{{ site_url }}{% url 'ticket_detail' ticket.pk %}
+
+We will update you as soon as possible.
+
+Thank you,
+{{ config.company_name }}

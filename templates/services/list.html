@@ -1,33 +1,109 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Services{% endblock %}
 {% block page_title %}Services{% endblock %}
 
 {% block content %}
 <div class="page-header">
   <h1>Services</h1>
-  <a href="{% url 'service_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Add Service</a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'service_export_csv' %}" class="btn btn-outline-success">
+      <i class="bi bi-file-spreadsheet"></i> Export CSV
+    </a>
+    <a href="{% url 'service_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i> Add Service
+    </a>
+  </div>
 </div>
-<div class="card">
-  {% if services %}
+
+<!-- Filter / Search form -->
+<form method="get" class="card mb-4">
+  <div class="card-body">
+    <div class="row g-3 align-items-end">
+      <div class="col">
+        <label class="form-label">Search</label>
+        <input type="text" name="q" class="form-control" placeholder="Name or category..." value="{{ search_query }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if search_query %}
+          <a href="{% url 'service_list' %}" class="btn btn-outline-secondary ms-1">Clear</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</form>
+
+<!-- Bulk action form -->
+<form method="post" action="{% url 'service_bulk_action' %}" id="bulk-action-form">
+  {% csrf_token %}
+  <div class="d-flex gap-2 mb-3">
+    <select name="action" class="form-select w-auto">
+      <option value="">Bulk actions</option>
+      <option value="activate">Activate selected</option>
+      <option value="deactivate">Deactivate selected</option>
+    </select>
+    <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+  </div>
+
   <div class="table-responsive">
     <table class="modern-table">
-      <thead><tr><th>Name</th><th>Category</th><th>Base Price</th><th>Unit</th><th>Status</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th style="width: 30px"><input type="checkbox" id="select-all"></th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Base Price</th>
+          <th>Unit</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
-      {% for s in services %}
-      <tr>
-        <td class="fw-semibold">{{ s.name }}</td>
-        <td>{% if s.category %}{{ s.category.icon }} {{ s.category.name }}{% else %}—{% endif %}</td>
-        <td class="fw-semibold">{{ site_config.currency_symbol }}{{ s.base_price|floatformat:0 }}</td>
-        <td class="text-muted">per {{ s.unit }}</td>
-        <td><span class="badge {% if s.is_active %}bg-success{% else %}bg-secondary{% endif %}">{{ s.is_active|yesno:'Active,Inactive' }}</span></td>
-        <td><a href="{% url 'service_update' s.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
-      </tr>
-      {% endfor %}
+        {% for service in services %}
+        <tr>
+          <td><input type="checkbox" name="service_ids" value="{{ service.pk }}" class="service-checkbox"></td>
+          <td class="fw-semibold">{{ service.name }}</td>
+          <td>{% if service.category %}{{ service.category.icon }} {{ service.category.name }}{% else %}—{% endif %}</td>
+          <td class="fw-semibold">{{ site_config.currency_symbol }}{{ service.base_price|floatformat:0 }}</td>
+          <td class="text-muted">per {{ service.unit }}</td>
+          <td>
+            <span class="badge {% if service.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+              {{ service.is_active|yesno:'Active,Inactive' }}
+            </span>
+           </td>
+          <td>
+            <a href="{% url 'service_update' service.pk %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i> Edit
+            </a>
+           </td>
+         </tr>
+        {% empty %}
+         <tr><td colspan="7" class="text-center py-4">No services found.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
-  {% else %}
-  <div class="card-body text-center py-5"><div class="empty-icon mb-3">🔧</div><h5 class="text-muted">No services yet.</h5><a href="{% url 'service_create' %}" class="btn btn-primary mt-2">Add your first service</a></div>
-  {% endif %}
-</div>
+</form>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search_query }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+<script>
+  document.getElementById('select-all')?.addEventListener('change', function(e) {
+    document.querySelectorAll('.service-checkbox').forEach(cb => cb.checked = e.target.checked);
+  });
+</script>
 {% endblock %}

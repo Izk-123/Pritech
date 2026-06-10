@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ticket {{ ticket.ticket_number }} status changed</title>
+</head>
+<body>
+    <h2>Ticket {{ ticket.ticket_number }} status changed</h2>
+    <p>Dear {{ ticket.client.name }},</p>
+    <p>Ticket "{{ ticket.title }}" status has been changed from <strong>{{ old_status }}</strong> to <strong>{{ ticket.get_status_display }}</strong>.</p>
+    <p><a href="{{ site_url }}{% url 'ticket_detail' ticket.pk }}">View Ticket</a></p>
+    <p>Thank you,<br>{{ config.company_name }}</p>
+</body>
+</html>

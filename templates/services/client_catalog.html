@@ -7,8 +7,16 @@
 <div class="page-header">
   <h1>Our Services</h1>
   <p class="text-muted">Browse our services and request a quotation.</p>
+  
+  <!-- VAT information note (medium‑risk fix) -->
+  <div class="alert alert-info small mt-2">
+    <i class="bi bi-info-circle"></i> All prices exclude VAT 
+    ({{ site_config.vat_rate|floatformat:2|default:"16.5" }}%).
+  </div>
 </div>
 
+<!-- ========== SERVICES SECTION ========== -->
+<h2 class="mb-3">Individual Services</h2>
 {% if services %}
 <div class="row g-4">
   {% for service in services %}
@@ -27,7 +35,7 @@
         <p class="card-text small">{{ service.description|truncatewords:25 }}</p>
         <div class="mt-3">
           <div class="fw-bold fs-5">{{ site_config.currency_symbol }}{{ service.base_price|floatformat:2 }}</div>
-          <div class="text-muted small">per {{ service.unit }}</div>
+          <div class="text-muted small">per {{ service.unit }} <span class="text-warning">+ VAT</span></div>
         </div>
       </div>
       <div class="card-footer bg-transparent border-top-0">
@@ -41,5 +49,63 @@
 </div>
 {% else %}
 <div class="alert alert-info">No services available at the moment.</div>
+{% endif %}
+
+<!-- ========== PACKAGES SECTION (if any) ========== -->
+{% if packages %}
+<h2 class="mb-3 mt-5">Service Packages</h2>
+<div class="row g-4">
+  {% for package in packages %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100 shadow-sm border-primary">
+      <div class="card-body">
+        <h5 class="card-title">{{ package.name }}</h5>
+        <p class="card-text small">{{ package.description|truncatewords:25 }}</p>
+        <div class="mt-2">
+          <div class="fw-bold fs-5">{{ site_config.currency_symbol }}{{ package.monthly_price|floatformat:2 }}</div>
+          <div class="text-muted small">per month <span class="text-warning">+ VAT</span></div>
+        </div>
+        <div class="mt-2">
+          <strong>Includes:</strong>
+          <ul class="small mt-1 mb-0">
+            {% for service in package.services.all|slice:":3" %}
+              <li>{{ service.name }}</li>
+            {% endfor %}
+            {% if package.services.count > 3 %}
+              <li>+{{ package.services.count|add:"-3" }} more</li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent border-top-0">
+        <a href="{% url 'request_package_quote' package.pk %}" class="btn btn-outline-primary w-100">
+          <i class="bi bi-box"></i> Request Package Quote
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ========== PAGINATION ========== -->
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+      </li>
+    {% endif %}
+    <li class="page-item disabled">
+      <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    </li>
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+      </li>
+    {% endif %}
+  </ul>
+</nav>
 {% endif %}
 {% endblock %}

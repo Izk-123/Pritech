@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ticket {{ ticket.ticket_number }} created</title>
+</head>
+<body>
+    <h2>Ticket #{{ ticket.ticket_number }} created</h2>
+    <p>Dear {{ ticket.client.name }},</p>
+    <p>A new support ticket has been created:</p>
+    <ul>
+        <li><strong>Title:</strong> {{ ticket.title }}</li>
+        <li><strong>Priority:</strong> {{ ticket.get_priority_display }}</li>
+        <li><strong>Status:</strong> {{ ticket.get_status_display }}</li>
+    </ul>
+    <p><a href="{{ site_url }}{% url 'ticket_detail' ticket.pk %}">View Ticket</a></p>
+    <p>We will update you as soon as possible.</p>
+    <p>Thank you,<br>{{ config.company_name }}</p>
+</body>
+</html>

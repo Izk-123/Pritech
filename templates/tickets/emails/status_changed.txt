@@ -1,0 +1,10 @@
+Ticket {{ ticket.ticket_number }} status changed
+
+Dear {{ ticket.client.name }},
+
+Ticket "{{ ticket.title }}" status has been changed from {{ old_status }} to {{ ticket.get_status_display }}.
+
+View ticket: {{ site_url }}{% url 'ticket_detail' ticket.pk %}
+
+Thank you,
+{{ config.company_name }}
