@@ -293,7 +293,7 @@ ready(() => {
         const target = document.querySelector(url.hash);
         if (target) {
           e.preventDefault();
-          const offset = 80;
+          const offset = 92; // navbar height + spacing
           const top = target.getBoundingClientRect().top + window.scrollY - offset;
           window.scrollTo({ top, behavior: 'smooth' });
           target.focus({ preventScroll: true });
@@ -413,7 +413,7 @@ ready(() => {
   const updateMobileMenuHeight = () => {
     const mobileMenuDiv = document.getElementById('mobile-menu');
     if (mobileMenuDiv && mobileMenuDiv.classList.contains('open')) {
-      mobileMenuDiv.style.maxHeight = `calc(100dvh - 72px)`;
+      mobileMenuDiv.style.maxHeight = `calc(100dvh - 84px)`;
     }
   };
   if (mobileMedia.addEventListener) {

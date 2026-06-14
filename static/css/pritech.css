@@ -355,7 +355,7 @@ a:hover { color: var(--accent-light); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  height: 84px;
   gap: var(--space-6);
 }
 .navbar-brand, .footer-brand {
@@ -364,13 +364,27 @@ a:hover { color: var(--accent-light); }
   gap: var(--space-3);
   text-decoration: none;
 }
-.brand-name {
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
+
+/* ── Logo theme switching ─────────────────────────────────────── */
+/* Navbar: swap between dark-text logo (for light bg) and white logo (for dark bg) */
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 52px;
+  object-fit: contain;
 }
+
+/* Light theme → show the blue/colour logo (readable on light navbar) */
+[data-theme="light"] .brand-logo--dark { display: none; }
+[data-theme="light"] .brand-logo--light { display: block; }
+
+/* Dark theme → show the white logo (readable on dark navbar) */
+[data-theme="dark"] .brand-logo--light { display: none; }
+[data-theme="dark"] .brand-logo--dark { display: block; }
+
+/* Footer is always on a dark background, regardless of site theme */
+.footer-brand .brand-logo { height: 32px; }
+
 .brand-dot { color: var(--accent); }
 .navbar-links {
   display: none;
@@ -585,7 +599,7 @@ a:hover { color: var(--accent-light); }
 }
 @media (max-width: 767px) {
   .mobile-menu {
-    max-height: calc(100dvh - 72px);
+    max-height: calc(100dvh - 84px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -619,7 +633,7 @@ a:hover { color: var(--accent-light); }
   align-items: center;
   position: relative;
   overflow: hidden;
-  padding: calc(72px + var(--space-12)) 0 var(--space-16);
+  padding: calc(84px + var(--space-12)) 0 var(--space-16);
   background: var(--hero-grad);
   background-attachment: fixed;
   background-position: center;
@@ -839,7 +853,7 @@ a:hover { color: var(--accent-light); }
 /* ── Responsive hero tweaks ───────────────────────────────────── */
 @media (max-width: 640px) {
   .hero {
-    padding-top: calc(72px + var(--space-8));
+    padding-top: calc(84px + var(--space-8));
     padding-bottom: var(--space-12);
     background-attachment: scroll;
   }
@@ -1078,6 +1092,17 @@ a:hover { color: var(--accent-light); }
   width: 100%; height: 100%;
   object-fit: cover;
 }
+.about-img-placeholder {
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+.about-img-placeholder i { font-size: 3rem; margin-bottom: 1rem; }
 .about-img-badge {
   position: absolute;
   bottom: var(--space-5);
@@ -1100,6 +1125,20 @@ a:hover { color: var(--accent-light); }
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+.about-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-6) 0;
+}
+.about-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+}
+.about-list li i { color: var(--accent); width: 20px; }
 .stats-bento {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1302,6 +1341,14 @@ textarea.form-control { resize: vertical; min-height: 120px; }
   white-space: nowrap;
 }
 .newsletter-btn:hover { transform: scale(1.05) translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
+.consent-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.8);
+}
+.consent-check input { accent-color: white; }
 
 /* ── Footer ───────────────────────────────────────────────────── */
 .site-footer {
@@ -1494,7 +1541,7 @@ textarea.form-control { resize: vertical; min-height: 120px; }
 /* ── Toast notifications ──────────────────────────────────────── */
 .toast-container {
   position: fixed;
-  top: calc(72px + 1rem);
+  top: calc(84px + 1rem);
   right: 1rem;
   display: flex;
   flex-direction: column;
@@ -1638,6 +1685,19 @@ img[loading="lazy"].loaded {
   border: 1px solid var(--border);
 }
 
+/* ── GDPR links (extra footer) ───────────────────────────────── */
+.gdpr-links {
+  text-align: center;
+  margin-top: var(--space-4);
+  font-size: 0.8rem;
+}
+.gdpr-links a {
+  color: var(--text-muted);
+  margin: 0 var(--space-2);
+  text-decoration: none;
+}
+.gdpr-links a:hover { color: var(--accent); }
+
 /* ── Utilities ───────────────────────────────────────────────── */
 .text-accent { color: var(--accent); }
 .text-muted { color: var(--text-muted); }
@@ -1650,6 +1710,8 @@ img[loading="lazy"].loaded {
 }
 
 @media print {
-  .site-header, .fab-whatsapp, .back-to-top, .scroll-progress { display: none; }
+  .site-header, .fab-whatsapp, .back-to-top, .scroll-progress, .newsletter-fullwidth, .btn, .gdpr-links { display: none; }
   body { background: white; color: black; }
+  .hero-title { background: none; -webkit-text-fill-color: black; }
+  .card, .project-card { break-inside: avoid; }
 }
