@@ -7,75 +7,107 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Pritech ICT Solutions – Dashboard and Client Portal">
+  <meta name="theme-color" content="#4154f1">
   <title>{% block title %}Dashboard{% endblock %} — {{ site_config.company_name|default:"Pritech" }}</title>
 
   <!-- Favicon -->
   <link href="{% static 'img/favicon.ico' %}" rel="icon">
 
-  <!-- Bootstrap 5 + Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <!-- Bootstrap 5 CSS (SRI works) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+  
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+  </style>
+
   <!-- HTMX -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
   <!-- Custom CSS -->
   <link rel="stylesheet" href="{% static 'css/mobile-first.css' %}">
   {% block extra_css %}{% endblock %}
 
   <style>
-    /* HTMX loading indicators */
+    /* HTMX indicators */
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator { display: inline-block; }
     .spinner-border-sm { width: 1rem; height: 1rem; border-width: 0.2em; }
 
-    /* Skip to main content (accessibility) */
+    /* Accessibility skip link */
     .visually-hidden-focusable:not(:focus) {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0,0,0,0);
-      white-space: nowrap;
-      border: 0;
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
     .visually-hidden-focusable:focus {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: var(--bg-primary);
-      color: var(--primary);
-      padding: 0.5rem 1rem;
-      z-index: 2000;
-      text-decoration: none;
-      border-radius: 8px;
+      position: fixed; top: 10px; left: 10px; background: var(--bg-primary); color: var(--primary);
+      padding: 0.5rem 1rem; z-index: 2000; text-decoration: none; border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
     /* Back to top button */
     .back-to-top {
-      position: fixed;
-      bottom: 80px;
-      right: 20px;
-      display: none;
-      z-index: 1000;
+      position: fixed; bottom: 80px; right: 20px; display: none; z-index: 1000;
     }
-    @media (max-width: 768px) {
-      .back-to-top { bottom: 70px; }
+    @media (max-width: 768px) { .back-to-top { bottom: 70px; } }
+
+    /* Force icon visibility */
+    .theme-toggle-btn i, .sidebar-collapse-btn i, .desktop-menu-btn i,
+    .mobile-menu-btn i, .bottom-link i, .ai-nav-link i, .nav-link i {
+      color: var(--text-primary) !important;
+    }
+
+    /* Global search results dropdown */
+    .global-search-container {
+      position: relative;
+    }
+    .global-search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 400px;
+      overflow-y: auto;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      z-index: 1050;
+      display: none;
+    }
+    .global-search-results.show {
+      display: block;
+    }
+    .global-search-results .dropdown-item {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: background 0.15s;
+    }
+    .global-search-results .dropdown-item:hover {
+      background: var(--hover-bg);
+    }
+    .global-search-results .dropdown-item i {
+      margin-right: 0.75rem;
+      width: 20px;
+      text-align: center;
     }
   </style>
 </head>
 
 <body class="{% if request.user.is_authenticated %}sidebar-expanded{% endif %}">
 
-  <!-- Skip link for keyboard navigation -->
   <a href="#main-content" class="visually-hidden-focusable">Skip to main content</a>
 
-  <!-- ========== DESKTOP SIDEBAR (only for authenticated users) ========== -->
+  <!-- ========== DESKTOP SIDEBAR (authenticated only) ========== -->
   {% if request.user.is_authenticated %}
-  <aside class="desktop-sidebar d-none d-lg-flex">
+  <aside class="desktop-sidebar d-none d-lg-flex" aria-label="Main navigation">
     <div class="sidebar-header">
       <div class="d-flex align-items-center justify-content-between mb-3">
         <div class="d-flex align-items-center gap-2">
@@ -87,24 +119,23 @@
           <i class="bi bi-chevron-double-left"></i>
         </button>
       </div>
-      <a href="{% url 'ticket_create' %}" class="new-chat-btn"><i class="bi bi-plus-circle"></i> New Ticket</a>
+      <a href="{% url 'ticket_create' %}" class="new-chat-btn" aria-label="Create new ticket">
+        <i class="bi bi-plus-circle"></i> New Ticket
+      </a>
     </div>
 
-    <div class="sidebar-search">
-      <input type="text" class="form-control" placeholder="Search conversations...">
+    <div class="sidebar-search" aria-label="Search">
+      <input type="text" class="form-control" placeholder="Search conversations..." aria-label="Search tickets or clients">
     </div>
 
     <div class="sidebar-nav-section">
-      <!-- Main navigation -->
       <div class="nav-label">Main</div>
       <a href="{% url 'dashboard' %}" class="ai-nav-link"><i class="bi bi-house"></i> Dashboard</a>
 
-      <!-- Staff with appropriate roles: full client list (using custom filter) -->
       {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
         <a href="{% url 'client_list' %}" class="ai-nav-link"><i class="bi bi-people"></i> Clients</a>
       {% endif %}
 
-      <!-- Clients: their own organization (if linked) -->
       {% if request.user.user_type == 'client' and request.user.client_organization %}
         <a href="{% url 'client_detail' request.user.client_organization.pk %}" class="ai-nav-link">
           <i class="bi bi-building"></i> My Organization
@@ -113,12 +144,11 @@
 
       <a href="{% url 'ticket_list' %}" class="ai-nav-link"><i class="bi bi-chat-text"></i> Tickets</a>
 
-      <!-- Client‑specific: Service Catalog -->
       {% if request.user.user_type == 'client' %}
         <a href="{% url 'client_service_catalog' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> Service Catalog</a>
       {% endif %}
 
-      <!-- Client: My Finance -->
+      <!-- Client Finance -->
       {% if request.user.user_type == 'client' and request.user.client_organization %}
         <div class="nav-label mt-3">My Finance</div>
         <a href="{% url 'client_invoice_list' %}" class="ai-nav-link"><i class="bi bi-receipt"></i> My Invoices</a>
@@ -126,7 +156,7 @@
         <a href="{% url 'client_subscription_detail' %}" class="ai-nav-link"><i class="bi bi-calendar-check"></i> My Subscription</a>
       {% endif %}
 
-      <!-- Client: Administration (self-service) -->
+      <!-- Client Administration -->
       {% if request.user.user_type == 'client' and request.user.client_organization %}
         <div class="nav-label mt-3">Administration</div>
         <a href="{% url 'client_team' %}" class="ai-nav-link"><i class="bi bi-people"></i> Team Members</a>
@@ -134,7 +164,7 @@
         <a href="{% url 'client_audit_log' %}" class="ai-nav-link"><i class="bi bi-journal-text"></i> Audit Log</a>
       {% endif %}
 
-      <!-- Staff: Services Management -->
+      <!-- Staff Services Management -->
       {% if request.user.is_staff %}
         <div class="nav-label mt-3">Services</div>
         <a href="{% url 'service_list' %}" class="ai-nav-link"><i class="bi bi-grid-3x3"></i> All Services</a>
@@ -142,7 +172,7 @@
         <a href="{% url 'service_package_list' %}" class="ai-nav-link"><i class="bi bi-box"></i> Packages</a>
       {% endif %}
 
-      <!-- Staff: Finance Management -->
+      <!-- Staff Finance Management -->
       {% if request.user|has_perm:'view_finance_dashboard' or request.user.is_staff %}
         <div class="nav-label mt-3">Finance</div>
         <a href="{% url 'quotation_list' %}" class="ai-nav-link"><i class="bi bi-file-earmark-text"></i> Quotations</a>
@@ -156,13 +186,22 @@
         <a href="{% url 'finance_reports' %}" class="ai-nav-link"><i class="bi bi-bar-chart-line"></i> Reports</a>
       {% endif %}
 
-      <!-- Recent items (shared) -->
+      <!-- Staff Admin (Accounts app) -->
+      {% if request.user.is_staff %}
+        <div class="nav-label mt-3">Staff Admin</div>
+        <a href="{% url 'user_list' %}" class="ai-nav-link"><i class="bi bi-people"></i> Manage Users</a>
+        <a href="{% url 'role_list' %}" class="ai-nav-link"><i class="bi bi-shield-lock"></i> Roles</a>
+        <a href="{% url 'permission_list' %}" class="ai-nav-link"><i class="bi bi-key"></i> Permissions</a>
+        <a href="{% url 'analytics' %}" class="ai-nav-link"><i class="bi bi-graph-up"></i> Analytics</a>
+      {% endif %}
+
+      <!-- Recent items -->
       <div class="recent-section">
         <div class="nav-label">Recent Tickets</div>
         {% if recent_sidebar_tickets %}
           {% for ticket in recent_sidebar_tickets|slice:":5" %}
-            <a href="{% url 'ticket_detail' ticket.pk %}" class="recent-item" title="{{ ticket.title }}">
-              <i class="bi bi-chat"></i><span class="flex-grow-1 text-truncate">{{ ticket.title }}</span>
+            <a href="{% url 'ticket_detail' ticket.pk %}" class="recent-item" title="{{ ticket.title|escape }}">
+              <i class="bi bi-chat"></i><span class="flex-grow-1 text-truncate">{{ ticket.title|escape }}</span>
             </a>
           {% endfor %}
         {% else %}
@@ -175,7 +214,7 @@
         {% if recent_sidebar_invoices %}
           {% for invoice in recent_sidebar_invoices|slice:":3" %}
             <a href="{% url 'invoice_detail' invoice.pk %}" class="recent-item">
-              <i class="bi bi-file-text"></i><span class="flex-grow-1 text-truncate">{{ invoice.invoice_number }}</span>
+              <i class="bi bi-file-text"></i><span class="flex-grow-1 text-truncate">{{ invoice.invoice_number|escape }}</span>
             </a>
           {% endfor %}
         {% else %}
@@ -183,10 +222,14 @@
         {% endif %}
       </div>
 
-      <!-- System (shared) -->
+      <!-- System -->
       <div class="nav-label mt-3">System</div>
       <a href="{% url 'profile' %}" class="ai-nav-link"><i class="bi bi-person-circle"></i> My Profile</a>
       <a href="{% url 'home' %}" class="ai-nav-link"><i class="bi bi-globe"></i> Public Site</a>
+      {% if request.user|has_any_role:'SUPER_ADMIN,ADMIN' %}
+        <a href="{% url 'site_configuration' %}" class="ai-nav-link"><i class="bi bi-sliders"></i> Site Settings</a>
+        <a href="{% url 'announcement_list' %}" class="ai-nav-link"><i class="bi bi-megaphone"></i> Announcements</a>
+      {% endif %}
       {% if request.user.is_staff %}
         <a href="{% url 'admin:index' %}" class="ai-nav-link"><i class="bi bi-shield"></i> Admin</a>
         <a href="{% url 'audit_log' %}" class="ai-nav-link"><i class="bi bi-journal-text"></i> Audit Log</a>
@@ -194,15 +237,14 @@
       {% endif %}
     </div>
 
-    <!-- Sidebar footer (user info + logout) -->
     <div class="sidebar-footer">
       <div class="user-profile">
         <div class="user-avatar">
           {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
         </div>
         <div class="user-info">
-          <div class="user-name">{{ request.user.get_full_name|default:request.user.email }}</div>
-          <div class="user-email">{{ request.user.email }}</div>
+          <div class="user-name">{{ request.user.get_full_name|default:request.user.email|escape }}</div>
+          <div class="user-email">{{ request.user.email|escape }}</div>
         </div>
         <form method="post" action="{% url 'logout' %}" class="ms-auto">
           {% csrf_token %}
@@ -216,7 +258,7 @@
   {% endif %}
 
   <!-- ========== TOPBAR ========== -->
-  <header class="topbar sticky-top {% if request.user.is_authenticated %}topbar-desktop{% endif %}">
+  <header class="topbar sticky-top {% if request.user.is_authenticated %}topbar-desktop{% endif %}" aria-label="Header">
     <div class="d-flex align-items-center h-100 px-3">
       {% if request.user.is_authenticated %}
       <button class="desktop-menu-btn d-none d-lg-block me-2" id="desktopMenuToggle" type="button"
@@ -230,6 +272,22 @@
       {% endif %}
 
       <span class="page-title fw-semibold flex-grow-1">{% block page_title %}Dashboard{% endblock %}</span>
+
+      <!-- Global Search (desktop only) -->
+      {% if request.user.is_authenticated %}
+      <div class="global-search-container d-none d-md-block me-2">
+        <input type="text" id="global-search-input" class="form-control form-control-sm" placeholder="Search..." style="width: 220px;">
+        <div id="global-search-results" class="global-search-results"></div>
+      </div>
+      {% endif %}
+
+      <!-- Online users count (staff only) -->
+      {% if request.user.is_staff and online_users_count %}
+      <div class="me-2 small text-muted d-none d-sm-flex align-items-center gap-1">
+        <i class="bi bi-people-fill text-success"></i>
+        <span>{{ online_users_count }}</span>
+      </div>
+      {% endif %}
 
       <button class="theme-toggle-btn me-2" id="themeToggle" type="button"
               data-bs-toggle="tooltip" title="Switch theme" aria-label="Switch dark/light mode">
@@ -248,24 +306,22 @@
     </div>
   </header>
 
-  <!-- ========== MOBILE OFFCANVAS DRAWER (only for authenticated users) ========== -->
+  <!-- ========== MOBILE OFFCANVAS DRAWER ========== -->
   {% if request.user.is_authenticated %}
-  <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" style="width: 280px;">
+  <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" style="width: 280px;" aria-label="Mobile menu">
     <div class="offcanvas-header bg-primary text-white">
       <h5 class="offcanvas-title fw-bold">PT</h5>
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0">
-      <nav class="nav flex-column p-2">
+      <nav class="nav flex-column p-2" aria-label="Mobile navigation">
         <div class="px-3 py-2 text-muted small fw-semibold">MAIN</div>
         <a href="{% url 'dashboard' %}" class="nav-link"><i class="bi bi-grid me-2"></i>Dashboard</a>
 
-        <!-- Role‑based client list in mobile menu -->
         {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
           <a href="{% url 'client_list' %}" class="nav-link"><i class="bi bi-building me-2"></i>Clients</a>
         {% endif %}
 
-        <!-- Clients: their own organization -->
         {% if request.user.user_type == 'client' and request.user.client_organization %}
           <a href="{% url 'client_detail' request.user.client_organization.pk %}" class="nav-link">
             <i class="bi bi-building me-2"></i>My Organization
@@ -310,9 +366,22 @@
           <a href="{% url 'finance_reports' %}" class="nav-link"><i class="bi bi-bar-chart-line me-2"></i>Reports</a>
         {% endif %}
 
+        <!-- Staff Admin -->
+        {% if request.user.is_staff %}
+          <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">STAFF ADMIN</div>
+          <a href="{% url 'user_list' %}" class="nav-link"><i class="bi bi-people me-2"></i>Manage Users</a>
+          <a href="{% url 'role_list' %}" class="nav-link"><i class="bi bi-shield-lock me-2"></i>Roles</a>
+          <a href="{% url 'permission_list' %}" class="nav-link"><i class="bi bi-key me-2"></i>Permissions</a>
+          <a href="{% url 'analytics' %}" class="nav-link"><i class="bi bi-graph-up me-2"></i>Analytics</a>
+        {% endif %}
+
         <div class="px-3 py-2 text-muted small fw-semibold border-top mt-2">SYSTEM</div>
         <a href="{% url 'profile' %}" class="nav-link"><i class="bi bi-person-circle me-2"></i>My Profile</a>
         <a href="{% url 'home' %}" class="nav-link"><i class="bi bi-globe me-2"></i>Public Site</a>
+        {% if request.user|has_any_role:'SUPER_ADMIN,ADMIN' %}
+          <a href="{% url 'site_configuration' %}" class="nav-link"><i class="bi bi-sliders me-2"></i>Site Settings</a>
+          <a href="{% url 'announcement_list' %}" class="nav-link"><i class="bi bi-megaphone me-2"></i>Announcements</a>
+        {% endif %}
         {% if request.user.is_staff %}
           <a href="{% url 'admin:index' %}" class="nav-link"><i class="bi bi-gear me-2"></i>Admin</a>
           <a href="{% url 'audit_log' %}" class="nav-link"><i class="bi bi-journal-text me-2"></i>Audit Log</a>
@@ -330,29 +399,42 @@
   {% endif %}
 
   <!-- ========== MAIN CONTENT ========== -->
-  <main id="main-content" class="main-content pb-6 mb-4 {% if request.user.is_authenticated %}main-content-desktop{% endif %}">
+  <main id="main-content" class="main-content pb-6 mb-4 {% if request.user.is_authenticated %}main-content-desktop{% endif %}" tabindex="-1">
     <div class="container-fluid py-3">
+      {% if site_config.maintenance_mode and request.user.is_staff %}
+        <div class="alert alert-danger d-flex align-items-center gap-2 shadow-sm" role="alert">
+          <i class="bi bi-cone-striped fs-5"></i>
+          <div>
+            <strong>Maintenance mode is active.</strong>
+            Only staff can access the site right now. Non-staff users are seeing the maintenance page.
+            {% if request.user|has_any_role:'SUPER_ADMIN,ADMIN' %}
+              <a href="{% url 'site_configuration' %}" class="alert-link">Turn it off</a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
       {% if messages %}
         {% for msg in messages %}
           <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show shadow-sm" role="alert">
-            {{ msg }}
+            {{ msg|escape }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
         {% endfor %}
       {% endif %}
+
       {% block content %}
-        <div class="alert alert-warning">Content block is empty. Please check view or template inheritance.</div>
+        <div class="alert alert-warning">Content block is empty.</div>
       {% endblock %}
     </div>
   </main>
 
-  <!-- ========== BOTTOM NAVIGATION (mobile) ========== -->
+  <!-- ========== BOTTOM NAVIGATION (mobile only) ========== -->
   {% if request.user.is_authenticated %}
-  <nav class="bottom-nav d-lg-none fixed-bottom">
+  <nav class="bottom-nav d-lg-none fixed-bottom" aria-label="Mobile bottom navigation">
     <div class="bottom-nav-inner">
       <a href="{% url 'dashboard' %}" class="bottom-link"><i class="bi bi-grid"></i><span>Home</span></a>
 
-      <!-- Role‑based client link in bottom navigation -->
       {% if request.user|has_any_role:'ADMIN,SALES,FINANCE' %}
         <a href="{% url 'client_list' %}" class="bottom-link"><i class="bi bi-building"></i><span>Clients</span></a>
       {% elif request.user.user_type == 'client' and request.user.client_organization %}
@@ -385,8 +467,10 @@
     <i class="bi bi-arrow-up"></i>
   </button>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <!-- JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+          crossorigin="anonymous"></script>
   <script>
     (function () {
       const body = document.body;
@@ -397,7 +481,7 @@
       const topbar = document.querySelector('.topbar');
       const backToTopBtn = document.getElementById('back-to-top');
 
-      // Topbar shadow and back‑to‑top visibility
+      // Scroll effects
       window.addEventListener('scroll', () => {
         if (window.scrollY > 10) topbar?.classList.add('scrolled');
         else topbar?.classList.remove('scrolled');
@@ -406,6 +490,7 @@
         }
       });
 
+      // Sidebar toggle
       function toggleSidebar() {
         body.classList.toggle('sidebar-collapsed');
         const isCollapsed = body.classList.contains('sidebar-collapsed');
@@ -432,10 +517,8 @@
           new bootstrap.Tooltip(desktopToggle);
         }
       }
-
       if (collapseBtn) collapseBtn.addEventListener('click', toggleSidebar);
       if (desktopToggle) desktopToggle.addEventListener('click', toggleSidebar);
-
       if (localStorage.getItem('sidebarCollapsed') === 'true') {
         body.classList.add('sidebar-collapsed');
         const icon = collapseBtn?.querySelector('i');
@@ -446,6 +529,7 @@
         }
       }
 
+      // Theme toggle
       function setTheme(theme) {
         html.setAttribute('data-theme', theme);
         html.setAttribute('data-bs-theme', theme);
@@ -465,18 +549,16 @@
         if (tooltip) tooltip.dispose();
         new bootstrap.Tooltip(themeToggle);
       }
-
       const savedTheme = localStorage.getItem('theme') ||
         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       setTheme(savedTheme);
-
       if (themeToggle) {
         themeToggle.addEventListener('click', () => {
           setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
         });
       }
 
-      // Active navigation link
+      // Active nav highlighting
       const path = window.location.pathname;
       document.querySelectorAll('.ai-nav-link, .bottom-link, .offcanvas .nav-link').forEach(link => {
         const href = link.getAttribute('href');
@@ -486,39 +568,86 @@
         }
       });
 
-      // Initial tooltips
+      // Tooltips
       var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
       tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
-
-      // Re‑initialize tooltips after HTMX content swap
       document.body.addEventListener('htmx:afterSwap', function() {
         var newTooltipTriggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         newTooltipTriggers.map(el => new bootstrap.Tooltip(el));
       });
 
-      // Staggered animation for table rows
+      // Staggered table rows
       document.querySelectorAll('.modern-table tbody tr').forEach((el, index) => {
         el.classList.add('stagger-item');
         el.style.animationDelay = `${index * 0.05}s`;
       });
 
-      // HTMX CSRF protection
+      // HTMX CSRF
       document.body.addEventListener('htmx:configRequest', function(event) {
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
-        if (csrfToken) {
-          event.detail.headers['X-CSRFToken'] = csrfToken;
-        }
+        if (csrfToken) event.detail.headers['X-CSRFToken'] = csrfToken;
       });
 
-      // Back to top click
+      // Back to top
       if (backToTopBtn) {
         backToTopBtn.addEventListener('click', () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         });
       }
+
+      // ========== GLOBAL SEARCH ==========
+      const searchInput = document.getElementById('global-search-input');
+      const resultsDiv = document.getElementById('global-search-results');
+      if (searchInput && resultsDiv) {
+        let debounceTimer;
+        searchInput.addEventListener('input', function() {
+          clearTimeout(debounceTimer);
+          const query = this.value.trim();
+          if (query.length < 2) {
+            resultsDiv.classList.remove('show');
+            return;
+          }
+          debounceTimer = setTimeout(() => {
+            fetch(`/search/?q=${encodeURIComponent(query)}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.results && data.results.length) {
+                  resultsDiv.innerHTML = data.results.map(r => `
+                    <a class="dropdown-item" href="${r.url}">
+                      <i class="bi bi-${r.type === 'client' ? 'building' : r.type === 'ticket' ? 'ticket' : 'file-text'} me-2"></i>
+                      ${escapeHtml(r.name)}
+                    </a>
+                  `).join('');
+                  resultsDiv.classList.add('show');
+                } else {
+                  resultsDiv.innerHTML = '<div class="dropdown-item text-muted">No results</div>';
+                  resultsDiv.classList.add('show');
+                }
+              })
+              .catch(() => {
+                resultsDiv.innerHTML = '<div class="dropdown-item text-danger">Error loading results</div>';
+                resultsDiv.classList.add('show');
+              });
+          }, 300);
+        });
+        // Close results when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+            resultsDiv.classList.remove('show');
+          }
+        });
+        // Escape HTML helper
+        function escapeHtml(str) {
+          return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+          });
+        }
+      }
     })();
   </script>
   {% block extra_js %}{% endblock %}
 </body>
-
 </html>
