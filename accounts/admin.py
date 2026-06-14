@@ -1,30 +1,26 @@
 # accounts/admin.py
+"""
+Admin interface for Accounts app using Unfold.
+Registers all models with appropriate list displays and filters.
+"""
+
 from unfold.admin import ModelAdmin
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django.contrib.admin import site as admin_site
 from allauth.socialaccount.models import SocialApp, SocialAccount, SocialToken
-from .models import User, Role, Permission, UserRole, RolePermission, UserAuditLog, EmailVerificationToken, InvitationToken
+
+from .models import (
+    User, Role, Permission, UserRole, RolePermission,
+    UserAuditLog, EmailVerificationToken, InvitationToken,
+    UserProfile, UserSession, LoginEvent, RecoveryCode
+)
 
 
-# ========== Custom forms for user creation / changes ==========
-class CustomUserCreationForm(UserCreationForm):
-    """A form that creates a user, with no privileges, from the given email and password."""
-    class Meta:
-        model = User
-        fields = ("email", "username", "first_name", "last_name", "user_type", "client_role")
-
-
-class CustomUserChangeForm(UserChangeForm):
-    """A form for updating users. Includes all the fields on the user."""
-    class Meta:
-        model = User
-        fields = "__all__"
-        field_classes = {"email": None}  # keep email field as EmailField
-
-
-# ========== Unregister allauth default admins (to replace with Unfold) ==========
+# ============================================================================
+# Unregister allauth default admins (to replace with Unfold)
+# ============================================================================
 try:
     admin_site.unregister(SocialApp)
 except admin.sites.NotRegistered:
@@ -39,32 +35,56 @@ except admin.sites.NotRegistered:
     pass
 
 
-# ========== User admin (custom for Unfold and custom user model) ==========
+# ============================================================================
+# Custom forms for User admin
+# ============================================================================
+
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+        fields = ("email", "username", "first_name", "last_name", "user_type", "client_role")
+
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = User
+        fields = "__all__"
+        field_classes = {"email": None}
+
+
+# ============================================================================
+# User Admin (customised for Unfold)
+# ============================================================================
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin, ModelAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
-    list_display = ('email', 'get_full_name', 'user_type', 'client_role', 'is_active', 'last_login')
+    list_display = ('email', 'get_full_name', 'user_type', 'client_role', 'client_organization', 'is_active', 'last_login')
     list_filter = ('user_type', 'client_role', 'is_active')
     search_fields = ('email', 'first_name', 'last_name', 'phone_number')
     readonly_fields = ('last_login', 'date_joined', 'last_login_ip')
+    raw_id_fields = ('client_organization',)
     ordering = ('email',)
     fieldsets = (
         (None, {'fields': ('email', 'username', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'physical_address')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
-        ('Profile', {'fields': ('user_type', 'client_role', 'national_id', 'last_login_ip')}),
+        ('Profile', {'fields': ('user_type', 'client_role', 'national_id', 'last_login_ip', 'client_organization', 'is_2fa_enabled')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'first_name', 'last_name', 'password1', 'password2', 'user_type', 'client_role'),
+            'fields': ('email', 'username', 'first_name', 'last_name', 'password1', 'password2', 'user_type', 'client_role', 'client_organization'),
         }),
     )
 
 
-# ========== Other accounts models ==========
+# ============================================================================
+# Other account models
+# ============================================================================
+
 @admin.register(Role)
 class RoleAdmin(ModelAdmin):
     list_display = ('code', 'name')
@@ -104,6 +124,7 @@ class EmailVerificationTokenAdmin(ModelAdmin):
     list_display = ('user', 'token', 'created_at', 'is_valid')
     list_filter = ('created_at',)
     readonly_fields = ('user', 'token', 'created_at')
+
     def is_valid(self, obj):
         return obj.is_valid()
     is_valid.boolean = True
@@ -115,12 +136,52 @@ class InvitationTokenAdmin(ModelAdmin):
     list_filter = ('role', 'created_at')
     search_fields = ('email', 'client_organization__name')
     readonly_fields = ('email', 'token', 'client_organization', 'role', 'created_at')
+
     def is_valid(self, obj):
         return obj.is_valid()
     is_valid.boolean = True
 
 
-# ========== Allauth social models (registered with Unfold) ==========
+# ============================================================================
+# New models for enhanced functionality
+# ============================================================================
+
+@admin.register(UserProfile)
+class UserProfileAdmin(ModelAdmin):
+    list_display = ('user', 'gender', 'date_of_birth')
+    search_fields = ('user__email',)
+    raw_id_fields = ('user',)
+
+
+@admin.register(UserSession)
+class UserSessionAdmin(ModelAdmin):
+    list_display = ('user', 'ip_address', 'device', 'login_time', 'last_activity', 'is_active')
+    list_filter = ('is_active', 'device')
+    search_fields = ('user__email', 'ip_address')
+    readonly_fields = ('session_key', 'login_time', 'last_activity')
+    raw_id_fields = ('user',)
+
+
+@admin.register(LoginEvent)
+class LoginEventAdmin(ModelAdmin):
+    list_display = ('user', 'event_type', 'ip_address', 'timestamp')
+    list_filter = ('event_type', 'timestamp')
+    search_fields = ('user__email', 'ip_address')
+    readonly_fields = ('timestamp',)
+
+
+@admin.register(RecoveryCode)
+class RecoveryCodeAdmin(ModelAdmin):
+    list_display = ('user', 'code', 'is_used', 'created_at')
+    list_filter = ('is_used',)
+    search_fields = ('user__email',)
+    readonly_fields = ('code', 'created_at')
+
+
+# ============================================================================
+# Allauth social models (registered with Unfold)
+# ============================================================================
+
 @admin.register(SocialApp)
 class SocialAppAdmin(ModelAdmin):
     list_display = ('name', 'provider', 'client_id')

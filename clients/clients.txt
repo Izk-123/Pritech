@@ -1,0 +1,662 @@
+# 👥 Clients App — Complete System Design
+
+The **Clients App** is the customer relationship and client management module of the Pritech System. It serves as the central source of truth for all clients, organizations, contacts, contracts, services, quotations, invoices, tickets, and interactions.
+
+---
+
+# 🎯 Purpose
+
+The Clients App enables Pritech to:
+
+* Register and manage clients
+* Store client information
+* Track client relationships
+* Manage client contacts
+* Monitor services purchased
+* View client financial status
+* View client support history
+* Analyze client value and engagement
+
+---
+
+# 🧠 Core Idea
+
+```text
+One Client
+    ↓
+Many Services
+    ↓
+Many Tickets
+    ↓
+Many Quotations
+    ↓
+Many Invoices
+```
+
+The Clients App becomes the **Customer 360° View** of the entire ERP.
+
+---
+
+# 👥 Users Involved
+
+## 🏢 Client
+
+Can:
+
+* Register organization account
+* Manage own profile
+* View services
+* Submit tickets
+* View quotations
+* View invoices
+* View payment status
+* Track project progress
+
+---
+
+## 👨‍💼 Administrator
+
+Can:
+
+* Manage all clients
+* Approve registrations
+* View analytics
+* Assign account managers
+* Deactivate clients
+
+---
+
+## 💰 Finance Officer
+
+Can:
+
+* View client balances
+* View quotations
+* View invoices
+* View payment history
+
+---
+
+## 🧑‍🔧 Technician
+
+Can:
+
+* View assigned client information
+* View client service history
+* View tickets
+
+---
+
+## 🤖 AI Engine
+
+Uses client data for:
+
+* Lead scoring
+* Customer segmentation
+* Upselling recommendations
+* Churn prediction
+
+---
+
+# 🗄 Database Design
+
+---
+
+# 1️⃣ ClientOrganization
+
+Main client account.
+
+```python
+class ClientOrganization(models.Model):
+    name
+    registration_number
+
+    tax_id
+
+    industry
+
+    website
+
+    email
+    phone
+
+    status
+
+    date_joined
+
+    notes
+```
+
+---
+
+## Examples
+
+```text
+ABC Secondary School
+XYZ Bank
+Malawi Construction Ltd
+```
+
+---
+
+# 2️⃣ ClientAddress
+
+Stores addresses.
+
+```python
+class ClientAddress(models.Model):
+    client
+
+    country
+    city
+
+    physical_address
+
+    postal_address
+```
+
+---
+
+# 3️⃣ ClientContact
+
+People within an organization.
+
+```python
+class ClientContact(models.Model):
+    client
+
+    first_name
+    last_name
+
+    position
+
+    phone
+    email
+
+    is_primary
+```
+
+---
+
+## Example
+
+```text
+Company:
+ABC School
+
+Primary Contact:
+John Banda
+ICT Manager
+```
+
+---
+
+# 4️⃣ ClientContract
+
+Service agreements.
+
+```python
+class ClientContract(models.Model):
+    client
+
+    contract_number
+
+    start_date
+    end_date
+
+    value
+
+    status
+```
+
+---
+
+# Status
+
+```text
+Active
+Expired
+Terminated
+Pending
+```
+
+---
+
+# 5️⃣ ClientService
+
+Services currently used.
+
+```python
+class ClientService(models.Model):
+    client
+
+    service
+
+    start_date
+
+    end_date
+
+    status
+```
+
+---
+
+## Example
+
+```text
+Client:
+ABC School
+
+Services:
+✓ Website Hosting
+✓ ICT Support
+✓ Network Maintenance
+```
+
+---
+
+# 6️⃣ ClientInteraction
+
+Tracks communication history.
+
+```python
+class ClientInteraction(models.Model):
+    client
+
+    interaction_type
+
+    description
+
+    created_by
+
+    created_at
+```
+
+---
+
+## Interaction Types
+
+```text
+Phone Call
+Meeting
+Email
+WhatsApp
+Site Visit
+```
+
+---
+
+# 7️⃣ ClientDocument
+
+Stores important files.
+
+```python
+class ClientDocument(models.Model):
+    client
+
+    title
+
+    file
+
+    uploaded_at
+```
+
+---
+
+## Examples
+
+```text
+Contract
+NDA
+Purchase Order
+Company Registration
+```
+
+---
+
+# 🔗 Relationships
+
+```text
+Client
+  ↓
+ ┌───────────────┬──────────────┬──────────────┐
+ ↓              ↓              ↓
+Tickets     Quotations     Invoices
+ ↓              ↓              ↓
+Services     Payments     Contracts
+```
+
+---
+
+# ⚙️ Client Lifecycle
+
+---
+
+## Step 1 — Registration
+
+```text
+Client visits website
+↓
+Registers organization
+↓
+Account created
+```
+
+---
+
+## Step 2 — Verification
+
+```text
+Admin reviews
+↓
+Approve
+↓
+Client activated
+```
+
+---
+
+## Step 3 — Service Request
+
+```text
+Client requests service
+↓
+Quotation generated
+```
+
+---
+
+## Step 4 — Service Delivery
+
+```text
+Service assigned
+↓
+Technician works
+↓
+Ticket tracking
+```
+
+---
+
+## Step 5 — Billing
+
+```text
+Invoice generated
+↓
+Payment received
+```
+
+---
+
+## Step 6 — Retention
+
+```text
+Support
+↓
+Renewal
+↓
+Upsell opportunities
+```
+
+---
+
+# 🌐 Client Portal Features
+
+After login, clients should have a self-service portal.
+
+---
+
+## Dashboard
+
+Shows:
+
+```text
+Open Tickets
+Active Services
+Outstanding Invoices
+Recent Payments
+Projects
+Notifications
+```
+
+---
+
+## My Services
+
+```text
+Current services
+Status
+Renewal dates
+```
+
+---
+
+## My Tickets
+
+```text
+Create Ticket
+Track Progress
+Upload Attachments
+View Resolution
+```
+
+---
+
+## My Quotations
+
+```text
+View Quotation
+Accept
+Reject
+Download PDF
+```
+
+---
+
+## My Invoices
+
+```text
+View Invoice
+Download PDF
+View Balance
+```
+
+---
+
+## Documents
+
+```text
+Contracts
+Reports
+Certificates
+```
+
+---
+
+# ⚡ Real-Time Features
+
+Using:
+
+* Redis
+* Django Channels
+* WebSockets
+
+---
+
+## Live Notifications
+
+```text
+New quotation available
+```
+
+---
+
+## Ticket Updates
+
+```text
+Technician updated ticket
+```
+
+---
+
+## Invoice Updates
+
+```text
+Payment received
+```
+
+---
+
+## Service Status Updates
+
+```text
+Project completed
+```
+
+---
+
+# 📊 Client Analytics
+
+Track:
+
+## Client Value
+
+```text
+Total Revenue Generated
+```
+
+---
+
+## Service Usage
+
+```text
+Services Consumed
+```
+
+---
+
+## Support Metrics
+
+```text
+Tickets Opened
+Tickets Resolved
+```
+
+---
+
+## Engagement
+
+```text
+Portal Logins
+Page Visits
+```
+
+---
+
+# 🤖 AI Features
+
+---
+
+## Client Segmentation
+
+Group clients by:
+
+```text
+Industry
+Revenue
+Service Usage
+```
+
+---
+
+## Churn Prediction
+
+Identify clients likely to leave.
+
+---
+
+## Upselling
+
+Example:
+
+```text
+Client uses Hosting
+↓
+Recommend Website Maintenance
+```
+
+---
+
+## Lead Scoring
+
+Determine:
+
+```text
+High-value clients
+```
+
+---
+
+# 📈 Dashboard KPIs
+
+Admin should see:
+
+* Total Clients
+* Active Clients
+* New Clients This Month
+* Top Clients by Revenue
+* Client Retention Rate
+* Contract Renewals Due
+* Average Client Lifetime Value
+
+---
+
+# 🔐 Permissions
+
+## Client
+
+Only sees their organization data.
+
+---
+
+## Finance
+
+Can access client financial records.
+
+---
+
+## Technician
+
+Can access assigned client information.
+
+---
+
+## Administrator
+
+Full access.
+
+---
+
+# 🎯 Main Goal of the Clients App
+
+> **To provide a centralized customer management platform that stores, organizes, and tracks all client information, services, interactions, contracts, tickets, quotations, invoices, and relationships, enabling Pritech to deliver excellent customer service and build long-term client relationships.**
+
+## Position Within Pritech ERP
+
+```text
+Portfolio App
+      ↓
+Potential Client
+      ↓
+Clients App
+      ↓
+Services App
+      ↓
+Tickets App
+      ↓
+Finance App
+      ↓
+Analytics & AI
+```
+
+This makes the **Clients App the heart of customer relationship management (CRM)** within the Pritech System. 🚀👥📊💼

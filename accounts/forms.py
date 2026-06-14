@@ -1,9 +1,20 @@
-from django import forms
-from django.contrib.auth.forms import AuthenticationForm
-from .models import User
+# accounts/forms.py
+"""
+Forms for registration, login, profile editing, staff management, and 2FA.
+"""
 
+from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, UserChangeForm
+from .models import Permission, User, Role, UserRole
+
+
+# -----------------------------------------------------------------------------
+# Client Registration (includes company_name)
+# -----------------------------------------------------------------------------
 
 class ClientRegisterForm(forms.ModelForm):
+    """Client self‑registration form with organisation name."""
+    company_name = forms.CharField(max_length=200, required=True, label="Company / Organisation name")
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'form-control'})
     )
@@ -13,7 +24,8 @@ class ClientRegisterForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'email', 'phone_number', 'physical_address', 'password']
+        fields = ['first_name', 'last_name', 'email', 'phone_number', 'physical_address',
+                  'password', 'company_name']
         widgets = {
             'first_name': forms.TextInput(attrs={'placeholder': 'First name', 'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'placeholder': 'Last name', 'class': 'form-control'}),
@@ -23,13 +35,20 @@ class ClientRegisterForm(forms.ModelForm):
         }
 
     def clean(self):
-        cd = super().clean()
-        if cd.get('password') != cd.get('confirm_password'):
-            raise forms.ValidationError('Passwords do not match.')
-        return cd
+        cleaned_data = super().clean()
+        pwd = cleaned_data.get('password')
+        confirm = cleaned_data.get('confirm_password')
+        if pwd and confirm and pwd != confirm:
+            raise forms.ValidationError("Passwords do not match.")
+        return cleaned_data
 
+
+# -----------------------------------------------------------------------------
+# Login Form (email or phone)
+# -----------------------------------------------------------------------------
 
 class CustomLoginForm(AuthenticationForm):
+    """Allow login with email or phone number."""
     username = forms.CharField(
         label='Email or Phone',
         widget=forms.TextInput(attrs={
@@ -42,8 +61,13 @@ class CustomLoginForm(AuthenticationForm):
         widget=forms.PasswordInput(attrs={'placeholder': 'Password', 'class': 'form-control'})
     )
 
+
+# -----------------------------------------------------------------------------
+# Client Profile Editing (includes company fields)
+# -----------------------------------------------------------------------------
+
 class ClientProfileForm(forms.ModelForm):
-    """Form for client to edit their own profile (user and organization)."""
+    """Form for clients to edit their profile and linked organisation."""
     company_name = forms.CharField(max_length=200, required=True)
     company_phone = forms.CharField(max_length=20, required=False)
     company_address = forms.CharField(widget=forms.Textarea, required=False)
@@ -82,8 +106,12 @@ class ClientProfileForm(forms.ModelForm):
         return user
 
 
+# -----------------------------------------------------------------------------
+# Invite Team Member Form
+# -----------------------------------------------------------------------------
+
 class InviteTeamMemberForm(forms.ModelForm):
-    """Invite a new user to the client organization."""
+    """Invite a new user to the client organisation."""
     email = forms.EmailField()
     first_name = forms.CharField()
     last_name = forms.CharField()
@@ -102,9 +130,14 @@ class InviteTeamMemberForm(forms.ModelForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("A user with this email already exists.")
         return email
-    
+
+
+# -----------------------------------------------------------------------------
+# 2FA Token Form
+# -----------------------------------------------------------------------------
 
 class TOTPTokenForm(forms.Form):
+    """Simple 6‑digit token input."""
     token = forms.CharField(
         label='Authenticator code',
         max_length=6,
@@ -116,3 +149,50 @@ class TOTPTokenForm(forms.Form):
             'autocomplete': 'off'
         })
     )
+
+
+# -----------------------------------------------------------------------------
+# Staff User Management (for admin panel)
+# -----------------------------------------------------------------------------
+
+class StaffUserCreationForm(UserCreationForm):
+    """Form for creating staff users (admins only)."""
+    roles = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), required=False,
+                                           help_text="Assign roles to this user")
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'phone_number', 'user_type',
+                  'is_active', 'is_staff', 'is_superuser']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Restrict user_type to staff (clients are created via registration)
+        self.fields['user_type'].choices = [('staff', 'Staff')]
+        self.fields['user_type'].initial = 'staff'
+
+
+class StaffUserChangeForm(UserChangeForm):
+    """Form for editing staff users."""
+    roles = forms.ModelMultipleChoiceField(queryset=Role.objects.all(), required=False)
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'phone_number', 'user_type',
+                  'is_active', 'is_staff', 'is_superuser']
+
+
+# -----------------------------------------------------------------------------
+# Role & Permission Forms (for staff management)
+# -----------------------------------------------------------------------------
+
+class RoleForm(forms.ModelForm):
+    class Meta:
+        model = Role
+        fields = ['code', 'name', 'description']
+
+
+class PermissionForm(forms.ModelForm):
+    class Meta:
+        model = Permission
+        fields = ['code', 'description']

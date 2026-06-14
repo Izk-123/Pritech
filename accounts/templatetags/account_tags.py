@@ -1,4 +1,3 @@
-# accounts/templatetags/account_tags.py
 from django import template
 
 register = template.Library()
@@ -18,3 +17,15 @@ def has_role(user, role_code):
     if user.is_authenticated:
         return user.has_role(role_code)
     return False
+
+
+@register.filter(name='has_any_role')
+def has_any_role(user, roles_string):
+    """
+    Check if user has any of the given roles.
+    Usage: {{ user|has_any_role:'SUPER_ADMIN,ADMIN' }}
+    """
+    if not user or not user.is_authenticated:
+        return False
+    roles = [role.strip() for role in roles_string.split(',')]
+    return any(user.has_role(role) for role in roles)

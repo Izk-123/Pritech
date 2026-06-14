@@ -3,6 +3,7 @@ from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib.sites.models import Site
 from django.http import HttpRequest
 from django.contrib.auth import get_user_model
+from django.shortcuts import render
 from clients.models import ClientOrganization
 from accounts.models import Role, UserRole
 
@@ -45,3 +46,22 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         role, _ = Role.objects.get_or_create(code='CLIENT', defaults={'name': 'Client'})
         UserRole.objects.get_or_create(user=user, role=role)
         return user
+
+    # ---------- NEW: Force custom templates for error and cancel pages ----------
+    def render_authentication_error(self, request, provider_id, error=None, exception=None, extra_context=None):
+        """
+        Override to use your custom socialaccount/authentication_error.html template.
+        """
+        context = {
+            'auth_error': error,
+            'provider_id': provider_id,
+        }
+        if extra_context:
+            context.update(extra_context)
+        return render(request, 'socialaccount/authentication_error.html', context, status=400)
+
+    def render_cancel(self, request):
+        """
+        Override to use your custom socialaccount/login_cancelled.html template.
+        """
+        return render(request, 'socialaccount/login_cancelled.html', {}, status=200)

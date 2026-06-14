@@ -1,0 +1,658 @@
+# 🔐 Accounts App — Complete System Design
+
+The **Accounts App** is the identity, authentication, authorization, and security foundation of the entire Pritech System.
+
+Every user in the system must pass through the Accounts App.
+
+---
+
+# 🎯 Purpose
+
+The Accounts App is responsible for:
+
+* Authentication (Login/Logout)
+* Authorization (Permissions & Roles)
+* User Management
+* Security
+* Audit Logging
+* Session Management
+* User Profiles
+* Account Verification
+* Real-time Presence Tracking
+
+---
+
+# 🧠 Core Philosophy
+
+For Pritech:
+
+✅ **Clients can self-register**
+
+❌ Internal staff cannot self-register
+
+Staff accounts are created by Administrators.
+
+---
+
+# 👥 Users Involved
+
+## 1. Client Users
+
+Can:
+
+* Register organization account
+* Login
+* Manage profile
+* Create tickets
+* View quotations
+* View invoices
+
+---
+
+## 2. Technicians
+
+Created by Admin.
+
+Can:
+
+* Login
+* Manage assigned tickets
+* View client information
+* Update work logs
+
+---
+
+## 3. Finance Officers
+
+Created by Admin.
+
+Can:
+
+* Access finance module
+* Manage quotations
+* Manage invoices
+* Generate reports
+
+---
+
+## 4. Administrators
+
+Created by Super Admin.
+
+Can:
+
+* Manage users
+* Manage roles
+* Manage permissions
+* Manage security settings
+
+---
+
+## 5. Super Administrator
+
+Full system access.
+
+Can:
+
+* Configure system
+* Manage all users
+* Manage all modules
+* View audit logs
+
+---
+
+# 🗄 Database Design
+
+---
+
+## User
+
+Custom user model.
+
+```python
+class User(AbstractBaseUser, PermissionsMixin):
+    id = models.UUIDField(primary_key=True)
+
+    email = models.EmailField(unique=True, null=True, blank=True)
+
+    phone_number = models.CharField(
+        max_length=20,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+
+    national_id = models.CharField(max_length=50)
+
+    physical_address = models.TextField()
+
+    is_active = models.BooleanField(default=True)
+
+    is_staff = models.BooleanField(default=False)
+
+    is_verified = models.BooleanField(default=False)
+
+    date_joined = models.DateTimeField(auto_now_add=True)
+```
+
+---
+
+## Why Email OR Phone?
+
+Many Malawian clients may not use email frequently.
+
+Allow:
+
+```text
+Email only
+Phone only
+Email + Phone
+```
+
+Login can use either.
+
+---
+
+# User Profile
+
+Additional information.
+
+```python
+class UserProfile(models.Model):
+    user = models.OneToOneField(User)
+
+    profile_photo
+
+    gender
+
+    date_of_birth
+
+    bio
+```
+
+---
+
+# Role
+
+RBAC (Role-Based Access Control).
+
+```python
+class Role(models.Model):
+    name
+
+    code
+
+    description
+```
+
+---
+
+Examples:
+
+```text
+CLIENT
+TECHNICIAN
+FINANCE_OFFICER
+ADMIN
+SUPER_ADMIN
+```
+
+---
+
+# UserRole
+
+```python
+class UserRole(models.Model):
+    user
+    role
+```
+
+---
+
+Allows future expansion.
+
+Example:
+
+```text
+Isaac
+↓
+ADMIN
+FINANCE_OFFICER
+```
+
+One user can have multiple roles.
+
+---
+
+# Permission
+
+```python
+class Permission(models.Model):
+    code
+    name
+    module
+```
+
+---
+
+Examples:
+
+```text
+view_invoice
+create_invoice
+delete_invoice
+approve_quotation
+```
+
+---
+
+# RolePermission
+
+```python
+class RolePermission(models.Model):
+    role
+    permission
+```
+
+---
+
+# User Session
+
+Tracks active sessions.
+
+```python
+class UserSession(models.Model):
+    user
+
+    session_key
+
+    ip_address
+
+    device
+
+    login_time
+
+    logout_time
+```
+
+---
+
+# UserAuditLog
+
+Tracks all critical activities.
+
+```python
+class UserAuditLog(models.Model):
+    user
+
+    action
+
+    entity_type
+
+    entity_id
+
+    ip_address
+
+    timestamp
+```
+
+---
+
+Examples:
+
+```text
+Created Invoice
+Deleted Ticket
+Approved Quotation
+```
+
+---
+
+# 🔐 Authentication
+
+---
+
+## Login Methods
+
+Supported:
+
+```text
+Email + Password
+
+Phone + Password
+
+Username + Password (optional)
+```
+
+---
+
+## Future
+
+```text
+OTP via SMS
+2FA
+Google Login
+Microsoft Login
+```
+
+---
+
+# Registration Flow
+
+Only Clients register.
+
+```text
+Visitor
+↓
+Client Registration
+↓
+Organization Created
+↓
+Client Account Created
+↓
+Verification
+↓
+Activated
+```
+
+---
+
+# Internal User Flow
+
+```text
+Admin
+↓
+Create Staff Account
+↓
+Assign Role
+↓
+Send Credentials
+```
+
+---
+
+# 🔒 Authorization
+
+Role-Based Access Control (RBAC)
+
+---
+
+Example:
+
+### Client
+
+```text
+Can:
+✓ Create Ticket
+✓ View Invoice
+
+Cannot:
+✗ Manage Users
+✗ Access Finance Dashboard
+```
+
+---
+
+### Finance Officer
+
+```text
+Can:
+✓ Create Invoice
+✓ View Reports
+
+Cannot:
+✗ Manage System Settings
+```
+
+---
+
+### Technician
+
+```text
+Can:
+✓ Manage Assigned Tickets
+
+Cannot:
+✗ Delete Financial Records
+```
+
+---
+
+# ⚡ Real-Time Features
+
+Using:
+
+* Redis
+* Django Channels
+* WebSockets
+
+---
+
+## Online Status
+
+```text
+User Online
+User Offline
+```
+
+Displayed live.
+
+---
+
+## Session Monitoring
+
+Admin sees:
+
+```text
+Currently Active Users
+```
+
+---
+
+## Security Alerts
+
+Example:
+
+```text
+New Login Detected
+```
+
+Instant notification.
+
+---
+
+## Concurrent Login Detection
+
+```text
+User logged in from another device
+```
+
+---
+
+# 📊 Analytics
+
+Track:
+
+## Login Statistics
+
+```text
+Daily Logins
+Monthly Logins
+```
+
+---
+
+## Active Users
+
+```text
+Users Online Now
+```
+
+---
+
+## User Growth
+
+```text
+New Clients This Month
+```
+
+---
+
+## Device Statistics
+
+```text
+Desktop
+Mobile
+Tablet
+```
+
+---
+
+# 🤖 AI Opportunities
+
+Future AI can:
+
+### Detect Suspicious Activity
+
+```text
+Multiple failed logins
+```
+
+---
+
+### User Behavior Analysis
+
+```text
+Most active clients
+```
+
+---
+
+### Churn Prediction
+
+```text
+Clients not logging in
+```
+
+---
+
+# 📋 Forms
+
+### Public
+
+```text
+ClientRegistrationForm
+LoginForm
+ForgotPasswordForm
+ResetPasswordForm
+```
+
+---
+
+### Admin
+
+```text
+UserCreateForm
+RoleForm
+PermissionForm
+StaffCreationForm
+```
+
+---
+
+# 🌐 Views (Class-Based Views)
+
+```text
+RegisterView
+LoginView
+LogoutView
+
+ProfileView
+ProfileUpdateView
+
+UserListView
+UserCreateView
+UserUpdateView
+
+RoleListView
+RoleCreateView
+
+PermissionListView
+```
+
+---
+
+# Dashboard Integration
+
+The Accounts App provides user information to the Core Dashboard.
+
+Examples:
+
+### Admin Dashboard
+
+```text
+Total Users
+Online Users
+New Registrations
+```
+
+---
+
+### Client Dashboard
+
+```text
+My Tickets
+My Services
+My Invoices
+```
+
+---
+
+# 🔗 Relationships
+
+```text
+User
+ ↓
+Roles
+ ↓
+Permissions
+
+User
+ ↓
+Client Organization
+
+User
+ ↓
+Tickets
+
+User
+ ↓
+Audit Logs
+```
+
+---
+
+# 🎯 Main Goal of the Accounts App
+
+> **To provide secure authentication, flexible role-based authorization, user identity management, session monitoring, audit logging, and real-time account services for all users of the Pritech System while supporting future scalability and enterprise-grade security.**
+
+### Position in the System
+
+```text
+Accounts App
+      ↓
+Clients App
+      ↓
+Services App
+      ↓
+Tickets App
+      ↓
+Finance App
+      ↓
+Tracking & AI
+```
+
+The **Accounts App is the foundation of the entire Pritech ERP**, because every action in the system is performed by an authenticated and authorized user. 🔐🚀

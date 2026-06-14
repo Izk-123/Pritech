@@ -1,4 +1,9 @@
 # accounts/urls.py
+"""
+URL configuration for accounts app.
+Includes authentication, profile, team, 2FA, staff management, roles, permissions, analytics.
+"""
+
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views_2fa import two_factor_disable, two_factor_setup
@@ -6,7 +11,7 @@ from .views import (
     ClientRegisterView,
     CustomLoginView,
     CustomLogoutView,
-    StaffListView,
+    StaffListView,                # kept for backward compatibility
     ProfileView,
     ClientTeamListView,
     ClientTeamInviteView,
@@ -16,6 +21,21 @@ from .views import (
     TwoFactorVerifyView,
     accept_invite,
     verify_email,
+    # New staff management views
+    UserListView,
+    UserCreateView,
+    UserUpdateView,
+    UserDeleteView,
+    RoleListView,
+    RoleCreateView,
+    RoleUpdateView,
+    RoleDeleteView,
+    PermissionListView,
+    PermissionCreateView,
+    PermissionUpdateView,
+    PermissionDeleteView,
+    AnalyticsView,
+    recovery_codes_view,
 )
 
 urlpatterns = [
@@ -23,10 +43,10 @@ urlpatterns = [
     path('register/', ClientRegisterView.as_view(), name='register'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
-    
+
     # Email verification
     path('verify-email/<uuid:token>/', verify_email, name='verify_email'),
-    
+
     # Password reset (Django built-in)
     path('password-reset/',
          auth_views.PasswordResetView.as_view(
@@ -44,22 +64,47 @@ urlpatterns = [
     path('reset/done/',
          auth_views.PasswordResetCompleteView.as_view(template_name='accounts/password_reset_complete.html'),
          name='password_reset_complete'),
-    
-    # Staff listing (internal)
+
+    # Staff listing (legacy)
     path('staff/', StaffListView.as_view(), name='staff_list'),
-    
-    # Profile (read-only)
+
+    # Profile & client self-service
     path('profile/', ProfileView.as_view(), name='profile'),
-    
-    # Client self-service
     path('team/', ClientTeamListView.as_view(), name='client_team'),
     path('team/invite/', ClientTeamInviteView.as_view(), name='client_team_invite'),
     path('team/remove/<int:user_id>/', ClientTeamRemoveView.as_view(), name='client_team_remove'),
     path('profile/edit/', ClientProfileEditView.as_view(), name='client_profile_edit'),
     path('audit/', ClientAuditLogView.as_view(), name='client_audit_log'),
-    
+
+    # Invitation
     path('accept-invite/<uuid:token>/', accept_invite, name='accept_invite'),
+
+    # 2FA
     path('2fa/setup/', two_factor_setup, name='two_factor_setup'),
     path('2fa/disable/', two_factor_disable, name='two_factor_disable'),
-    path('2fa/verify/', TwoFactorVerifyView.as_view(), name='two_factor_verify')
+    path('2fa/verify/', TwoFactorVerifyView.as_view(), name='two_factor_verify'),
+
+    # Recovery codes (for 2FA)
+    path('recovery-codes/', recovery_codes_view, name='recovery_codes'),
+
+    # Staff user management
+    path('staff/users/', UserListView.as_view(), name='user_list'),
+    path('staff/users/create/', UserCreateView.as_view(), name='user_create'),
+    path('staff/users/<uuid:pk>/edit/', UserUpdateView.as_view(), name='user_update'),
+    path('staff/users/<uuid:pk>/delete/', UserDeleteView.as_view(), name='user_delete'),
+
+    # Role management
+    path('staff/roles/', RoleListView.as_view(), name='role_list'),
+    path('staff/roles/create/', RoleCreateView.as_view(), name='role_create'),
+    path('staff/roles/<int:pk>/edit/', RoleUpdateView.as_view(), name='role_update'),
+    path('staff/roles/<int:pk>/delete/', RoleDeleteView.as_view(), name='role_delete'),
+
+    # Permission management
+    path('staff/permissions/', PermissionListView.as_view(), name='permission_list'),
+    path('staff/permissions/create/', PermissionCreateView.as_view(), name='permission_create'),
+    path('staff/permissions/<int:pk>/edit/', PermissionUpdateView.as_view(), name='permission_update'),
+    path('staff/permissions/<int:pk>/delete/', PermissionDeleteView.as_view(), name='permission_delete'),
+
+    # Analytics
+    path('staff/analytics/', AnalyticsView.as_view(), name='analytics'),
 ]
