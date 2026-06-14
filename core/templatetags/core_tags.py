@@ -56,3 +56,8 @@ def has_any_role(user, roles_str):
         return False
     roles = [role.strip() for role in roles_str.split(',')]
     return any(user.has_role(role) for role in roles)
+
+@register.filter
+def sanitize_html(value):
+    from infrastructure.pdf_sanitizer import sanitize_html as do_sanitize
+    return do_sanitize(value)

@@ -1,87 +1,98 @@
-from django.views.generic import TemplateView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Sum, F, Count
-from tickets.models import Ticket
-from finance.models import Invoice
-from clients.models import ClientOrganization
-from django.shortcuts import render
-from .services import (
-    ClientDashboardService,
-    FinanceDashboardService,
-    TechnicianDashboardService,
-    AdminDashboardService,
-    CommonDashboardService,
-)
-
-# class DashboardView(LoginRequiredMixin, TemplateView):
-#     template_name = 'core/dashboard.html'
-
-#     def get_context_data(self, **kwargs):
-#         ctx = super().get_context_data(**kwargs)
-#         ctx['total_clients'] = ClientOrganization.objects.filter(is_active=True).count()
-#         ctx['open_tickets'] = Ticket.objects.exclude(status__in=['closed', 'resolved']).count()
-#         ctx['total_invoices'] = Invoice.objects.count()
-#         ctx['revenue'] = Invoice.objects.filter(status='paid').aggregate(t=Sum('total_amount'))['t'] or 0
-
-#         # ✅ Fixed: use database fields with F expression
-#         ctx['pending_revenue'] = Invoice.objects.filter(
-#             status__in=['issued', 'partial', 'overdue']
-#         ).aggregate(
-#             t=Sum(F('total_amount') - F('amount_paid'))
-#         )['t'] or 0
-
-#         ctx['recent_tickets'] = Ticket.objects.select_related('client').order_by('-created_at')[:5]
-#         ctx['recent_invoices'] = Invoice.objects.select_related('client').order_by('-created_at')[:5]
-#         ctx['ticket_stats'] = {
-#             s[0]: Ticket.objects.filter(status=s[0]).count()
-#             for s in Ticket.STATUS_CHOICES
-#         }
-#         return ctx
-from django.shortcuts import render
-from django.contrib.admin.views.decorators import staff_member_required
-from tickets.models import Ticket
-from django.http import JsonResponse, HttpResponse
-from django.template.loader import render_to_string
-from django.db.models import Q
-
-@staff_member_required
-def htmx_dashboard(request):
-    tickets = Ticket.objects.all().order_by('-created_at')[:20]
-    return render(request, 'core/htmx_dashboard.html', {'tickets': tickets})
-
-@staff_member_required
-def live_ticket_search(request):
-    query = request.GET.get('q', '')
-    tickets = Ticket.objects.filter(
-        Q(ticket_number__icontains=query) | Q(title__icontains=query)
-    )[:20]
-    html = render_to_string('core/ticket_rows.html', {'tickets': tickets})
-    return HttpResponse(html)
-
-@staff_member_required
-def inline_ticket_status(request, ticket_id):
-    ticket = Ticket.objects.get(id=ticket_id)
-    new_status = request.POST.get('status')
-    if ticket.can_transition_to(new_status):
-        ticket.status = new_status
-        ticket.save()
-    return HttpResponse(f'<span class="status-badge">{ticket.get_status_display()}</span>')
-
 # core/views.py
-from django.shortcuts import render
+"""
+Core views: main dashboard, HTMX partials, global search, audit log,
+page visits, site configuration, and announcement management.
+"""
+
+from django.views.generic import TemplateView, ListView, UpdateView, CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Q
+from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from .dashboard import dashboard_callback   # reuse your callback to inject data
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET
+from django.urls import reverse_lazy
+from django.utils import timezone
+from datetime import timedelta
 
-@staff_member_required
-def admin_dashboard_view(request, extra_context=None):
-    context = {}
-    # Call your existing callback to populate data
-    dashboard_callback(request, context)
-    # Render your custom template (NOT unfold/index.html)
-    return render(request, 'admin/custom_dashboard.html', context)
+from tickets.models import Ticket
+from accounts.models import UserAuditLog
+from tracking.models import PageVisit
+from clients.models import ClientOrganization
+from finance.models import Invoice, Quotation
+from services.models import Service
+
+from .models import SiteConfig, Announcement
+from .services import CommonDashboardService, DashboardContextBuilder
+from .forms import SiteConfigurationForm, AnnouncementForm
+from .mixins import RoleRequiredMixin
 
 
+# =============================================================================
+# Global Search (JSON endpoint)
+# =============================================================================
+@require_GET
+def global_search(request):
+    """Search across clients, tickets, invoices, quotations, services."""
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
 
+    results = []
+
+    clients = ClientOrganization.objects.filter(name__icontains=query)[:5]
+    for c in clients:
+        results.append({
+            'type': 'client',
+            'id': str(c.id),
+            'name': c.name,
+            'url': f'/clients/{c.id}/'
+        })
+
+    tickets = Ticket.objects.filter(Q(ticket_number__icontains=query) | Q(title__icontains=query))[:5]
+    for t in tickets:
+        results.append({
+            'type': 'ticket',
+            'id': t.id,
+            'name': f"Ticket #{t.ticket_number}: {t.title}",
+            'url': f'/tickets/{t.id}/'
+        })
+
+    invoices = Invoice.objects.filter(invoice_number__icontains=query)[:5]
+    for inv in invoices:
+        results.append({
+            'type': 'invoice',
+            'id': inv.id,
+            'name': f"Invoice {inv.invoice_number}",
+            'url': f'/finance/invoices/{inv.id}/'
+        })
+
+    quotations = Quotation.objects.filter(quotation_number__icontains=query)[:5]
+    for q in quotations:
+        results.append({
+            'type': 'quotation',
+            'id': q.id,
+            'name': f"Quotation {q.quotation_number}",
+            'url': f'/finance/quotations/{q.id}/'
+        })
+
+    services = Service.objects.filter(name__icontains=query)[:5]
+    for s in services:
+        results.append({
+            'type': 'service',
+            'id': s.id,
+            'name': s.name,
+            'url': f'/services/{s.id}/'
+        })
+
+    return JsonResponse({'results': results})
+
+
+# =============================================================================
+# Main Dashboard View
+# =============================================================================
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
 
@@ -89,50 +100,157 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        # Common context for all authenticated users
+        # Check maintenance mode
+        config = SiteConfig.get()
+        if config.maintenance_mode and not user.is_staff:
+            context['maintenance_mode'] = True
+            return context
+
+        # Common sidebar context
         context.update(CommonDashboardService.get_context(user))
 
-        # Role‑specific context
-        if user.user_type == 'client':
-            context.update(ClientDashboardService.get_context(user))
-        elif user.has_perm_code('view_finance_dashboard'):
-            context.update(FinanceDashboardService.get_context(user))
-        elif user.has_role('TECHNICIAN'):
-            context.update(TechnicianDashboardService.get_context(user))
-        else:
-            # Admin / fallback
-            context.update(AdminDashboardService.get_context(user))
+        # Role‑specific context (unified)
+        context.update(DashboardContextBuilder.get_context(user))
+
+        # Add online users count for staff
+        if user.is_staff:
+            threshold = timezone.now() - timedelta(minutes=5)
+            from accounts.models import UserSession
+            context['online_users_count'] = UserSession.objects.filter(
+                last_activity__gte=threshold, is_active=True
+            ).values('user').distinct().count()
 
         return context
 
 
-# HTMX partial view for real‑time updates
-def dashboard_stats_partial(request):
-    """Return only the stats cards and recent items for HTMX polling."""
+# =============================================================================
+# HTMX partial for real‑time stats (with cache control and loading indicator)
+# =============================================================================
+@never_cache
+def core_dashboard_stats_partial(request):
+    """Returns the stats cards + recent tables for HTMX polling."""
+    if not request.user.is_authenticated:
+        return HttpResponse(status=401)
+
     user = request.user
-    context = {}
+    context = DashboardContextBuilder.get_context(user)
 
-    if user.user_type == 'client':
-        context.update(ClientDashboardService.get_context(user))
-    elif user.has_perm_code('view_finance_dashboard'):
-        context.update(FinanceDashboardService.get_context(user))
-    elif user.has_role('TECHNICIAN'):
-        context.update(TechnicianDashboardService.get_context(user))
-    else:
-        context.update(AdminDashboardService.get_context(user))
+    # Timestamp for "last updated"
+    context['last_updated'] = timezone.now().strftime('%H:%M:%S')
 
-    # Add site_config for currency symbol, etc.
-    from core.context_processors import site_config
-    context['site_config'] = site_config(request)['site_config']
+    # site_config, announcements, and online_users_count are already supplied
+    # globally via context processors (see settings.TEMPLATES), so we don't
+    # need to recompute them here.
 
     return render(request, 'core/partials/dashboard_stats.html', context)
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView
-from accounts.models import UserAuditLog
-from tracking.models import PageVisit
+
+# =============================================================================
+# Site Configuration (Super Admin only)
+# =============================================================================
+# core/views.py – SiteConfigurationView (updated)
+
+class SiteConfigurationView(RoleRequiredMixin, UpdateView):
+    """Display/update the singleton SiteConfig instance."""
+    model = SiteConfig
+    form_class = SiteConfigurationForm
+    template_name = 'core/site_configuration.html'
+    required_roles = ['SUPER_ADMIN', 'ADMIN']
+    success_url = reverse_lazy('site_configuration')
+
+    def get_object(self, queryset=None):
+        return SiteConfig.get()
+
+    def form_valid(self, form):
+        """Handle logo clearing and replacement."""
+        obj = form.save(commit=False)
+
+        # Check if user wants to clear the logo
+        clear_logo = self.request.POST.get('clear_logo') == '1'
+        if clear_logo:
+            # Delete existing logo file from storage
+            if obj.logo:
+                obj.logo.delete(save=False)
+            obj.logo = None
+
+        # Save the object (logo file will be handled automatically by form if a new file is provided)
+        form.save()
+
+        messages.success(self.request, "Site configuration updated successfully.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Please correct the errors below.")
+        return super().form_invalid(form)
+
+# Alias for symmetry with spec naming (SiteConfigurationUpdateView == SiteConfigurationView)
+SiteConfigurationUpdateView = SiteConfigurationView
+
+# =============================================================================
+# Announcements (Admin)
+# =============================================================================
+class AnnouncementListView(RoleRequiredMixin, ListView):
+    model = Announcement
+    template_name = 'core/announcement_list.html'
+    context_object_name = 'announcements'
+    paginate_by = 25
+    required_roles = ['SUPER_ADMIN', 'ADMIN']
+
+    def get_queryset(self):
+        return Announcement.objects.order_by('-start_date')
 
 
+class AnnouncementCreateView(RoleRequiredMixin, CreateView):
+    model = Announcement
+    form_class = AnnouncementForm
+    template_name = 'core/announcement_form.html'
+    success_url = reverse_lazy('announcement_list')
+    required_roles = ['SUPER_ADMIN', 'ADMIN']
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        response = super().form_valid(form)
+        messages.success(self.request, "Announcement created successfully.")
+        return response
+
+
+class AnnouncementUpdateView(RoleRequiredMixin, UpdateView):
+    model = Announcement
+    form_class = AnnouncementForm
+    template_name = 'core/announcement_form.html'
+    success_url = reverse_lazy('announcement_list')
+    required_roles = ['SUPER_ADMIN', 'ADMIN']
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "Announcement updated successfully.")
+        return response
+
+
+@staff_member_required
+def announcement_delete(request, pk):
+    announcement = get_object_or_404(Announcement, pk=pk)
+    if request.method == 'POST':
+        announcement.delete()
+        messages.success(request, "Announcement deleted.")
+        return redirect('announcement_list')
+    return render(request, 'core/announcement_confirm_delete.html', {'announcement': announcement})
+
+
+# =============================================================================
+# Admin dashboard (Unfold integration)
+# =============================================================================
+@staff_member_required
+def admin_dashboard_view(request, extra_context=None):
+    from .dashboard import dashboard_callback
+    context = {}
+    dashboard_callback(request, context)
+    return render(request, 'admin/custom_dashboard.html', context)
+
+
+# =============================================================================
+# Audit Log & Page Visits
+# =============================================================================
 class AuditLogView(LoginRequiredMixin, ListView):
     model = UserAuditLog
     template_name = 'core/audit_log.html'

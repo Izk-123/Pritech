@@ -1,18 +1,46 @@
 # core/services.py
-from django.db.models import Sum, F, Q
+"""
+Dashboard context builders with caching.
+Role‑specific data for the main dashboard.
+"""
+
+import logging
+from django.core.cache import cache
+from django.db.models import Sum, F
 from tickets.models import Ticket
 from finance.models import Invoice
 from clients.models import ClientOrganization
 
+logger = logging.getLogger(__name__)
 
-class CommonDashboardService:
+# Cache timeout for dashboard aggregates (seconds)
+DASHBOARD_CACHE_TIMEOUT = 60  # 1 minute
+
+
+class DashboardContextBuilder:
+    """Unified builder for role‑specific dashboard context with caching."""
+
     @staticmethod
     def get_context(user):
-        """Context available to everyone (sidebar recent items)."""
-        # Filter sidebar items appropriately
+        """Main entry point – returns context dict for the given user."""
         if user.user_type == 'client':
-            # ✅ Fixed: use 'user' field instead of 'primary_contact'
-            client_org = ClientOrganization.objects.filter(user=user).first()
+            return ClientDashboardService.get_context(user)
+        elif user.has_perm_code('view_finance_dashboard'):
+            return FinanceDashboardService.get_context(user)
+        elif user.has_role('TECHNICIAN'):
+            return TechnicianDashboardService.get_context(user)
+        else:
+            return AdminDashboardService.get_context(user)
+
+
+class CommonDashboardService:
+    """Sidebar recent items (no caching – these are lightweight)."""
+
+    @staticmethod
+    def get_context(user):
+        if user.user_type == 'client':
+            # FIXED: use the ForeignKey on User, not the old OneToOne reverse
+            client_org = user.client_organization
             if client_org:
                 tickets = Ticket.objects.filter(client=client_org)
                 invoices = Invoice.objects.filter(client=client_org)
@@ -20,7 +48,6 @@ class CommonDashboardService:
                 tickets = Ticket.objects.none()
                 invoices = Invoice.objects.none()
         elif user.has_perm_code('view_finance_dashboard') or user.has_role('TECHNICIAN'):
-            # For staff, show all recent items (or filtered by assignment)
             tickets = Ticket.objects.all()
             invoices = Invoice.objects.all()
         else:
@@ -36,8 +63,8 @@ class CommonDashboardService:
 class ClientDashboardService:
     @staticmethod
     def get_context(user):
-        # ✅ Fixed: use 'user' field
-        client_org = ClientOrganization.objects.filter(user=user).first()
+        # FIXED: use the ForeignKey on User
+        client_org = user.client_organization
         if not client_org:
             return {}
 
@@ -51,9 +78,7 @@ class ClientDashboardService:
             'recent_invoices': invoices.order_by('-created_at')[:5],
             'pending_revenue': invoices.filter(
                 status__in=['issued', 'partial', 'overdue']
-            ).aggregate(
-                t=Sum(F('total_amount') - F('amount_paid'))
-            )['t'] or 0,
+            ).aggregate(t=Sum(F('total_amount') - F('amount_paid')))['t'] or 0,
             'show_finance_widgets': True,
             'show_client_widgets': True,
             'client_org': client_org,
@@ -63,15 +88,38 @@ class ClientDashboardService:
 class FinanceDashboardService:
     @staticmethod
     def get_context(user):
+        cache_key = 'dashboard_finance_aggregates'
+        aggregates = cache.get(cache_key)
+        if aggregates is None:
+            try:
+                aggregates = {
+                    'total_clients': ClientOrganization.objects.filter(status='active').count(),
+                    'revenue': Invoice.objects.filter(status='paid').aggregate(t=Sum('total_amount'))['t'] or 0,
+                    'pending_revenue': Invoice.objects.filter(
+                        status__in=['issued', 'partial', 'overdue']
+                    ).aggregate(t=Sum(F('total_amount') - F('amount_paid')))['t'] or 0,
+                    'open_tickets': Ticket.objects.exclude(status__in=['closed', 'resolved']).count(),
+                }
+                cache.set(cache_key, aggregates, DASHBOARD_CACHE_TIMEOUT)
+            except Exception as e:
+                logger.error(f"Failed to compute finance aggregates: {e}")
+                aggregates = {
+                    'total_clients': 0,
+                    'revenue': 0,
+                    'pending_revenue': 0,
+                    'open_tickets': 0,
+                }
+
+        recent_tickets = Ticket.objects.order_by('-created_at')[:5]
+        recent_invoices = Invoice.objects.order_by('-created_at')[:10]
+
         return {
-            'total_clients': ClientOrganization.objects.filter(status='active').count(),  # ✅ fixed is_active -> status
-            'revenue': Invoice.objects.filter(status='paid').aggregate(t=Sum('total_amount'))['t'] or 0,
-            'pending_revenue': Invoice.objects.filter(
-                status__in=['issued', 'partial', 'overdue']
-            ).aggregate(t=Sum(F('total_amount') - F('amount_paid')))['t'] or 0,
-            'open_tickets': Ticket.objects.exclude(status__in=['closed', 'resolved']).count(),
-            'recent_tickets': Ticket.objects.order_by('-created_at')[:5],
-            'recent_invoices': Invoice.objects.order_by('-created_at')[:10],
+            'total_clients': aggregates['total_clients'],
+            'revenue': aggregates['revenue'],
+            'pending_revenue': aggregates['pending_revenue'],
+            'open_tickets': aggregates['open_tickets'],
+            'recent_tickets': recent_tickets,
+            'recent_invoices': recent_invoices,
             'show_finance_widgets': True,
             'show_admin_widgets': False,
         }
@@ -92,19 +140,44 @@ class TechnicianDashboardService:
 class AdminDashboardService:
     @staticmethod
     def get_context(user):
+        cache_key = 'dashboard_admin_aggregates'
+        aggregates = cache.get(cache_key)
+        if aggregates is None:
+            try:
+                aggregates = {
+                    'total_clients': ClientOrganization.objects.filter(status='active').count(),
+                    'open_tickets': Ticket.objects.exclude(status__in=['closed', 'resolved']).count(),
+                    'revenue': Invoice.objects.filter(status='paid').aggregate(t=Sum('total_amount'))['t'] or 0,
+                    'pending_revenue': Invoice.objects.filter(
+                        status__in=['issued', 'partial', 'overdue']
+                    ).aggregate(t=Sum(F('total_amount') - F('amount_paid')))['t'] or 0,
+                }
+                cache.set(cache_key, aggregates, DASHBOARD_CACHE_TIMEOUT)
+            except Exception as e:
+                logger.error(f"Failed to compute admin aggregates: {e}")
+                aggregates = {
+                    'total_clients': 0,
+                    'open_tickets': 0,
+                    'revenue': 0,
+                    'pending_revenue': 0,
+                }
+
+        recent_tickets = Ticket.objects.order_by('-created_at')[:10]
+        recent_invoices = Invoice.objects.order_by('-created_at')[:10]
+
+        ticket_stats = {
+            s[0]: Ticket.objects.filter(status=s[0]).count()
+            for s in Ticket.STATUS_CHOICES
+        }
+
         return {
-            'total_clients': ClientOrganization.objects.filter(status='active').count(),  # ✅ fixed is_active -> status
-            'open_tickets': Ticket.objects.exclude(status__in=['closed', 'resolved']).count(),
-            'revenue': Invoice.objects.filter(status='paid').aggregate(t=Sum('total_amount'))['t'] or 0,
-            'pending_revenue': Invoice.objects.filter(
-                status__in=['issued', 'partial', 'overdue']
-            ).aggregate(t=Sum(F('total_amount') - F('amount_paid')))['t'] or 0,
-            'recent_tickets': Ticket.objects.order_by('-created_at')[:10],
-            'recent_invoices': Invoice.objects.order_by('-created_at')[:10],
-            'ticket_stats': {
-                s[0]: Ticket.objects.filter(status=s[0]).count()
-                for s in Ticket.STATUS_CHOICES
-            },
+            'total_clients': aggregates['total_clients'],
+            'open_tickets': aggregates['open_tickets'],
+            'revenue': aggregates['revenue'],
+            'pending_revenue': aggregates['pending_revenue'],
+            'recent_tickets': recent_tickets,
+            'recent_invoices': recent_invoices,
+            'ticket_stats': ticket_stats,
             'show_finance_widgets': True,
             'show_admin_widgets': True,
         }

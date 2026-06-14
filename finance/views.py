@@ -3,12 +3,12 @@
 Finance App Views
 -----------------
 Complete set of views for financial management:
-- Quotations (CRUD, send, convert, duplicate, PDF, print, Word, Excel)
+- Quotations (CRUD, send, convert, duplicate, delete, PDF, print, Word, Excel)
 - Invoices (CRUD, add items, record payment, issue, bulk actions, CSV export, PDF)
 - Expenses (list, create, approve, reject)
-- Financial Reports (income statement, aging, top clients, monthly trends)
+- Financial Reports (income statement, aging, top clients, monthly trends, service revenue)
 - Client portal (invoices, quotations, approve/reject, subscription management)
-- HTMX real‑time endpoints (live search, status updates, dashboard partials)
+- HTMX real‑time endpoints (live search, status updates)
 
 All staff views enforce role‑based access using RoleRequiredMixin.
 Client views use standard LoginRequiredMixin with object‑level permissions.
@@ -21,12 +21,12 @@ import base64
 from datetime import date, timedelta
 from pathlib import Path
 
-from django.views.generic import ListView, CreateView, DetailView, UpdateView, TemplateView, View
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, TemplateView, View, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.http import HttpResponse, Http404, JsonResponse
+from django.http import HttpResponse, Http404
 from django.db import models, transaction
 from django.utils import timezone
 from django.core.cache import cache
@@ -45,7 +45,6 @@ from .models import Invoice, Expense, InvoiceItem, Quotation, QuotationItem, Pla
 from .forms import (
     InvoiceForm, InvoiceItemForm, PaymentForm, ExpenseForm,
     QuotationForm, QuotationItemFormSet, SubscriptionChangeForm,
-    InvoiceFilterForm
 )
 from .services import InvoiceService, QuotationService
 from .reports import ReportService
@@ -139,7 +138,6 @@ class QuotationCreateView(RoleRequiredMixin, CreateView):
                 items.save()
                 QuotationService.recalculate(self.object)
 
-        # Check which action button was clicked
         if self.request.POST.get('action') == 'send':
             try:
                 QuotationService.send(self.object)
@@ -267,6 +265,27 @@ class DuplicateQuotationView(RoleRequiredMixin, View):
         return redirect('quotation_detail', pk=new_quotation.pk)
 
 
+class QuotationDeleteView(RoleRequiredMixin, DeleteView):
+    """
+    Delete a quotation. Only allowed for draft quotations.
+    Shows a confirmation page (GET) and deletes on POST.
+    Redirects to quotation list after success.
+    """
+    model = Quotation
+    success_url = reverse_lazy('quotation_list')
+    template_name = 'finance/quotation_confirm_delete.html'
+    required_roles = ['FINANCE', 'ADMIN']
+
+    def get_queryset(self):
+        # Only allow deletion of draft quotations (prevent accidental deletion of important records)
+        return super().get_queryset().filter(status='draft')
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+        messages.success(request, f"Quotation {obj.quotation_number} has been deleted.")
+        return super().delete(request, *args, **kwargs)
+
+
 # -----------------------------------------------------------------------------
 # Export Views (Print, PDF Direct, Word, Excel)
 # -----------------------------------------------------------------------------
@@ -293,7 +312,6 @@ def quotation_pdf_direct(request, pk):
     config = SiteConfig.get()
     vat_percent = float(config.vat_rate) * 100
 
-    # Build items data for template
     items_data = []
     for item in items:
         items_data.append({
@@ -303,7 +321,6 @@ def quotation_pdf_direct(request, pk):
             'total': item.total,
         })
 
-    # Logo data URI (for PDF embedding)
     logo_path = Path(settings.BASE_DIR) / 'static' / 'images' / 'logo.png'
     logo_data_uri = ""
     if logo_path.exists():
@@ -351,7 +368,6 @@ def quotation_excel_export(request, pk):
     ws = wb.active
     ws.title = "Quotation"
 
-    # Title and header info
     ws['A1'] = config.company_name
     ws['A1'].font = Font(bold=True, size=14)
     ws.merge_cells('A1:D1')
@@ -362,7 +378,6 @@ def quotation_excel_export(request, pk):
     ws['A4'] = f"Issue Date: {quotation.issue_date}   Valid Until: {quotation.valid_until}"
     ws.merge_cells('A4:D4')
 
-    # Headers
     headers = ['Description', 'Quantity', 'Unit Price', 'Total']
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=6, column=col, value=header)
@@ -370,7 +385,6 @@ def quotation_excel_export(request, pk):
         cell.alignment = Alignment(horizontal='center')
         cell.border = Border(bottom=Side(style='thin'), top=Side(style='thin'))
 
-    # Items
     row = 7
     for item in items:
         ws.cell(row=row, column=1, value=item.description)
@@ -379,7 +393,6 @@ def quotation_excel_export(request, pk):
         ws.cell(row=row, column=4, value=float(item.total))
         row += 1
 
-    # Totals
     ws.cell(row=row+1, column=3, value="Subtotal").font = Font(bold=True)
     ws.cell(row=row+1, column=4, value=float(quotation.subtotal))
     ws.cell(row=row+2, column=3, value=f"VAT ({float(config.vat_rate)*100:.1f}%)").font = Font(bold=True)
@@ -387,11 +400,9 @@ def quotation_excel_export(request, pk):
     ws.cell(row=row+3, column=3, value="Total").font = Font(bold=True, size=12)
     ws.cell(row=row+3, column=4, value=float(quotation.total_amount)).font = Font(bold=True, size=12)
 
-    # Notes
     if quotation.notes:
         ws.cell(row=row+5, column=1, value="Notes").font = Font(bold=True)
         ws.merge_cells(f'A{row+5}:D{row+5}')
-        # Strip HTML tags for plain text notes
         plain_notes = quotation.notes.html if hasattr(quotation.notes, 'html') else str(quotation.notes)
         ws.cell(row=row+6, column=1, value=plain_notes).alignment = Alignment(wrap_text=True)
         ws.merge_cells(f'A{row+6}:D{row+6}')
@@ -714,7 +725,8 @@ class RejectExpenseView(RoleRequiredMixin, View):
 # =============================================================================
 
 class ReportView(RoleRequiredMixin, TemplateView):
-    """Financial dashboard with income statement, aging, top clients, monthly charts."""
+    """Financial dashboard with income statement, aging, top clients, monthly charts,
+    and service analytics (revenue by service, most requested services, technician performance)."""
     template_name = 'finance/reports.html'
     required_roles = ['FINANCE', 'ADMIN']
 
@@ -740,6 +752,18 @@ class ReportView(RoleRequiredMixin, TemplateView):
             ('this_quarter', 'This Quarter'),
             ('this_year', 'This Year'),
         ]
+
+        # Service analytics (requires services app)
+        try:
+            ctx['service_revenue'] = ReportService.service_revenue(start, end)
+            ctx['most_requested_services'] = ReportService.most_requested_services()
+            ctx['technician_performance'] = ReportService.technician_performance()
+        except Exception as e:
+            ctx['service_revenue'] = []
+            ctx['most_requested_services'] = []
+            ctx['technician_performance'] = []
+            logger.warning(f"Could not load service analytics: {e}")
+
         return ctx
 
 
@@ -860,7 +884,6 @@ class ClientQuotationRejectView(LoginRequiredMixin, View):
         quotation.client_feedback = reason
         quotation.save(update_fields=['status', 'client_feedback'])
 
-        # Notify finance team (optional)
         try:
             from django.core.mail import send_mail
             config = SiteConfig.get()
@@ -937,7 +960,7 @@ class ClientSubscriptionCancelView(LoginRequiredMixin, View):
 
 
 # =============================================================================
-# HTMX REAL‑TIME ENDPOINTS
+# HTMX REAL‑TIME ENDPOINTS (no dashboard stats here – only search & status)
 # =============================================================================
 
 def live_quotation_search(request):
@@ -997,21 +1020,6 @@ def live_invoice_search(request):
         invoices = invoices.filter(status=status)
     html = render_to_string('finance/partials/invoice_rows.html', {
         'invoices': invoices,
-        'site_config': SiteConfig.get(),
-    })
-    return HttpResponse(html)
-
-
-def dashboard_stats_partial(request):
-    """HTMX endpoint – returns financial summary stats for dashboard."""
-    from .reports import ReportService
-    start = date.today().replace(day=1)
-    end = date.today()
-    income = ReportService.income_statement(start, end)
-    aging = ReportService.accounts_receivable_aging()
-    html = render_to_string('finance/partials/dashboard_stats.html', {
-        'income': income,
-        'aging': aging,
         'site_config': SiteConfig.get(),
     })
     return HttpResponse(html)

@@ -1,3 +1,4 @@
+# finance/reports.py
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import date, timedelta
@@ -139,7 +140,7 @@ class ReportService:
 
     @staticmethod
     def sales_by_service(start: date, end: date) -> list:
-        """Which services generated the most revenue."""
+        """Which services generated the most revenue (via tickets)."""
         from tickets.models import Ticket
         from django.db.models import F
         result = Invoice.objects.filter(
@@ -163,4 +164,62 @@ class ReportService:
                 paid=Sum('amount_paid'),
                 count=Count('id')
             ).order_by('-total')[:limit]
+        )
+
+    # -------------------------------------------------------------------------
+    # NEW: Service analytics (integrate with services app)
+    # -------------------------------------------------------------------------
+    @staticmethod
+    def service_revenue(start: date, end: date) -> list:
+        """
+        Revenue broken down by service name, using InvoiceItem descriptions
+        that match actual Service names.
+        """
+        from services.models import Service
+        service_names = list(Service.objects.values_list('name', flat=True))
+        if not service_names:
+            return []
+
+        from .models import InvoiceItem
+        items = InvoiceItem.objects.filter(
+            invoice__issue_date__gte=start,
+            invoice__issue_date__lte=end,
+            invoice__status='paid',
+            description__in=service_names
+        ).values('description').annotate(
+            total=Sum('total'),
+            count=Count('id')
+        ).order_by('-total')
+        return list(items)
+
+    @staticmethod
+    def most_requested_services(limit: int = 10) -> list:
+        """
+        Most frequently requested services (based on ServiceRequest model).
+        """
+        from services.models import ServiceRequest
+        return list(
+            ServiceRequest.objects.filter(
+                status__in=['approved', 'completed', 'quoted']
+            ).values('service__name').annotate(
+                count=Count('id')
+            ).order_by('-count')[:limit]
+        )
+
+    @staticmethod
+    def technician_performance() -> list:
+        """
+        Number of completed service assignments per technician.
+        """
+        from services.models import ServiceAssignment
+        return list(
+            ServiceAssignment.objects.filter(
+                completed_at__isnull=False
+            ).values(
+                'technician__email',
+                'technician__first_name',
+                'technician__last_name'
+            ).annotate(
+                completed_count=Count('id')
+            ).order_by('-completed_count')[:10]
         )

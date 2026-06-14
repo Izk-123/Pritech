@@ -1,0 +1,631 @@
+# 🏢 Core App — Complete System Design
+
+The **Core App** is the central foundation of the Pritech System. It contains shared functionality, system-wide configurations, dashboards, navigation, branding, settings, and reusable components used by all other apps.
+
+Think of it as the **control center** that connects:
+
+```text
+Accounts
+Clients
+Services
+Tickets
+Finance
+Portfolio
+Tracking
+AI Engine
+Notifications
+```
+
+---
+
+# 🎯 Purpose
+
+The Core App is responsible for:
+
+* Main Dashboard
+* System Settings
+* Site Configuration
+* Company Branding
+* Navigation/Menu Management
+* Announcements
+* Dashboard Widgets
+* System Preferences
+* Global Search
+* Activity Feed
+* Shared Utilities
+
+---
+
+# 👥 Users Involved
+
+## 👨‍💼 Super Admin
+
+Can:
+
+* Configure entire system
+* Manage branding
+* Configure settings
+* Monitor system health
+
+---
+
+## 👨‍💼 Administrator
+
+Can:
+
+* Access dashboard
+* Manage announcements
+* View reports
+* Configure modules
+
+---
+
+## 🧑‍🔧 Technician
+
+Can:
+
+* Access personal dashboard
+* View assigned work
+
+---
+
+## 💰 Finance Officer
+
+Can:
+
+* Access finance dashboard widgets
+
+---
+
+## 🏢 Client
+
+Can:
+
+* Access client portal dashboard
+
+---
+
+# 🗄 Database Schema
+
+---
+
+# 1️⃣ SiteConfiguration
+
+Stores company-wide settings.
+
+```python
+class SiteConfiguration(models.Model):
+    company_name
+
+    company_slogan
+
+    email
+
+    phone
+
+    website
+
+    address
+
+    logo
+
+    favicon
+
+    timezone
+
+    currency
+
+    maintenance_mode
+```
+
+---
+
+## Example
+
+```text
+Company:
+Pritech Systems Malawi
+
+Currency:
+MWK
+
+Timezone:
+Africa/Blantyre
+```
+
+---
+
+# 2️⃣ CompanyBranch
+
+For future expansion.
+
+```python
+class CompanyBranch(models.Model):
+    name
+
+    address
+
+    phone
+
+    email
+```
+
+---
+
+Example:
+
+```text
+Blantyre Branch
+Lilongwe Branch
+```
+
+---
+
+# 3️⃣ DashboardWidget
+
+Controls dashboard widgets.
+
+```python
+class DashboardWidget(models.Model):
+    name
+
+    code
+
+    description
+
+    is_active
+
+    order
+```
+
+---
+
+Examples:
+
+```text
+Revenue Widget
+Open Tickets Widget
+Client Widget
+```
+
+---
+
+# 4️⃣ Announcement
+
+System-wide announcements.
+
+```python
+class Announcement(models.Model):
+    title
+
+    message
+
+    start_date
+
+    end_date
+
+    is_active
+```
+
+---
+
+Examples:
+
+```text
+Scheduled Maintenance
+
+New Service Launch
+
+Holiday Notice
+```
+
+---
+
+# 5️⃣ ActivityFeed
+
+Recent system activities.
+
+```python
+class ActivityFeed(models.Model):
+    user
+
+    activity
+
+    module
+
+    created_at
+```
+
+---
+
+Examples:
+
+```text
+Invoice Created
+
+Ticket Closed
+
+Client Registered
+```
+
+---
+
+# 6️⃣ SystemNotification
+
+Global notifications.
+
+```python
+class SystemNotification(models.Model):
+    title
+
+    message
+
+    notification_type
+
+    created_at
+```
+
+---
+
+# 7️⃣ AuditTrail
+
+System-wide auditing.
+
+```python
+class AuditTrail(models.Model):
+    user
+
+    action
+
+    module
+
+    ip_address
+
+    created_at
+```
+
+---
+
+# 🔗 Relationships
+
+```text
+Core App
+      ↓
+ ┌─────────────┬─────────────┬─────────────┐
+ ↓             ↓             ↓
+Accounts    Finance      Tickets
+ ↓             ↓             ↓
+Tracking    Services     Clients
+```
+
+---
+
+# 📊 Unified Dashboard
+
+One dashboard adapts based on the logged-in user's role.
+
+---
+
+## Super Admin Dashboard
+
+Shows:
+
+```text
+Total Users
+Total Clients
+Open Tickets
+Revenue
+System Health
+Online Users
+```
+
+---
+
+## Admin Dashboard
+
+Shows:
+
+```text
+New Clients
+Open Tickets
+Projects
+Notifications
+```
+
+---
+
+## Finance Dashboard
+
+Shows:
+
+```text
+Revenue
+Outstanding Invoices
+Expenses
+Profit
+```
+
+---
+
+## Technician Dashboard
+
+Shows:
+
+```text
+Assigned Tickets
+Today's Tasks
+Completed Tickets
+```
+
+---
+
+## Client Dashboard
+
+Shows:
+
+```text
+My Services
+My Tickets
+My Quotations
+My Invoices
+```
+
+---
+
+# ⚙️ How Dashboard Works
+
+Instead of:
+
+```text
+finance/dashboard/
+ticket/dashboard/
+client/dashboard/
+```
+
+Use:
+
+```text
+dashboard/
+```
+
+The system loads widgets according to user roles.
+
+Example:
+
+```python
+if user.is_finance:
+    show_finance_widgets()
+
+if user.is_technician:
+    show_ticket_widgets()
+```
+
+---
+
+# 🌐 Global Search
+
+Search across the entire system.
+
+Example:
+
+```text
+Search:
+ABC School
+```
+
+Returns:
+
+```text
+Client
+Invoices
+Tickets
+Services
+Projects
+```
+
+---
+
+# 🎨 Branding Management
+
+Admin can configure:
+
+* Logo
+* Favicon
+* Theme Colors
+* Footer
+* Contact Information
+
+Used automatically in:
+
+* PDFs
+* Quotations
+* Invoices
+* Reports
+* Portal
+
+---
+
+# ⚡ Real-Time Features
+
+Using:
+
+* Redis
+* Django Channels
+* WebSockets
+
+---
+
+## Live Dashboard Updates
+
+```text
+New Ticket Created
+↓
+Dashboard Updates Instantly
+```
+
+---
+
+## Live Revenue
+
+```text
+Payment Recorded
+↓
+Revenue Widget Updates
+```
+
+---
+
+## Live Notifications
+
+```text
+New Client Registered
+↓
+Admin Notified
+```
+
+---
+
+## Online Users
+
+```text
+12 Users Online
+```
+
+Updated instantly.
+
+---
+
+# 📈 Dashboard KPIs
+
+System-wide metrics:
+
+### Users
+
+```text
+Total Users
+Active Users
+Online Users
+```
+
+---
+
+### Clients
+
+```text
+Total Clients
+New Clients
+```
+
+---
+
+### Services
+
+```text
+Active Services
+Most Requested Services
+```
+
+---
+
+### Tickets
+
+```text
+Open Tickets
+Resolved Tickets
+SLA Compliance
+```
+
+---
+
+### Finance
+
+```text
+Revenue
+Expenses
+Profit
+Outstanding Invoices
+```
+
+---
+
+# 🔐 Permissions
+
+Only administrators can:
+
+* Configure settings
+* Change branding
+* Manage announcements
+* Enable maintenance mode
+
+Regular users only see dashboard information relevant to their roles.
+
+---
+
+# 📋 Views (Class-Based Views)
+
+```python
+DashboardView
+
+SiteConfigurationView
+SiteConfigurationUpdateView
+
+AnnouncementListView
+AnnouncementCreateView
+
+ActivityFeedView
+
+AuditTrailView
+```
+
+---
+
+# 📋 Forms
+
+```python
+SiteConfigurationForm
+
+AnnouncementForm
+
+DashboardPreferenceForm
+```
+
+---
+
+# 🤖 AI Integration
+
+The Core Dashboard becomes the main place where AI insights are displayed.
+
+Examples:
+
+```text
+Revenue expected to increase 15%
+
+Top client at risk of churn
+
+Most profitable service:
+Web Development
+
+Technician workload high
+```
+
+---
+
+# 🎯 Main Goal of the Core App
+
+> **To provide a centralized control center that manages system-wide settings, branding, dashboards, navigation, notifications, monitoring, and shared functionality while delivering a personalized real-time experience for every user of the Pritech System.**
+
+## Position Within Pritech ERP Architecture
+
+```text
+                    Core App
+                        │
+ ┌──────────────┬──────────────┬──────────────┐
+ │              │              │
+Accounts      Clients       Portfolio
+ │              │              │
+Services      Tickets       Finance
+ │              │              │
+Tracking    Notifications   AI Engine
+```
+
+The **Core App is the brain of the system**, coordinating all modules and providing the single entry point (dashboard) through which users interact with the entire Pritech ERP platform. 🚀🏢📊🔐
