@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Service Requests (Staff){% endblock %}
+{% block page_title %}Service Request Management{% endblock %}
+
+{% block extra_css %}
+<style>
+  .request-card {
+    transition: all 0.2s;
+  }
+  .request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .filter-bar {
+    background: var(--card-bg);
+    border-radius: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1><i class="bi bi-clipboard-data me-2"></i>Service Requests</h1>
+  <p class="text-muted">Review, approve, reject, and assign technician for client service requests.</p>
+</div>
+
+<!-- Filter bar -->
+<div class="card filter-bar border-0 shadow-sm mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="">All</option>
+          {% for code, label in status_choices %}
+            <option value="{{ code }}" {% if current_status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Client / Service</label>
+        <input type="text" name="q" class="form-control" placeholder="Search..." value="{{ request.GET.q|default:'' }}">
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Requests list -->
+<div class="row g-3">
+  {% for req in requests %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card request-card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-0">{{ req.service.name }}</h5>
+            <span class="badge bg-{% if req.status == 'pending' %}secondary{% elif req.status == 'approved' %}success{% elif req.status == 'rejected' %}danger{% elif req.status == 'quoted' %}primary{% elif req.status == 'in_progress' %}warning{% elif req.status == 'completed' %}info{% else %}dark{% endif %}">
+              {{ req.get_status_display }}
+            </span>
+          </div>
+          <p class="card-text small text-muted">{{ req.client.name }}</p>
+          <p class="card-text small">{{ req.description|truncatechars:100 }}</p>
+          <div class="text-muted small mb-3">Requested: {{ req.requested_at|date:"Y-m-d H:i" }}</div>
+
+          <!-- Actions based on status -->
+          <div class="d-flex gap-2 flex-wrap">
+            {% if req.status == 'pending' %}
+              <form method="post" action="{% url 'approve_service_request' req.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-circle"></i> Approve</button>
+              </form>
+              <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ req.pk }}">
+                <i class="bi bi-x-circle"></i> Reject
+              </button>
+            {% elif req.status == 'quoted' %}
+              <form method="post" action="{% url 'assign_technician' req.pk %}" class="d-flex gap-1">
+                {% csrf_token %}
+                <select name="technician_id" class="form-select form-select-sm" required>
+                  <option value="">Assign tech...</option>
+                  {% for tech in all_technicians %}
+                    <option value="{{ tech.pk }}">{{ tech.get_full_name|default:tech.email }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary">Assign</button>
+              </form>
+            {% elif req.status == 'in_progress' %}
+              <span class="badge bg-warning">In progress</span>
+            {% elif req.status == 'completed' %}
+              <span class="badge bg-success">Completed</span>
+            {% endif %}
+            {% if req.quotation %}
+              <a href="{% url 'quotation_detail' req.quotation.pk %}" class="btn btn-sm btn-outline-info">View Quotation</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rejection Modal -->
+    <div class="modal fade" id="rejectModal{{ req.pk }}" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <form method="post" action="{% url 'reject_service_request' req.pk %}">
+            {% csrf_token %}
+            <div class="modal-header bg-danger text-white">
+              <h5 class="modal-title">Reject Service Request</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p>Provide a reason for rejecting the request for <strong>{{ req.service.name }}</strong> from <strong>{{ req.client.name }}</strong>.</p>
+              <textarea name="reason" rows="4" class="form-control" placeholder="e.g., Service not available in your region, missing information, etc." required></textarea>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12">
+      <div class="empty-state py-5">
+        <div class="empty-icon">📭</div>
+        <h5>No service requests found</h5>
+        <p class="text-muted">All caught up!</p>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}&q={{ request.GET.q|default:'' }}">Previous</a></li>
+    {% endif %}
+    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ current_status }}&q={{ request.GET.q|default:'' }}">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}My Assignments{% endblock %}
+{% block page_title %}My Assigned Service Requests{% endblock %}
+
+{% block content %}
+<div class="page-header"><h1>My Assignments</h1></div>
+
+{% if assignments %}
+<div class="table-responsive">
+  <table class="modern-table">
+    <thead><tr><th>Client</th><th>Service</th><th>Assigned</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for ass in assignments %}
+      <tr>
+        <td>{{ ass.service_request.client.name }}</td>
+        <td>{{ ass.service_request.service.name }}</td>
+        <td>{{ ass.assigned_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ ass.service_request.get_status_display }}</td>
+        <td><form method="post" action="{% url 'complete_assignment' ass.pk %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-success">Mark Completed</button></form></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}<div class="card"><div class="card-body"><div class="empty-state"><div class="empty-icon">✅</div><p>No active assignments.</p></div></div></div>{% endif %}
+{% endblock %}

@@ -6,7 +6,11 @@
 
 {% block extra_css %}
 <style>
-  /* ========== SCREEN STYLES ========== */
+  /* =======================================================================
+     QUOTATION DETAIL – RESPONSIVE, PRINT‑FRIENDLY, DARK MODE READY
+     ======================================================================= */
+
+  /* ---- Status badge (colored) ---- */
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -30,6 +34,7 @@
   [data-theme="dark"] .status-rejected  { background: #7f1d1d; color: #fca5a5; }
   [data-theme="dark"] .status-expired   { background: #451a03; color: #fcd34d; }
 
+  /* ---- Client feedback alert ---- */
   .feedback-alert {
     border-left: 4px solid #f59e0b;
     background: var(--bg-tertiary);
@@ -38,7 +43,7 @@
     margin-bottom: 1.5rem;
   }
 
-  /* Responsive header and action buttons */
+  /* ---- Header and action buttons (responsive) ---- */
   .detail-header {
     display: flex;
     flex-wrap: wrap;
@@ -53,7 +58,8 @@
     gap: 0.5rem;
   }
   @media (max-width: 576px) {
-    .action-buttons .btn, .action-buttons .dropdown {
+    .action-buttons .btn,
+    .action-buttons .dropdown {
       width: 100%;
     }
     .action-buttons .dropdown-toggle {
@@ -62,7 +68,7 @@
     }
   }
 
-  /* Info grid (client, dates, total) */
+  /* ---- Info grid (client, dates, total) ---- */
   .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -86,33 +92,21 @@
     margin-top: 0.25rem;
   }
 
-  /* Desktop table (hidden on mobile) */
+  /* ---- Items: desktop table, mobile cards (hide/show) ---- */
+  @media (min-width: 769px) {
+    .mobile-items { display: none; }
+  }
   @media (max-width: 768px) {
-    .desktop-table {
-      display: none;
-    }
+    .desktop-table { display: none; }
+    .mobile-items { display: flex; flex-direction: column; gap: 0.8rem; }
   }
 
-  /* Mobile cards (hidden on desktop) */
-  .mobile-items {
-    display: none;
-  }
-  @media (max-width: 768px) {
-    .mobile-items {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-    }
-  }
   .item-card {
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 16px;
     padding: 1rem;
     transition: all 0.2s;
-  }
-  .item-card:hover {
-    border-color: var(--primary);
   }
   .item-desc {
     font-weight: 700;
@@ -146,7 +140,7 @@
     text-align: right;
   }
 
-  /* Totals block */
+  /* ---- Totals block ---- */
   .totals-block {
     max-width: 320px;
     margin-left: auto;
@@ -161,7 +155,7 @@
     }
   }
 
-  /* Print styles */
+  /* ---- Print styles (clean paper) ---- */
   @media print {
     .action-buttons, .dropdown, .btn, .no-print {
       display: none !important;
@@ -187,7 +181,7 @@
 
 {% block content %}
 <div class="container py-3 py-md-4">
-  <!-- Header -->
+  <!-- ==================== HEADER ==================== -->
   <div class="detail-header">
     <div>
       <nav aria-label="breadcrumb">
@@ -205,7 +199,7 @@
       </div>
     </div>
     <div class="action-buttons">
-      <!-- Export Dropdown -->
+      <!-- Export dropdown -->
       <div class="dropdown">
         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
           <i class="bi bi-download"></i> Export
@@ -216,22 +210,27 @@
           <li><a class="dropdown-item" href="{% url 'quotation_excel' quotation.pk %}"><i class="bi bi-file-excel"></i> Excel (.xlsx)</a></li>
         </ul>
       </div>
+
       {% if quotation.status == 'draft' %}
         <a href="{% url 'quotation_update' quotation.pk %}" class="btn btn-primary btn-sm">Edit</a>
         <form method="post" action="{% url 'quotation_send' quotation.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-success btn-sm">Send</button></form>
         <form method="post" action="{% url 'quotation_duplicate' quotation.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-secondary btn-sm">Duplicate</button></form>
+        <!-- ✅ CORRECT: simple GET link to confirmation page (DeleteView shows confirmation on GET) -->
+        <a href="{% url 'quotation_delete' quotation.pk %}" class="btn btn-danger btn-sm">
+          <i class="bi bi-trash3"></i> Delete
+        </a>
       {% elif quotation.status == 'sent' %}
         <button class="btn btn-secondary btn-sm" disabled>Sent</button>
         {% if perms.finance.can_convert_quotation %}
-          <form method="post" action="{% url 'quotation_convert' quotation.pk %}">{% csrf_token %}<button class="btn btn-warning btn-sm">Convert</button></form>
+          <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-warning btn-sm">Convert</button></form>
         {% endif %}
       {% elif quotation.status == 'approved' and perms.finance.can_convert_quotation %}
-        <form method="post" action="{% url 'quotation_convert' quotation.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm">Convert</button></form>
+        <form method="post" action="{% url 'quotation_convert' quotation.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-success btn-sm">Convert</button></form>
       {% endif %}
     </div>
   </div>
 
-  <!-- Client rejection feedback (if any) -->
+  <!-- ==================== CLIENT REJECTION FEEDBACK ==================== -->
   {% if quotation.status == 'rejected' and quotation.client_feedback %}
   <div class="feedback-alert mb-4 no-print">
     <div class="d-flex gap-2">
@@ -245,7 +244,7 @@
   </div>
   {% endif %}
 
-  <!-- Info grid -->
+  <!-- ==================== INFO GRID ==================== -->
   <div class="info-grid">
     <div class="info-card">
       <div class="info-label">Client</div>
@@ -266,7 +265,7 @@
     </div>
   </div>
 
-  <!-- ========== DESKTOP TABLE ========== -->
+  <!-- ==================== LINE ITEMS (DESKTOP TABLE) ==================== -->
   <div class="desktop-table">
     <div class="card">
       <div class="card-body p-0">
@@ -289,8 +288,7 @@
                 <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
               </tr>
               {% empty %}
-              <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td></tr>
-              {% endfor %}
+              <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td>{% endfor %}
             </tbody>
           </table>
         </div>
@@ -298,7 +296,7 @@
     </div>
   </div>
 
-  <!-- ========== MOBILE CARDS ========== -->
+  <!-- ==================== LINE ITEMS (MOBILE CARDS) ==================== -->
   <div class="mobile-items">
     {% for item in items %}
     <div class="item-card">
@@ -323,7 +321,7 @@
     {% endfor %}
   </div>
 
-  <!-- Totals block -->
+  <!-- ==================== TOTALS BLOCK ==================== -->
   <div class="mt-4">
     <div class="totals-block">
       <div class="d-flex justify-content-between py-1">
@@ -341,7 +339,7 @@
     </div>
   </div>
 
-  <!-- Notes -->
+  <!-- ==================== NOTES ==================== -->
   {% if quotation.notes %}
   <div class="mt-4 p-3 bg-light rounded small">
     <strong class="d-block mb-1">Notes</strong>

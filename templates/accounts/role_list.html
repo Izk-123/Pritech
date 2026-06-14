@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Roles{% endblock %}
+{% block page_title %}Roles{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div><div class="page-breadcrumb">Staff Admin</div><h1>Roles</h1></div>
+  <a href="{% url 'role_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add Role</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="table-responsive">
+      <table class="modern-table">
+        <thead><tr><th>Code</th><th>Name</th><th>Description</th><th>Actions</th></tr></thead>
+        <tbody>
+          {% for role in roles %}
+          <tr>
+            <td><code>{{ role.code }}</code></td>
+            <td>{{ role.name }}</td>
+            <td>{{ role.description|truncatechars:50 }}</td>
+            <td>
+              <a href="{% url 'role_update' role.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+              <a href="{% url 'role_delete' role.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4">No roles yet. <a href="{% url 'role_create' %}">Create one</a>.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -12,30 +12,7 @@
 
 {% block extra_css %}
 <style>
-  /* Mobile-first adjustments */
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  }
-  .filter-bar .filter-search-wrap {
-    flex: 1 1 200px;
-  }
-  .filter-bar select {
-    flex: 1 1 150px;
-  }
-  @media (max-width: 576px) {
-    .filter-bar {
-      flex-direction: column;
-    }
-    .filter-bar .filter-search-wrap,
-    .filter-bar select {
-      width: 100%;
-    }
-  }
-
-  /* Status badges */
+  /* ── Status badges (colored) ── */
   .status-badge {
     display: inline-flex;
     align-items: center;
@@ -45,6 +22,7 @@
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
   .status-draft     { background: #e2e8f0; color: #475569; }
   .status-sent      { background: #dbeafe; color: #1d4ed8; }
@@ -52,6 +30,30 @@
   .status-converted { background: #f3e8ff; color: #7e22ce; }
   .status-rejected  { background: #fee2e2; color: #b91c1c; }
   .status-expired   { background: #fef9c3; color: #92400e; }
+
+  /* Dark mode overrides */
+  [data-theme="dark"] .status-sent      { background: #1e3a5f; color: #93c5fd; }
+  [data-theme="dark"] .status-approved  { background: #14532d; color: #86efac; }
+  [data-theme="dark"] .status-converted { background: #3b0764; color: #d8b4fe; }
+  [data-theme="dark"] .status-rejected  { background: #7f1d1d; color: #fca5a5; }
+  [data-theme="dark"] .status-expired   { background: #451a03; color: #fcd34d; }
+  [data-theme="dark"] .status-draft     { background: #334155; color: #cbd5e1; }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .filter-search-wrap {
+    flex: 1 1 200px;
+  }
+  @media (max-width: 576px) {
+    .filter-bar {
+      flex-direction: column;
+    }
+  }
 
   /* Mobile cards */
   .quotation-card-list {
@@ -68,7 +70,6 @@
   }
   .quotation-card:hover {
     border-color: var(--primary);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
   .card-header-flex {
     display: flex;
@@ -119,6 +120,54 @@
     border-radius: 20px;
     background: var(--bg-primary);
   }
+
+  /* Desktop table styles */
+  .q-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .q-table th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 0.65rem 1rem;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+  }
+  .q-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+  }
+  .q-table tbody tr:hover {
+    background: var(--hover-bg);
+  }
+  .q-num a {
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: none;
+  }
+  .q-num a:hover {
+    text-decoration: underline;
+  }
+  .q-amount {
+    font-weight: 700;
+    text-align: right;
+  }
+  .q-expired {
+    color: var(--danger) !important;
+    font-weight: 600;
+  }
+  .q-table-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+  }
 </style>
 {% endblock %}
 
@@ -151,80 +200,83 @@
 {% endblock %}
 
 {% block table_head %}
-<!-- Desktop table (hidden on mobile) -->
-<div class="d-none d-md-block">
-  <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Quotation #</th>
-          <th>Client</th>
-          <th>Issue Date</th>
-          <th>Valid Until</th>
-          <th class="text-end">Total</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="quotation-table-body">
-        {% for obj in object_list %}
-          {% include "finance/partials/quotation_rows.html" with q=obj %}
-        {% empty %}
-        <tr><td colspan="7" class="text-center py-4 text-muted">No quotations found.{% endfor %}
-      </tbody>
-    </table>
+<!-- Container that HTMX will replace -->
+<div id="quotation-results">
+  <!-- Desktop table (hidden on mobile) -->
+  <div class="d-none d-md-block q-table-card">
+    <div class="table-responsive">
+      <table class="q-table">
+        <thead>
+          <tr>
+            <th>Quotation #</th>
+            <th>Client</th>
+            <th>Issue Date</th>
+            <th>Valid Until</th>
+            <th class="text-end">Total</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for q in object_list %}
+            {% include "finance/partials/quotation_rows.html" with q=q %}
+          {% empty %}
+          <tr><td colspan="7" class="text-center py-4">No quotations found.{% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<!-- Mobile cards (visible on small screens) -->
-<div id="quotation-results" class="d-md-none">
-  <div class="quotation-card-list">
-    {% for obj in object_list %}
-      <div class="quotation-card">
-        <div class="card-header-flex">
-          <a href="{% url 'quotation_detail' obj.pk %}" class="card-number">{{ obj.quotation_number }}</a>
-          <span class="status-badge status-{{ obj.status }}">{{ obj.get_status_display }}</span>
+  <!-- Mobile cards (visible on small screens) -->
+  <div class="d-md-none">
+    <div class="quotation-card-list">
+      {% for q in object_list %}
+        <div class="quotation-card">
+          <div class="card-header-flex">
+            <a href="{% url 'quotation_detail' q.pk %}" class="card-number">{{ q.quotation_number }}</a>
+            <span class="status-badge status-{{ q.status }}">{{ q.get_status_display }}</span>
+          </div>
+          <div class="card-meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Client</span>
+              <span class="meta-value">{{ q.client.name|truncatechars:30 }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Total</span>
+              <span class="meta-value amount">{{ site_config.currency_symbol }}{{ q.total_amount|floatformat:0 }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Issue Date</span>
+              <span class="meta-value">{{ q.issue_date }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Valid Until</span>
+              <span class="meta-value {% if q.valid_until < today %}text-danger{% endif %}">{{ q.valid_until }}</span>
+            </div>
+          </div>
+          <div class="card-footer-actions">
+            <select class="form-select form-select-sm status-select-mobile w-auto"
+                    data-url="{% url 'update_quotation_status' q.pk %}">
+              {% for val, label in q.STATUS_CHOICES %}
+                <option value="{{ val }}" {% if q.status == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <a href="{% url 'quotation_detail' q.pk %}" class="btn btn-sm btn-outline-primary">View →</a>
+          </div>
         </div>
-        <div class="card-meta-grid">
-          <div class="meta-item">
-            <span class="meta-label">Client</span>
-            <span class="meta-value">{{ obj.client.name|truncatechars:30 }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Total</span>
-            <span class="meta-value amount">{{ site_config.currency_symbol }}{{ obj.total_amount|floatformat:0 }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Issue Date</span>
-            <span class="meta-value">{{ obj.issue_date }}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">Valid Until</span>
-            <span class="meta-value {% if obj.valid_until < today %}text-danger{% endif %}">{{ obj.valid_until }}</span>
-          </div>
-        </div>
-        <div class="card-footer-actions">
-          <select class="form-select form-select-sm status-select-mobile w-auto"
-                  data-url="{% url 'update_quotation_status' obj.pk %}">
-            {% for val, label in obj.STATUS_CHOICES %}
-              <option value="{{ val }}" {% if obj.status == val %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-          <a href="{% url 'quotation_detail' obj.pk %}" class="btn btn-sm btn-outline-primary">View →</a>
-        </div>
-      </div>
-    {% empty %}
-      <div class="text-center py-4 text-muted">No quotations found.</div>
-    {% endfor %}
+      {% empty %}
+        <div class="text-center py-4 text-muted">No quotations found.</div>
+      {% endfor %}
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Status change via AJAX (works for both desktop select and mobile select)
+  // Handle status change on mobile select via AJAX
   document.body.addEventListener('change', function(e) {
-    if (e.target.classList.contains('status-select-mobile') || e.target.classList.contains('status-select')) {
+    if (e.target.classList.contains('status-select-mobile')) {
       const select = e.target;
       const url = select.dataset.url;
       if (!url) return;
@@ -238,7 +290,7 @@
       })
       .then(r => r.text())
       .then(html => {
-        // Replace select with badge (or keep as select? better to show badge)
+        // Replace select with badge (optional, or keep select)
         const badgeHtml = `<span class="status-badge status-${select.value}">${select.options[select.selectedIndex].text}</span>`;
         select.outerHTML = badgeHtml;
       })

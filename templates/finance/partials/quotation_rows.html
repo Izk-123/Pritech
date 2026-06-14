@@ -9,17 +9,13 @@
   <td style="font-size:0.82rem;" class="{% if q.valid_until < today %}q-expired{% endif %}">{{ q.valid_until }}</td>
   <td style="text-align:right;" class="q-amount">{{ site_config.currency_symbol }}{{ q.total_amount|floatformat:0 }}</td>
   <td>
-    <select class="status-select"
-            data-url="{% url 'update_quotation_status' q.pk %}">
-      {% for val, label in q.STATUS_CHOICES %}
-        <option value="{{ val }}" {% if q.status == val %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
+    <span class="status-badge status-{{ q.status }}">
+      <i class="bi bi-{% if q.status == 'approved' %}check-circle{% elif q.status == 'sent' %}send{% elif q.status == 'converted' %}arrow-repeat{% elif q.status == 'rejected' %}x-circle{% elif q.status == 'expired' %}clock-history{% else %}pencil-square{% endif %}"></i>
+      {{ q.get_status_display }}
+    </span>
   </td>
   <td class="q-actions">
-    <a href="{% url 'quotation_detail' q.pk %}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-eye"></i>
-    </a>
+    <a href="{% url 'quotation_detail' q.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
   </td>
 </tr>
 {% empty %}
@@ -28,7 +24,6 @@
     <div class="q-empty">
       <i class="bi bi-file-earmark-text q-empty-icon"></i>
       <div class="q-empty-title">No quotations found</div>
-      <div style="font-size:0.82rem;">Try adjusting your search filter.</div>
     </div>
   </td>
 </tr>

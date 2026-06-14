@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Maintenance Mode{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <i class="bi bi-tools display-1 text-warning"></i>
+  <h1 class="mt-3">Under Maintenance</h1>
+  <p class="lead">We're currently performing scheduled maintenance. Please check back soon.</p>
+  <p class="text-muted">If you are a staff member, please log in first.</p>
+  <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+</div>
+{% endblock %}

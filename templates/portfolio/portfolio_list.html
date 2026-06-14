@@ -1,0 +1,557 @@
+{% extends "portfolio/base.html" %}
+{% load static %}
+
+{% block title %}Portfolio – Pritech ICT Solutions{% endblock %}
+{% block meta_description %}Explore our portfolio of ICT projects — from network infrastructure and custom software to cloud migrations and cybersecurity implementations across Malawi.{% endblock %}
+
+{% block og_title %}Our Portfolio – Pritech ICT Solutions{% endblock %}
+{% block og_description %}Discover the innovative ICT projects Pritech has delivered for clients across Malawi and beyond.{% endblock %}
+
+{% block content %}
+
+{# ── Page hero ─────────────────────────────────────────────────── #}
+<section class="page-hero" aria-labelledby="portfolio-list-heading">
+  <div class="container">
+    <div class="page-hero-inner reveal">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}">Home</a>
+        <i class="fa-solid fa-chevron-right fa-xs" aria-hidden="true"></i>
+        <span aria-current="page">Portfolio</span>
+      </nav>
+      <span class="section-tag">
+        <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
+        Our Work
+      </span>
+      <h1 id="portfolio-list-heading">Projects We're Proud Of</h1>
+      <p>From enterprise networking to bespoke software, here's how we've helped businesses grow with technology.</p>
+    </div>
+  </div>
+</section>
+
+{# ── Filters bar ───────────────────────────────────────────────── #}
+<section class="section" style="padding-top:var(--space-8);padding-bottom:0;" aria-label="Filter projects">
+  <div class="container">
+    <form method="get" action="" class="portfolio-filters reveal" id="filterForm" aria-label="Search and filter portfolio">
+
+      {# Search input #}
+      <div class="filter-search">
+        <label for="portfolioSearch" class="sr-only">Search projects</label>
+        <i class="fa-solid fa-magnifying-glass filter-search-icon" aria-hidden="true"></i>
+        <input type="text"
+               id="portfolioSearch"
+               name="q"
+               class="filter-search-input"
+               placeholder="Search projects, clients, keywords…"
+               value="{{ search_query }}"
+               autocomplete="off"
+               aria-label="Search portfolio projects" />
+        {% if search_query %}
+        <a href="{% url 'portfolio_list' %}" class="filter-clear-btn" aria-label="Clear search">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+      </div>
+
+      {# Category filter #}
+      <div class="filter-group" role="group" aria-label="Filter by category">
+        <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if current_tech %}tech={{ current_tech }}{% endif %}"
+           class="filter-chip {% if not current_category %}active{% endif %}">
+          All
+        </a>
+        {% for cat in categories %}
+        <a href="?{% if search_query %}q={{ search_query }}&{% endif %}category={{ cat.slug }}{% if current_tech %}&tech={{ current_tech }}{% endif %}"
+           class="filter-chip {% if current_category == cat.slug %}active{% endif %}">
+          {% if cat.icon %}<i class="{{ cat.icon }}" aria-hidden="true"></i>{% endif %}
+          {{ cat.name }}
+        </a>
+        {% endfor %}
+      </div>
+
+      {# Technology filter #}
+      {% if technologies %}
+      <div class="filter-group" style="border-top:1px solid var(--border);padding-top:var(--space-4);" role="group" aria-label="Filter by technology">
+        <span class="filter-label">Tech:</span>
+        <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if current_category %}category={{ current_category }}{% endif %}"
+           class="filter-chip filter-chip--tech {% if not current_tech %}active{% endif %}">
+          All
+        </a>
+        {% for tech in technologies %}
+        <a href="?{% if search_query %}q={{ search_query }}&{% endif %}{% if current_category %}category={{ current_category }}&{% endif %}tech={{ tech.pk }}"
+           class="filter-chip filter-chip--tech {% if current_tech == tech.pk|stringformat:'s' %}active{% endif %}">
+          {% if tech.icon %}<i class="{{ tech.icon }}" aria-hidden="true"></i>{% endif %}
+          {{ tech.name }}
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
+</section>
+
+{# ── Projects grid ─────────────────────────────────────────────── #}
+<section class="section" aria-live="polite" aria-label="Portfolio projects">
+  <div class="container">
+
+    {# Results count #}
+    {% if search_query or current_category or current_tech %}
+    <p class="results-count reveal" aria-live="polite">
+      {% with projects.paginator.count as total %}
+        Showing <strong>{{ total }}</strong> project{{ total|pluralize }}
+        {% if search_query %} matching <em>"{{ search_query }}"</em>{% endif %}
+        {% if current_category %} in <em>{{ categories|dictsort:"slug"|first }}{{ current_category }}</em>{% endif %}
+      {% endwith %}
+    </p>
+    {% endif %}
+
+    {% if projects %}
+    <div class="portfolio-grid portfolio-grid--list" id="projectsGrid">
+      {% for project in projects %}
+      <article class="project-card project-card--full reveal reveal-delay-{{ forloop.counter|divisibleby:3|yesno:'3,2,1' }}"
+               aria-label="{{ project.title }}">
+
+        <a href="{{ project.get_absolute_url }}" class="project-card-link" aria-label="View {{ project.title }} project details">
+
+          {# Image #}
+          <div class="project-img-wrap">
+            {% if project.featured_image %}
+              <img src="{{ project.featured_image.url }}"
+                   alt="{{ project.title }}"
+                   loading="lazy"
+                   width="600" height="375" />
+            {% else %}
+              <div class="project-img-placeholder">
+                <i class="fa-solid fa-laptop-code" aria-hidden="true"></i>
+              </div>
+            {% endif %}
+
+            {# Overlay #}
+            <div class="project-overlay" aria-hidden="true">
+              <span class="project-overlay-cta">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                View Project
+              </span>
+            </div>
+
+            {# Category badge #}
+            {% if project.category %}
+            <span class="project-cat-badge" aria-label="Category: {{ project.category.name }}">
+              {% if project.category.icon %}<i class="{{ project.category.icon }}" aria-hidden="true"></i>{% endif %}
+              {{ project.category.name }}
+            </span>
+            {% endif %}
+          </div>
+
+          {# Body #}
+          <div class="project-body">
+            {% if project.client_name %}
+            <p class="project-client">
+              <i class="fa-regular fa-building fa-xs" aria-hidden="true"></i>
+              {{ project.client_name }}
+            </p>
+            {% endif %}
+
+            <h2 class="project-title">{{ project.title }}</h2>
+
+            {% if project.description %}
+            <p class="project-excerpt">
+              {{ project.description.html|striptags|truncatechars:120 }}
+            </p>
+            {% endif %}
+
+            {# Technologies #}
+            {% if project.technologies.all %}
+            <div class="project-techs" aria-label="Technologies used">
+              {% for tech in project.technologies.all|slice:":4" %}
+              <span class="tech-tag">
+                {% if tech.icon %}<i class="{{ tech.icon }}" aria-hidden="true"></i>{% endif %}
+                {{ tech.name }}
+              </span>
+              {% endfor %}
+              {% if project.technologies.count > 4 %}
+              <span class="tech-tag tech-tag--more">+{{ project.technologies.count|add:"-4" }}</span>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {# Footer #}
+            <div class="project-card-footer">
+              {% if project.completion_date %}
+              <span class="project-date">
+                <i class="fa-regular fa-calendar fa-xs" aria-hidden="true"></i>
+                {{ project.completion_date|date:"M Y" }}
+              </span>
+              {% endif %}
+              <span class="project-cta-link">
+                View details <i class="fa-solid fa-arrow-right fa-xs" aria-hidden="true"></i>
+              </span>
+            </div>
+          </div>
+
+        </a>
+      </article>
+      {% endfor %}
+    </div>
+
+    {# ── Pagination ───────────────────────────────────────────── #}
+    {% if is_paginated %}
+    <nav class="pagination" aria-label="Pagination">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tech %}&tech={{ current_tech }}{% endif %}"
+         class="page-btn" aria-label="Previous page">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+      </a>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <span class="page-btn page-btn--active" aria-current="page" aria-label="Page {{ num }}">{{ num }}</span>
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+        <a href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tech %}&tech={{ current_tech }}{% endif %}"
+           class="page-btn" aria-label="Page {{ num }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_tech %}&tech={{ current_tech }}{% endif %}"
+         class="page-btn" aria-label="Next page">
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </a>
+      {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    {# Empty state #}
+    <div class="empty-state reveal" role="status">
+      <div class="empty-state-icon" aria-hidden="true">🔍</div>
+      <h2>No projects found</h2>
+      <p>
+        {% if search_query %}
+          No projects match "<strong>{{ search_query }}</strong>". Try a different search term.
+        {% else %}
+          No projects in this category yet. Check back soon!
+        {% endif %}
+      </p>
+      <a href="{% url 'portfolio_list' %}" class="btn btn-primary">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        View all projects
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+{# ── CTA strip ─────────────────────────────────────────────────── #}
+<section class="cta-strip reveal" aria-label="Get started with Pritech">
+  <div class="container">
+    <div class="cta-strip-inner">
+      <div>
+        <h2>Ready to start your project?</h2>
+        <p>Let's build something great together — get a free consultation today.</p>
+      </div>
+      <div class="cta-strip-actions">
+        <a href="{% url 'home' %}#contact" class="btn btn-primary btn-lg">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+          Get in Touch
+        </a>
+        <a href="{% url 'home' %}#services" class="btn btn-outline btn-lg">
+          Our Services
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Page hero (reusable across inner pages) ────────────────────── */
+.page-hero {
+  padding: calc(84px + var(--space-16)) 0 var(--space-12);
+  background: var(--hero-grad);
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.page-hero::before {
+  content: '';
+  position: absolute;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14,165,233,.12) 0%, transparent 70%);
+  top: -200px; right: -100px;
+  pointer-events: none;
+}
+.page-hero-inner { max-width: 680px; margin: 0 auto; }
+.page-hero h1 { margin: var(--space-4) 0 var(--space-4); }
+.page-hero p { font-size: 1.1rem; color: var(--text-secondary); }
+
+/* Breadcrumb */
+.breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+.breadcrumb a { color: var(--text-muted); }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb [aria-current] { color: var(--text-secondary); }
+
+/* ── Filters ────────────────────────────────────────────────────── */
+.portfolio-filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5) var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+.filter-search {
+  position: relative;
+}
+.filter-search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: .9rem;
+  pointer-events: none;
+}
+.filter-search-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4) var(--space-3) 2.75rem;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: .95rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.filter-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.filter-search-input::placeholder { color: var(--text-muted); }
+.filter-clear-btn {
+  position: absolute;
+  right: .75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  width: 24px; height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+.filter-clear-btn:hover { background: var(--surface); color: var(--text-primary); }
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.filter-label {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-right: var(--space-1);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.filter-chip:hover { border-color: var(--accent); color: var(--accent); }
+.filter-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.filter-chip--tech { font-size: .8rem; }
+
+/* ── Results count ──────────────────────────────────────────────── */
+.results-count {
+  margin-bottom: var(--space-6);
+  font-size: .9rem;
+  color: var(--text-muted);
+}
+
+/* ── Portfolio grid (list page has slightly larger cards) ────────── */
+.portfolio-grid--list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+@media (min-width: 640px) {
+  .portfolio-grid--list { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .portfolio-grid--list { grid-template-columns: repeat(3, 1fr); }
+}
+
+.project-card--full { cursor: pointer; }
+.project-card-link { display: block; text-decoration: none; color: inherit; height: 100%; }
+
+.project-cat-badge {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--bg-glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.project-overlay-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: .875rem;
+  font-weight: 600;
+}
+
+.project-excerpt {
+  font-size: .875rem;
+  line-height: 1.6;
+  margin: var(--space-2) 0 var(--space-4);
+  color: var(--text-muted);
+}
+
+.project-techs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.tech-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  background: var(--accent-subtle);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-full);
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+.tech-tag--more { background: var(--surface); border-color: var(--border); color: var(--text-muted); }
+
+.project-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+.project-date { font-size: .8rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+.project-cta-link {
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: gap var(--transition-fast);
+}
+.project-card:hover .project-cta-link { gap: var(--space-2); }
+
+/* ── Pagination ─────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-12);
+  flex-wrap: wrap;
+}
+.page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px; height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: .9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+.page-btn:hover { border-color: var(--accent); color: var(--accent); }
+.page-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  font-weight: 700;
+}
+
+/* ── CTA strip ──────────────────────────────────────────────────── */
+.cta-strip {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  padding: var(--space-12) 0;
+}
+.cta-strip-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+@media (min-width: 768px) {
+  .cta-strip-inner { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+.cta-strip h2 { font-size: 1.6rem; margin-bottom: var(--space-2); }
+.cta-strip p { color: var(--text-secondary); }
+.cta-strip-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; flex-shrink: 0; }
+
+/* ── Empty state ────────────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: var(--space-20) var(--space-8);
+}
+.empty-state-icon { font-size: 4rem; margin-bottom: var(--space-4); }
+.empty-state h2 { margin-bottom: var(--space-3); }
+.empty-state p { color: var(--text-muted); margin-bottom: var(--space-6); }
+</style>
+{% endblock %}

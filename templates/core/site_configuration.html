@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Site Settings — {{ site_config.company_name|default:"Pritech" }}{% endblock %}
+{% block page_title %}Site Settings{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* floating label custom overrides */
+  .form-floating-custom {
+    margin-bottom: 1.5rem;
+  }
+  .form-floating-custom input,
+  .form-floating-custom select,
+  .form-floating-custom textarea {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1rem 0.9rem 0.6rem 0.9rem;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+  }
+  .form-floating-custom input:focus,
+  .form-floating-custom select:focus,
+  .form-floating-custom textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65, 84, 241, 0.12);
+    outline: none;
+  }
+  .form-floating-custom label {
+    position: absolute;
+    left: 0.9rem;
+    top: 0.9rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    background: transparent;
+    padding: 0 0.2rem;
+    pointer-events: none;
+    transition: all 0.2s ease;
+  }
+  .form-floating-custom input:focus ~ label,
+  .form-floating-custom input:not(:placeholder-shown) ~ label,
+  .form-floating-custom select:focus ~ label,
+  .form-floating-custom select:not([value=""]) ~ label,
+  .form-floating-custom textarea:focus ~ label,
+  .form-floating-custom textarea:not(:placeholder-shown) ~ label {
+    top: -0.5rem;
+    left: 0.8rem;
+    font-size: 0.7rem;
+    color: var(--primary);
+    background: var(--bg-primary);
+    font-weight: 500;
+  }
+
+  .section-card {
+    border-radius: 24px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .section-header {
+    background: var(--bg-tertiary);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .section-body {
+    padding: 1.5rem;
+  }
+  .form-check-input {
+    width: 2.2rem;
+    height: 1.2rem;
+    margin-top: 0;
+    cursor: pointer;
+  }
+  .form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+  hr {
+    opacity: 0.4;
+    margin: 1.5rem 0;
+  }
+
+  /* Logo upload drag & drop zone */
+  .logo-upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 20px;
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-secondary);
+  }
+  .logo-upload-area:hover,
+  .logo-upload-area.drag-over {
+    border-color: var(--primary);
+    background: var(--accent-subtle);
+  }
+  .logo-upload-area i {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .logo-preview {
+    max-width: 180px;
+    max-height: 80px;
+    margin: 0.5rem auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+  }
+  .logo-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 0.75rem;
+  }
+  .btn-icon-sm {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 768px) {
+    .section-body { padding: 1rem; }
+    .section-header { padding: 0.75rem 1rem; }
+    .logo-upload-area { padding: 1.5rem 0.5rem; }
+    .logo-preview { max-width: 140px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 py-md-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+          <i class="bi bi-sliders2 fs-4 text-primary"></i>
+        </div>
+        <div>
+          <h2 class="h4 fw-bold mb-0">Site Configuration</h2>
+          <p class="text-muted small mb-0">Manage branding, contact details, taxes and system mode</p>
+        </div>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" novalidate id="siteConfigForm">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger rounded-4 mb-4">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Company Info -->
+        <div class="section-card">
+          <div class="section-header">
+            <i class="bi bi-building me-2 text-primary"></i>
+            <strong>Company Information</strong>
+          </div>
+          <div class="section-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-floating-custom position-relative">
+                  {{ form.company_name }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>{{ form.company_name.label }}</label>
+                </div>
+                {% if form.company_name.errors %}<div class="text-danger small mt-1">{{ form.company_name.errors }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <div class="form-floating-custom position-relative">
+                  {{ form.tagline }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>{{ form.tagline.label }}</label>
+                </div>
+                {% if form.tagline.errors %}<div class="text-danger small mt-1">{{ form.tagline.errors }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold mb-2">{{ form.logo.label }}</label>
+                <!-- Hidden file input -->
+                <input type="file" name="logo" accept="image/*" id="id_logo" style="display:none;">
+                <!-- Drag & Drop zone -->
+                <div id="logoDropZone" class="logo-upload-area">
+                  <i class="bi bi-cloud-upload"></i>
+                  <div>Drag & drop or click to upload</div>
+                  <div class="small text-muted mt-1">PNG, JPG, GIF up to 5MB</div>
+                </div>
+                <!-- Preview & actions -->
+                <div id="logoPreviewContainer" class="mt-3 text-center" style="display: {% if form.instance.logo %}block{% else %}none{% endif %};">
+                  <img id="logoPreview" src="{% if form.instance.logo %}{{ form.instance.logo.url }}{% endif %}" alt="Logo preview" class="logo-preview">
+                  <div class="logo-actions">
+                    <button type="button" id="removeLogoBtn" class="btn btn-sm btn-outline-danger btn-icon-sm rounded-pill">
+                      <i class="bi bi-trash3"></i> Remove
+                    </button>
+                    <button type="button" id="changeLogoBtn" class="btn btn-sm btn-outline-secondary btn-icon-sm rounded-pill">
+                      <i class="bi bi-pencil"></i> Change
+                    </button>
+                  </div>
+                </div>
+                {% if form.logo.errors %}<div class="text-danger small mt-1">{{ form.logo.errors }}</div>{% endif %}
+                <div class="form-text text-muted">Recommended size: 200x60px (keeps aspect ratio).</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="section-card">
+          <div class="section-header">
+            <i class="bi bi-envelope me-2 text-primary"></i>
+            <strong>Contact Details</strong>
+          </div>
+          <div class="section-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-floating-custom position-relative">
+                  {{ form.email }}
+                  <input type="email" style="display:none;" placeholder=" ">
+                  <label>{{ form.email.label }}</label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-floating-custom position-relative">
+                  {{ form.phone }}
+                  <input type="tel" style="display:none;" placeholder=" ">
+                  <label>{{ form.phone.label }}</label>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-floating-custom position-relative">
+                  {{ form.address }}
+                  <textarea style="display:none;"></textarea>
+                  <label>{{ form.address.label }}</label>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="form-floating-custom position-relative">
+                  {{ form.website }}
+                  <input type="url" style="display:none;" placeholder=" ">
+                  <label>{{ form.website.label }}</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial -->
+        <div class="section-card">
+          <div class="section-header">
+            <i class="bi bi-currency-exchange me-2 text-primary"></i>
+            <strong>Financial Settings</strong>
+          </div>
+          <div class="section-body">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="form-floating-custom position-relative">
+                  {{ form.vat_rate }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>VAT rate</label>
+                </div>
+                <div class="form-text text-muted">0.175 = 17.5%</div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-floating-custom position-relative">
+                  {{ form.currency }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>Currency name</label>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-floating-custom position-relative">
+                  {{ form.currency_symbol }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>Symbol</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="form-floating-custom position-relative">
+                  {{ form.bank_name }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>Bank name</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-floating-custom position-relative">
+                  {{ form.bank_account }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>Account / IBAN</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-floating-custom position-relative">
+                  {{ form.mobile_money }}
+                  <input type="text" style="display:none;" placeholder=" ">
+                  <label>Mobile money</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Invoice footer + maintenance -->
+        <div class="section-card">
+          <div class="section-header">
+            <i class="bi bi-file-text me-2 text-primary"></i>
+            <strong>Footer & System Mode</strong>
+          </div>
+          <div class="section-body">
+            <div class="form-floating-custom position-relative mb-4">
+              {{ form.invoice_footer }}
+              <textarea style="display:none;"></textarea>
+              <label>Invoice footer text</label>
+            </div>
+            <div class="form-check form-switch d-flex align-items-center gap-3">
+              {{ form.maintenance_mode }}
+              <label class="form-check-label fw-semibold" for="{{ form.maintenance_mode.id_for_label }}">
+                Maintenance mode
+              </label>
+              <i class="bi bi-shield-shaded text-muted" data-bs-toggle="tooltip" title="When enabled, only staff can access the site"></i>
+            </div>
+            <div class="form-text mt-2">Blocks all non‑staff users, shows a maintenance page.</div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-3 justify-content-end mt-4">
+          <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+          <button type="submit" class="btn btn-primary rounded-pill px-5">
+            <i class="bi bi-check-circle me-1"></i> Save all settings
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const fileInput = document.getElementById('id_logo');
+    const dropZone = document.getElementById('logoDropZone');
+    const previewContainer = document.getElementById('logoPreviewContainer');
+    const previewImg = document.getElementById('logoPreview');
+    const removeBtn = document.getElementById('removeLogoBtn');
+    const changeBtn = document.getElementById('changeLogoBtn');
+    let currentFile = null;
+
+    // Open file picker on drop zone click
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Drag & drop events
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file (PNG, JPG, GIF).');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File too large. Max 5MB.');
+        return;
+      }
+      currentFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImg.src = e.target.result;
+        previewContainer.style.display = 'block';
+        // Update the file input's files (so Django gets it)
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Remove logo
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        // Clear file input
+        fileInput.value = '';
+        // Clear preview
+        previewContainer.style.display = 'none';
+        previewImg.src = '';
+        currentFile = null;
+        // Optional: send a signal to delete existing logo on server?
+        // For now, we rely on Django: submitting form without logo file will keep existing logo.
+        // To delete, we add a hidden field? We'll implement a "clear" checkbox approach:
+        // Add a hidden input to tell Django to delete the logo.
+        let clearInput = document.getElementById('clear_logo_flag');
+        if (!clearInput) {
+          clearInput = document.createElement('input');
+          clearInput.type = 'hidden';
+          clearInput.name = 'clear_logo';
+          clearInput.id = 'clear_logo_flag';
+          clearInput.value = '1';
+          document.getElementById('siteConfigForm').appendChild(clearInput);
+        } else {
+          clearInput.value = '1';
+        }
+      });
+    }
+
+    // Change logo (re-open picker)
+    if (changeBtn) {
+      changeBtn.addEventListener('click', () => fileInput.click());
+    }
+
+    // If there is already a logo, store the current URL and handle clear flag
+    const existingLogoUrl = "{% if form.instance.logo %}{{ form.instance.logo.url }}{% endif %}";
+    if (!existingLogoUrl) {
+      previewContainer.style.display = 'none';
+    }
+  })();
+</script>
+
+<script>
+  // activate tooltips
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Announcement{% else %}New Announcement{% endif %} — {{ site_config.company_name }}{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Announcement{% else %}Create Announcement{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-card {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .datetime-group {
+    position: relative;
+  }
+  .datetime-group input {
+    padding: 0.85rem 1rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    width: 100%;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s;
+  }
+  .datetime-group input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65, 84, 241, 0.1);
+    outline: none;
+  }
+  .datetime-group label {
+    position: absolute;
+    left: 0.9rem;
+    top: 0.85rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    transition: all 0.2s;
+    background: transparent;
+    padding: 0 0.2rem;
+  }
+  .datetime-group input:focus ~ label,
+  .datetime-group input:not(:placeholder-shown) ~ label {
+    top: -0.5rem;
+    left: 0.7rem;
+    font-size: 0.7rem;
+    color: var(--primary);
+    background: var(--bg-primary);
+  }
+  .message-area textarea {
+    resize: vertical;
+    min-height: 130px;
+  }
+  .switch-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: var(--bg-tertiary);
+    padding: 0.8rem 1.2rem;
+    border-radius: 60px;
+  }
+  .form-check-input {
+    width: 2.5rem;
+    height: 1.3rem;
+    cursor: pointer;
+  }
+  @media (max-width: 576px) {
+    .switch-wrapper {
+      border-radius: 20px;
+      justify-content: space-between;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 py-md-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <!-- header -->
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="rounded-circle bg-primary bg-opacity-10 p-3">
+          <i class="bi bi-megaphone fs-4 text-primary"></i>
+        </div>
+        <div>
+          <h2 class="h4 fw-bold mb-0">
+            {% if form.instance.pk %}Edit Announcement{% else %}New Announcement{% endif %}
+          </h2>
+          <p class="text-muted small mb-0">Inform users about important updates</p>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-4 p-md-5">
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger rounded-3 mb-4">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <!-- Title -->
+            <div class="form-floating-custom position-relative mb-4">
+              {{ form.title }}
+              <input type="text" style="display:none;" placeholder=" ">
+              <label>Title *</label>
+              <div class="invalid-feedback d-block">{{ form.title.errors|first }}</div>
+            </div>
+
+            <!-- Message -->
+            <div class="form-floating-custom position-relative mb-4 message-area">
+              {{ form.message }}
+              <textarea style="display:none;"></textarea>
+              <label>Message *</label>
+              <div class="form-text text-muted">You can use line breaks – HTML is escaped.</div>
+              <div class="invalid-feedback d-block">{{ form.message.errors|first }}</div>
+            </div>
+
+            <!-- Dates row -->
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <div class="datetime-group">
+                  {{ form.start_date }}
+                  <input type="datetime-local" style="display:none;" placeholder=" ">
+                  <label>Start date & time *</label>
+                </div>
+                <div class="invalid-feedback d-block">{{ form.start_date.errors|first }}</div>
+              </div>
+              <div class="col-md-6">
+                <div class="datetime-group">
+                  {{ form.end_date }}
+                  <input type="datetime-local" style="display:none;" placeholder=" ">
+                  <label>End date & time *</label>
+                </div>
+                <div class="invalid-feedback d-block">{{ form.end_date.errors|first }}</div>
+              </div>
+            </div>
+
+            <!-- Active switch (modern pill) -->
+            <div class="switch-wrapper mb-4">
+              <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-eye-slash text-muted"></i>
+                <span class="fw-semibold">Active status</span>
+              </div>
+              <div class="form-check form-switch m-0">
+                {{ form.is_active }}
+                <label class="form-check-label ms-2" for="{{ form.is_active.id_for_label }}">
+                  <span class="badge bg-success bg-opacity-25 text-success px-3 py-1 rounded-pill">
+                    <i class="bi bi-globe2 me-1"></i> Visible to users
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex flex-wrap gap-3 justify-content-end mt-5 pt-3 border-top">
+              <a href="{% url 'announcement_list' %}" class="btn btn-outline-secondary rounded-pill px-4">
+                <i class="bi bi-arrow-left me-1"></i> Back
+              </a>
+              <button type="submit" class="btn btn-primary rounded-pill px-5">
+                <i class="bi bi-save2 me-1"></i> 
+                {% if form.instance.pk %}Update{% else %}Publish{% endif %}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto‑add placeholder for floating labels (required for proper CSS)
+  document.querySelectorAll('.form-floating-custom input, .form-floating-custom textarea, .datetime-group input').forEach(field => {
+    if (!field.getAttribute('placeholder')) {
+      field.setAttribute('placeholder', ' ');
+    }
+  });
+</script>
+{% endblock %}

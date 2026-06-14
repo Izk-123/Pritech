@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Announcements — {{ site_config.company_name|default:"Pritech" }}{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+
+{% block extra_css %}
+<style>
+  .announcement-card {
+    transition: all 0.2s ease;
+    border-left: 4px solid var(--primary);
+  }
+  .announcement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  .announcement-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .empty-state-icon {
+    font-size: 4rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h2 class="h4 fw-semibold mb-0">
+      <i class="bi bi-megaphone me-2 text-primary"></i>System Announcements
+    </h2>
+    <a href="{% url 'announcement_create' %}" class="btn btn-primary rounded-pill px-4">
+      <i class="bi bi-plus-lg me-1"></i> New Announcement
+    </a>
+  </div>
+
+  {% if announcements %}
+    <div class="row g-4">
+      {% for announcement in announcements %}
+        <div class="col-12">
+          <div class="card announcement-card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card-body p-4">
+              <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                  <h5 class="card-title fw-semibold mb-2">{{ announcement.title }}</h5>
+                  <p class="card-text text-secondary">{{ announcement.message|linebreaksbr }}</p>
+                  <div class="announcement-meta d-flex flex-wrap gap-3 mt-3">
+                    <span><i class="bi bi-calendar3 me-1"></i> Starts: {{ announcement.start_date|date:"M d, Y H:i" }}</span>
+                    <span><i class="bi bi-calendar-check me-1"></i> Ends: {{ announcement.end_date|date:"M d, Y H:i" }}</span>
+                    <span class="badge {% if announcement.is_active %}bg-success{% else %}bg-secondary{% endif %} rounded-pill">
+                      {{ announcement.is_active|yesno:"Active,Inactive" }}
+                    </span>
+                  </div>
+                </div>
+                <div class="btn-group" role="group">
+                  <a href="{% url 'announcement_update' announcement.pk %}" class="btn btn-sm btn-outline-secondary rounded-pill me-2">
+                    <i class="bi bi-pencil"></i> Edit
+                  </a>
+                  <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" data-bs-toggle="modal" data-bs-target="#deleteModal{{ announcement.pk }}">
+                    <i class="bi bi-trash3"></i> Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal{{ announcement.pk }}" tabindex="-1" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                Are you sure you want to delete "<strong>{{ announcement.title }}</strong>"? This action cannot be undone.
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'announcement_delete' announcement.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger">Delete Permanently</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-5" aria-label="Announcements pagination">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page=1">&laquo; First</a></li>
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+
+  {% else %}
+    <div class="empty-state text-center py-5 my-5">
+      <div class="empty-state-icon mb-3">
+        <i class="bi bi-megaphone"></i>
+      </div>
+      <h4 class="h5 fw-normal">No announcements yet</h4>
+      <p class="text-muted">Create your first announcement to inform users.</p>
+      <a href="{% url 'announcement_create' %}" class="btn btn-primary rounded-pill mt-2">
+        <i class="bi bi-plus-lg me-1"></i> Create Announcement
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

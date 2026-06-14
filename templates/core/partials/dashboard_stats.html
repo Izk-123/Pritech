@@ -1,88 +1,167 @@
-{% load custom_filters %}
+{% load custom_filters account_tags %}
+{% load static %}
 
-{# ========== STAT CARDS ========== #}
-<div class="row g-3 mb-4">
+{# ========== HEADER WITH TIMESTAMP & REFRESH ========== #}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="small text-muted d-flex align-items-center gap-2">
+    <i class="bi bi-clock-history"></i>
+    <span id="live-timestamp">Last updated: {{ last_updated|default:"—" }}</span>
+    <span class="htmx-indicator spinner-border spinner-border-sm ms-2" style="display: none;"></span>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    {% if request.user|has_any_role:'SUPER_ADMIN,ADMIN' %}
+      <a href="{% url 'announcement_list' %}" class="btn btn-sm btn-outline-secondary rounded-pill">
+        <i class="bi bi-megaphone"></i> Announcements
+      </a>
+      <a href="{% url 'site_configuration' %}" class="btn btn-sm btn-outline-secondary rounded-pill">
+        <i class="bi bi-sliders"></i> Settings
+      </a>
+    {% endif %}
+    <button class="btn btn-sm btn-outline-secondary refresh-btn" 
+            hx-get="{% url 'core_dashboard_stats_partial' %}" 
+            hx-target="#dashboard-stats-container" 
+            hx-swap="outerHTML" 
+            hx-indicator="#dashboard-stats-container .htmx-indicator">
+      <i class="bi bi-arrow-repeat"></i> Refresh
+    </button>
+  </div>
+</div>
+
+{# ========== ACTIVE ANNOUNCEMENTS ========== #}
+{% if current_announcements %}
+  <div class="mb-4">
+    {% for ann in current_announcements %}
+      <div class="alert alert-warning alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+        <strong>{{ ann.title }}</strong> {{ ann.message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# ========== ONLINE USERS (staff only) ========== #}
+{% if request.user.is_staff and online_users_count %}
+  <div class="mb-3 text-end small text-muted">
+    <i class="bi bi-people-fill text-success"></i> {{ online_users_count }} user(s) online now
+  </div>
+{% endif %}
+
+{# ========== STAT CARDS (enhanced stagger + hover scale) ========== #}
+<div class="row g-3 mb-4 stat-cards-row">
   {% if show_finance_widgets %}
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="stat-label">Revenue</div>
-        <div class="stat-value text-success">{{ site_config.currency_symbol }}{{ revenue|floatformat:0 }}</div>
-        <small class="text-muted">Paid invoices</small>
+    <div class="col-6 col-md-3 stat-card-item">
+      <div class="stat-card glass-card h-100 p-3 rounded-4 shadow-sm transition-all hover-lift hover-glow">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="stat-label text-uppercase small fw-semibold text-muted">Revenue</div>
+            <div class="stat-value h2 fw-bold text-success mb-0 transition-number">{{ site_config.currency_symbol }}{{ revenue|floatformat:0 }}</div>
+          </div>
+          <i class="bi bi-graph-up-arrow fs-2 text-success opacity-50 transition-icon"></i>
+        </div>
+        <div class="mt-2 small text-muted">Paid invoices <i class="bi bi-check-circle-fill text-success ms-1"></i></div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="stat-label">Pending</div>
-        <div class="stat-value text-danger">{{ site_config.currency_symbol }}{{ pending_revenue|floatformat:0 }}</div>
-        <small class="text-muted">Awaiting payment</small>
+    <div class="col-6 col-md-3 stat-card-item">
+      <div class="stat-card glass-card h-100 p-3 rounded-4 shadow-sm transition-all hover-lift hover-glow">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="stat-label text-uppercase small fw-semibold text-muted">Pending</div>
+            <div class="stat-value h2 fw-bold text-warning mb-0 transition-number">{{ site_config.currency_symbol }}{{ pending_revenue|floatformat:0 }}</div>
+          </div>
+          <i class="bi bi-hourglass-split fs-2 text-warning opacity-50 transition-icon"></i>
+        </div>
+        <div class="mt-2 small text-muted">Awaiting payment</div>
       </div>
     </div>
   {% endif %}
 
   {% if total_clients %}
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="stat-label">Total Clients</div>
-        <div class="stat-value">{{ total_clients }}</div>
-        <small class="text-muted">Active organizations</small>
+    <div class="col-6 col-md-3 stat-card-item">
+      <div class="stat-card glass-card h-100 p-3 rounded-4 shadow-sm transition-all hover-lift hover-glow">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="stat-label text-uppercase small fw-semibold text-muted">Total Clients</div>
+            <div class="stat-value h2 fw-bold text-primary mb-0 transition-number">{{ total_clients }}</div>
+          </div>
+          <i class="bi bi-people fs-2 text-primary opacity-50 transition-icon"></i>
+        </div>
+        <div class="mt-2 small text-muted">Active organizations</div>
       </div>
     </div>
   {% endif %}
 
   {% if open_tickets %}
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="stat-label">Open Tickets</div>
-        <div class="stat-value text-warning">{{ open_tickets }}</div>
-        <small class="text-muted">Needs attention</small>
+    <div class="col-6 col-md-3 stat-card-item">
+      <div class="stat-card glass-card h-100 p-3 rounded-4 shadow-sm transition-all hover-lift hover-glow">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="stat-label text-uppercase small fw-semibold text-muted">Open Tickets</div>
+            <div class="stat-value h2 fw-bold text-danger mb-0 transition-number">{{ open_tickets }}</div>
+          </div>
+          <i class="bi bi-ticket-perforated fs-2 text-danger opacity-50 transition-icon"></i>
+        </div>
+        <div class="mt-2 small text-muted">Needs attention</div>
       </div>
     </div>
   {% endif %}
 
   {% if assigned_tickets_count %}
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="stat-label">Assigned to You</div>
-        <div class="stat-value">{{ assigned_tickets_count }}</div>
-        <small class="text-muted">Total tickets</small>
+    <div class="col-6 col-md-3 stat-card-item">
+      <div class="stat-card glass-card h-100 p-3 rounded-4 shadow-sm transition-all hover-lift hover-glow">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="stat-label text-uppercase small fw-semibold text-muted">Assigned to You</div>
+            <div class="stat-value h2 fw-bold text-info mb-0 transition-number">{{ assigned_tickets_count }}</div>
+          </div>
+          <i class="bi bi-person-badge fs-2 text-info opacity-50 transition-icon"></i>
+        </div>
+        <div class="mt-2 small text-muted">Total tickets</div>
       </div>
     </div>
   {% endif %}
 </div>
 
-{# ========== TICKET STATUS BADGES (Admin only) ========== #}
+{# ========== TICKET STATUS BADGES (staggered entrance) ========== #}
 {% if ticket_stats %}
-<div class="d-flex flex-wrap gap-2 mb-4">
+<div class="d-flex flex-wrap gap-2 mb-4 justify-content-center justify-content-md-start fade-in">
   {% for status, count in ticket_stats.items %}
-  <a href="{% url 'ticket_list' %}?status={{ status }}" class="text-decoration-none">
-    <span class="badge bg-light text-dark p-3 shadow-sm">
-      <strong>{{ count }}</strong> {{ status|title|replace:"_: " }}
+  <a href="{% url 'ticket_list' %}?status={{ status }}" class="text-decoration-none badge-link" role="button">
+    <span class="badge bg-light text-dark p-3 shadow-sm rounded-pill transition-all hover-scale d-inline-flex align-items-center gap-2">
+      <strong class="fs-6">{{ count }}</strong>
+      <span class="text-uppercase small">{{ status|cut:"_"|title }}</span>
+      <i class="bi bi-arrow-right-circle-fill ms-1 opacity-50 transition-icon"></i>
     </span>
   </a>
   {% endfor %}
 </div>
 {% endif %}
 
-{# ========== RECENT TICKETS & INVOICES ========== #}
-<div class="row">
+{# ========== RECENT TICKETS & INVOICES (enhanced table rows with hover) ========== #}
+<div class="row g-4 fade-in">
   {% if recent_tickets %}
-    <div class="col-md-6 mb-4">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Recent Tickets</h5>
-          <a href="{% url 'ticket_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+    <div class="col-md-6">
+      <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden transition-all hover-card-lift">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 class="mb-0 fw-semibold"><i class="bi bi-chat-text me-2 text-primary"></i>Recent Tickets</h5>
+          <a href="{% url 'ticket_list' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 transition-all">View all <i class="bi bi-arrow-right ms-1 transition-icon"></i></a>
         </div>
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="modern-table">
-              <thead><tr><th>#</th><th>Title</th><th>Status</th></tr></thead>
+          <div class="table-responsive scroll-hint">
+            <table class="table table-hover align-middle mb-0 dashboard-table">
+              <thead class="table-light">
+                <tr class="small text-uppercase text-muted">
+                  <th style="width: 60px">#</th>
+                  <th>Title</th>
+                  <th style="width: 100px">Status</th>
+                </tr>
+              </thead>
               <tbody>
               {% for t in recent_tickets %}
-              <tr>
-                <td><a href="{% url 'ticket_detail' t.pk %}">#{{ t.pk }}</a></td>
-                <td>{{ t.title|truncatechars:25 }}</td>
-                <td><span class="badge bg-{{ t.status_color }}">{{ t.get_status_display }}</span></td>
-              </tr>
+                <tr class="transition-all stagger-item table-row-hover">
+                  <td class="fw-semibold"><a href="{% url 'ticket_detail' t.pk %}" class="text-primary text-decoration-none">#{{ t.pk }}</a></td>
+                  <td><span class="text-truncate d-inline-block" style="max-width: 180px;">{{ t.title|truncatechars:25 }}</span></td>
+                  <td><span class="badge bg-{{ t.status_color }} rounded-pill px-3 transition-all">{{ t.get_status_display }}</span></td>
+                </tr>
               {% endfor %}
               </tbody>
             </table>
@@ -93,23 +172,29 @@
   {% endif %}
 
   {% if recent_invoices %}
-    <div class="col-md-6 mb-4">
-      <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">Recent Invoices</h5>
-          <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+    <div class="col-md-6">
+      <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden transition-all hover-card-lift">
+        <div class="card-header bg-transparent border-0 pt-3 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h5 class="mb-0 fw-semibold"><i class="bi bi-receipt me-2 text-success"></i>Recent Invoices</h5>
+          <a href="{% url 'invoice_list' %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 transition-all">View all <i class="bi bi-arrow-right ms-1 transition-icon"></i></a>
         </div>
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="modern-table">
-              <thead><tr><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead>
+          <div class="table-responsive scroll-hint">
+            <table class="table table-hover align-middle mb-0 dashboard-table">
+              <thead class="table-light">
+                <tr class="small text-uppercase text-muted">
+                  <th>Invoice</th>
+                  <th class="text-end">Amount</th>
+                  <th style="width: 100px">Status</th>
+                </tr>
+              </thead>
               <tbody>
               {% for inv in recent_invoices %}
-              <tr>
-                <td><a href="{% url 'invoice_detail' inv.pk %}">{{ inv.invoice_number }}</a></td>
-                <td>{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</td>
-                <td><span class="badge bg-{{ inv.status_color }}">{{ inv.get_status_display }}</span></td>
-              </tr>
+                <tr class="transition-all stagger-item table-row-hover">
+                  <td class="fw-semibold"><a href="{% url 'invoice_detail' inv.pk %}" class="text-primary text-decoration-none">{{ inv.invoice_number }}</a></td>
+                  <td class="text-end fw-semibold">{{ site_config.currency_symbol }}{{ inv.total_amount|floatformat:0 }}</td>
+                  <td class="text-end"><span class="badge bg-{{ inv.status_color }} rounded-pill px-3 transition-all">{{ inv.get_status_display }}</span></td>
+                </tr>
               {% endfor %}
               </tbody>
             </table>
@@ -120,9 +205,181 @@
   {% endif %}
 </div>
 
-{# ========== CLIENT‑SPECIFIC MESSAGE ========== #}
+{# ========== CLIENT WELCOME (fade-in-up animation) ========== #}
 {% if client_org %}
-  <div class="alert alert-info mt-3">
-    <i class="bi bi-building me-2"></i> Welcome back, {{ client_org.name }}!
+  <div class="alert alert-primary mt-4 rounded-4 shadow-sm border-0 d-flex align-items-center justify-content-between flex-wrap gap-2 fade-in-up">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-building fs-3 transition-icon"></i>
+      <div>
+        <strong class="d-block">Welcome back, {{ client_org.name }}!</strong>
+        <small class="opacity-75">Your dashboard is ready</small>
+      </div>
+    </div>
+    <a href="{% url 'client_detail' client_org.pk %}" class="btn btn-sm btn-light rounded-pill transition-all">Go to profile <i class="bi bi-arrow-right ms-1 transition-icon"></i></a>
   </div>
 {% endif %}
+
+{# ========== STYLES: ENHANCED ANIMATIONS & DARK MODE ========== #}
+<style>
+  /* ========== BASE ANIMATIONS ========== */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Staggered card entrance */
+  .stat-card-item {
+    animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+    opacity: 0;
+  }
+  .stat-card-item:nth-child(1) { animation-delay: 0.05s; }
+  .stat-card-item:nth-child(2) { animation-delay: 0.1s; }
+  .stat-card-item:nth-child(3) { animation-delay: 0.15s; }
+  .stat-card-item:nth-child(4) { animation-delay: 0.2s; }
+
+  /* Badge links entrance */
+  .badge-link {
+    animation: fadeSlideUp 0.4s ease-out forwards;
+    opacity: 0;
+  }
+  .badge-link:nth-child(1) { animation-delay: 0.05s; }
+  .badge-link:nth-child(2) { animation-delay: 0.1s; }
+  .badge-link:nth-child(3) { animation-delay: 0.15s; }
+  .badge-link:nth-child(4) { animation-delay: 0.2s; }
+  .badge-link:nth-child(5) { animation-delay: 0.25s; }
+  .badge-link:nth-child(6) { animation-delay: 0.3s; }
+
+  /* Table rows staggered entrance */
+  .stagger-item {
+    opacity: 0;
+    animation: fadeSlideUp 0.3s ease-out forwards;
+  }
+  .stagger-item:nth-child(1) { animation-delay: 0.02s; }
+  .stagger-item:nth-child(2) { animation-delay: 0.04s; }
+  .stagger-item:nth-child(3) { animation-delay: 0.06s; }
+  .stagger-item:nth-child(4) { animation-delay: 0.08s; }
+  .stagger-item:nth-child(5) { animation-delay: 0.10s; }
+  .stagger-item:nth-child(6) { animation-delay: 0.12s; }
+  .stagger-item:nth-child(7) { animation-delay: 0.14s; }
+  .stagger-item:nth-child(8) { animation-delay: 0.16s; }
+  .stagger-item:nth-child(9) { animation-delay: 0.18s; }
+  .stagger-item:nth-child(10) { animation-delay: 0.20s; }
+
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  .fade-in-up { animation: fadeSlideUp 0.3s ease-out; }
+
+  /* ========== HOVER EFFECTS ========== */
+  .transition-all { transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1); }
+  .transition-number { transition: all 0.2s ease; }
+  .transition-icon { transition: transform 0.2s ease, opacity 0.2s ease; }
+
+  .hover-lift:hover { transform: translateY(-5px); }
+  .hover-glow:hover { box-shadow: 0 15px 30px -12px rgba(0,0,0,0.2), 0 0 0 1px var(--primary); }
+  .hover-scale:hover { transform: scale(1.02); }
+  .hover-card-lift:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+
+  .stat-card:hover .transition-number { letter-spacing: 0.5px; }
+  .stat-card:hover .transition-icon { transform: scale(1.1) rotate(3deg); opacity: 0.8; }
+
+  .table-row-hover { transition: all 0.2s; }
+  .table-row-hover:hover { background-color: var(--hover-bg); transform: scale(1.001); }
+
+  .badge-link:hover .transition-icon { transform: translateX(3px); }
+
+  /* Refresh button spin on HTMX request */
+  .htmx-request .refresh-btn i {
+    animation: spin 0.6s linear infinite;
+  }
+
+  /* ========== TABLE DARK MODE ADAPTATION ========== */
+  .dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-primary);
+  }
+  .dashboard-table thead th {
+    background-color: var(--bg-tertiary);
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 0.75rem 1rem;
+  }
+  .dashboard-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+  }
+  [data-theme="dark"] .dashboard-table {
+    color: var(--text-primary);
+  }
+  [data-theme="dark"] .dashboard-table thead th {
+    background-color: var(--bg-tertiary);
+    color: var(--text-muted);
+    border-bottom-color: var(--border-color);
+  }
+  [data-theme="dark"] .dashboard-table td {
+    border-bottom-color: var(--border-color);
+  }
+  [data-theme="dark"] .table-light {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+  [data-theme="dark"] .badge.bg-light {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary) !important;
+  }
+
+  /* Mobile scroll hint */
+  .scroll-hint {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  @media (max-width: 768px) {
+    .dashboard-table th, .dashboard-table td {
+      white-space: nowrap;
+    }
+  }
+
+  /* Glass card style */
+  .glass-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+  }
+  [data-theme="dark"] .glass-card {
+    background: var(--card-bg);
+  }
+
+  /* HTMX indicators */
+  .htmx-indicator { display: none; }
+  .htmx-request .htmx-indicator { display: inline-block; }
+</style>
+
+{# ========== REAL-TIME TIMESTAMP UPDATE ========== #}
+<script>
+  (function() {
+    const timestampSpan = document.getElementById('live-timestamp');
+    if (timestampSpan && !window._timestampIntervalSet) {
+      window._timestampIntervalSet = true;
+      setInterval(() => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        timestampSpan.innerText = 'Last updated: ' + timeStr;
+      }, 1000);
+    }
+  })();
+</script>

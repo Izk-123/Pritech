@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load sanitize_quill %}
+
+{% block title %}{{ service.name }}{% endblock %}
+{% block page_title %}Service Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-info-circle-fill me-2"></i>{{ service.name }}</h1>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'service_list' %}">Services</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ service.name }}</li>
+      </ol>
+    </nav>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'service_update' service.pk %}" class="btn btn-primary">
+      <i class="bi bi-pencil-square"></i> Edit
+    </a>
+    <a href="{% url 'service_delete' service.pk %}" class="btn btn-outline-danger">
+      <i class="bi bi-trash"></i> Delete
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Main info card -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm">
+      <div class="card-header bg-transparent">
+        <ul class="nav nav-tabs card-header-tabs" id="serviceTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="description-tab" data-bs-toggle="tab" data-bs-target="#description" type="button" role="tab">Description</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="usage-tab" data-bs-toggle="tab" data-bs-target="#usage" type="button" role="tab">Usage & Links</button>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body">
+        <div class="tab-content">
+          <!-- Overview tab -->
+          <div class="tab-pane fade show active" id="overview" role="tabpanel">
+            <div class="row">
+              <div class="col-sm-6">
+                <ul class="info-list">
+                  <li><span class="label">Category</span><span class="value">{% if service.category %}{{ service.category.icon }} {{ service.category.name }}{% else %}—{% endif %}</span></li>
+                  <li><span class="label">Base Price</span><span class="value">{{ site_config.currency_symbol }}{{ service.base_price|floatformat:2 }}</span></li>
+                  <li><span class="label">Unit</span><span class="value">{{ service.unit }}</span></li>
+                  <li><span class="label">Billing Type</span><span class="value"><span class="badge bg-info">{{ service.get_billing_type_display }}</span></span></li>
+                  <li><span class="label">Status</span><span class="value"><span class="badge {% if service.is_active %}bg-success{% else %}bg-secondary{% endif %}">{% if service.is_active %}Active{% else %}Inactive{% endif %}</span></span></li>
+                  <li><span class="label">Slug</span><span class="value"><code>{{ service.slug }}</code></span></li>
+                  <li><span class="label">Created</span><span class="value">{{ service.created_at|date:"F j, Y, g:i a" }}</span></li>
+                </ul>
+              </div>
+              <div class="col-sm-6">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <div class="display-4 mb-2">{{ service.category.icon|default:"🔧" }}</div>
+                    <h5>{{ service.name }}</h5>
+                    <p class="text-muted small">{{ service.category.name|default:"No category" }}</p>
+                    <a href="{% url 'client_service_catalog' %}" class="btn btn-sm btn-outline-primary" target="_blank">View in Client Catalog</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Description tab -->
+          <div class="tab-pane fade" id="description" role="tabpanel">
+            <div class="p-3">
+              {{ service.description|sanitize_quill }}
+            </div>
+          </div>
+
+          <!-- Usage & Links tab -->
+          <div class="tab-pane fade" id="usage" role="tabpanel">
+            <h6>Packages that include this service</h6>
+            <ul>
+              {% for pkg in service.packages.all %}
+                <li><a href="{% url 'service_package_update' pkg.pk %}">{{ pkg.name }}</a></li>
+              {% empty %}
+                <li class="text-muted">Not included in any package.</li>
+              {% endfor %}
+            </ul>
+            <hr>
+            <h6>Recent tickets referencing this service</h6>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead><tr><th>Ticket #</th><th>Title</th><th>Client</th><th>Status</th></tr></thead>
+                <tbody>
+                  {% for ticket in service.tickets.all|slice:":5" %}
+                  <tr>
+                    <td><a href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.ticket_number }}</a></td>
+                    <td>{{ ticket.title|truncatechars:40 }}</td>
+                    <td>{{ ticket.client.name }}</td>
+                    <td><span class="badge bg-secondary">{{ ticket.get_status_display }}</span></td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="4" class="text-muted">No tickets yet.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar (quick actions, stats) -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-transparent fw-semibold">Quick Actions</div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{% url 'service_update' service.pk %}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> Edit Service</a>
+          <a href="{% url 'service_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+          <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="bi bi-trash"></i> Delete Permanently</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow-sm">
+      <div class="card-header bg-transparent fw-semibold">Statistics</div>
+      <div class="card-body">
+        <ul class="list-unstyled">
+          <li class="mb-2"><i class="bi bi-box-seam me-2"></i> Used in packages: <strong>{{ service.packages.count }}</strong></li>
+          <li class="mb-2"><i class="bi bi-ticket me-2"></i> Linked tickets: <strong>{{ service.tickets.count }}</strong></li>
+          <li class="mb-2"><i class="bi bi-receipt me-2"></i> Invoiced amount: <strong>{{ site_config.currency_symbol }}{{ total_invoiced|default:"0.00" }}</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Deletion</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the service <strong>"{{ service.name }}"</strong>?</p>
+        {% if service.tickets.count > 0 %}
+        <div class="alert alert-warning">
+          <i class="bi bi-info-circle"></i> This service is linked to <strong>{{ service.tickets.count }}</strong> ticket(s). Deleting it may break historical records.
+        </div>
+        {% endif %}
+        <p class="text-danger">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'service_delete' service.pk %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

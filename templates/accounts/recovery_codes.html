@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Recovery Codes{% endblock %}
+{% block page_title %}Two‑Factor Recovery Codes{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">Recovery Codes</div>
+      <div class="card-body">
+        <p>Store these codes in a safe place. Each code can be used only once.</p>
+        {% if codes %}
+          <div class="alert alert-warning">You have {{ codes.count }} unused recovery codes.</div>
+          <div class="row">
+            {% for code in codes %}
+              <div class="col-6 mb-2"><code>{{ code.code }}</code></div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="alert alert-info">No unused recovery codes. Generate new ones below.</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">Generate New Codes</button>
+          <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

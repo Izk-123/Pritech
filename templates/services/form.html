@@ -1,49 +1,338 @@
-{% extends "generic/form.html" %}
+{% extends "base.html" %}
+{% load sanitize_quill %}
+
 {% block title %}{% if form.instance.pk %}Edit Service{% else %}New Service{% endif %}{% endblock %}
-{% block form_title %}Service{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Service{% else %}Create New Service{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Custom animations and improvements */
+  .preview-card {
+    transition: all 0.3s ease;
+    position: sticky;
+    top: 80px;
+  }
+  .preview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+  }
+  .form-floating > .form-control:focus ~ label,
+  .form-floating > .form-select:focus ~ label {
+    color: var(--primary);
+  }
+  .slug-preview {
+    font-family: monospace;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    display: inline-block;
+  }
+  .character-counter {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: right;
+    margin-top: 0.25rem;
+  }
+  .preview-badge {
+    transition: all 0.2s;
+  }
+  .form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width:640px;">
-  <div class="page-header">
-    <div>
-      {% block breadcrumb %}{% endblock %}
-      <h1>{% if form.instance.pk %}Edit{% else %}New{% endif %} Service</h1>
+<div class="row g-4">
+  <!-- Main form column -->
+  <div class="col-lg-7 col-xl-8">
+    <div class="page-header mb-4">
+      <h1><i class="bi bi-gear-wide-connected me-2"></i>{% if form.instance.pk %}Edit{% else %}Add New{% endif %} Service</h1>
+      <p class="text-muted">Fill in the details below. Fields marked with <span class="text-danger">*</span> are required.</p>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-4">
+        <form method="post" novalidate id="serviceForm">
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+
+          <!-- Row 1: Name + Slug preview -->
+          <div class="row mb-4">
+            <div class="col-md-8">
+              <div class="form-floating">
+                {{ form.name }}
+                <label for="{{ form.name.id_for_label }}">{{ form.name.label }} <span class="text-danger">*</span></label>
+              </div>
+              {% if form.name.errors %}
+                <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label text-muted small">Slug (URL friendly)</label>
+              <div class="slug-preview w-100" id="slugPreview">—</div>
+              <div class="form-text small">Auto-generated from name</div>
+            </div>
+          </div>
+
+          <!-- Row 2: Category + Billing Type -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="form-floating">
+                {{ form.category }}
+                <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+              </div>
+              {% if form.category.errors %}
+                <div class="invalid-feedback d-block">{{ form.category.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <div class="form-floating">
+                {{ form.billing_type }}
+                <label for="{{ form.billing_type.id_for_label }}">{{ form.billing_type.label }}</label>
+              </div>
+              {% if form.billing_type.errors %}
+                <div class="invalid-feedback d-block">{{ form.billing_type.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Row 3: Base Price + Unit -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ form.base_price.label }} <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-transparent">{{ site_config.currency_symbol|default:"K" }}</span>
+                {{ form.base_price }}
+              </div>
+              {% if form.base_price.errors %}
+                <div class="invalid-feedback d-block">{{ form.base_price.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <div class="form-floating">
+                {{ form.unit }}
+                <label for="{{ form.unit.id_for_label }}">{{ form.unit.label }}</label>
+              </div>
+              <div class="form-text">e.g., job, hour, month, project</div>
+              {% if form.unit.errors %}
+                <div class="invalid-feedback d-block">{{ form.unit.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Row 4: Description (with character counter) -->
+          <div class="mb-4">
+            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">{{ form.description.label }}</label>
+            {{ form.description }}
+            <div class="character-counter" id="descCounter">0 characters</div>
+            <div class="form-text">Detailed description of what this service includes. Supports basic HTML formatting.</div>
+            {% if form.description.errors %}
+              <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Row 5: Active status switch -->
+          <div class="mb-4">
+            <div class="form-check form-switch">
+              {{ form.is_active }}
+              <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                {{ form.is_active.label }} – <span id="activeStatusText">{% if form.instance.is_active %}Visible to clients{% else %}Hidden from clients{% endif %}</span>
+              </label>
+            </div>
+            {% if form.is_active.errors %}
+              <div class="invalid-feedback d-block">{{ form.is_active.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Form actions -->
+          <div class="d-flex flex-wrap gap-2 justify-content-end pt-3 border-top">
+            <a href="{% url 'service_list' %}" class="btn btn-outline-secondary px-4" id="cancelBtn">
+              <i class="bi bi-x-lg"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg"></i> {% if form.instance.pk %}Save Changes{% else %}Create Service{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% for field in form %}
-        <div class="form-group">
-          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {% if field.field.widget.input_type == 'select' %}
-            <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control">
-              {% for val, label in field.field.choices %}
-              <option value="{{ val }}" {% if field.value|stringformat:'s' == val|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          {% elif field.field.widget.input_type == 'textarea' %}
-            <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control" rows="3">{{ field.value|default:'' }}</textarea>
-          {% elif field.field.widget.input_type == 'checkbox' %}
-            <div style="display:flex;align-items:center;gap:.5rem;">
-              <input type="checkbox" name="{{ field.html_name }}" id="{{ field.id_for_label }}" {% if field.value %}checked{% endif %}>
-              <label for="{{ field.id_for_label }}" style="font-weight:400;margin:0;">{{ field.label }}</label>
-            </div>
-          {% else %}
-            <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
-              class="form-control" value="{{ field.value|default:'' }}" {% if field.field.required %}required{% endif %}>
-          {% endif %}
-          {% if field.errors %}<div class="form-error">{{ field.errors }}</div>{% endif %}
-          {% if field.help_text %}<div class="form-hint">{{ field.help_text }}</div>{% endif %}
+  <!-- Sticky preview column -->
+  <div class="col-lg-5 col-xl-4">
+    <div class="preview-card card shadow-sm border-0 rounded-4 bg-light">
+      <div class="card-header bg-transparent border-0 pt-3">
+        <h5 class="card-title mb-0"><i class="bi bi-eye me-2"></i>Live Preview</h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <div class="display-1" id="previewIcon">{{ form.instance.category.icon|default:"🔧" }}</div>
         </div>
-        {% endfor %}
-        <div style="display:flex;gap:.75rem;margin-top:1.5rem;">
-          <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Save changes{% else %}Create{% endif %}</button>
-          <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+        <h3 id="previewName" class="text-center">{{ form.instance.name|default:"New Service" }}</h3>
+        <div class="text-center mb-3">
+          <span class="badge preview-badge" id="previewBadge">
+            {{ form.instance.is_active|yesno:"Active,Inactive" }}
+          </span>
+          <span class="badge bg-info ms-2" id="previewBilling">{{ form.instance.get_billing_type_display|default:"One Time" }}</span>
         </div>
-      </form>
+        <hr>
+        <div class="row text-center">
+          <div class="col-6">
+            <div class="text-muted small">Price</div>
+            <div class="fs-3 fw-bold" id="previewPrice">{{ site_config.currency_symbol }}{{ form.base_price.value|default:"0.00" }}</div>
+            <div class="small text-muted" id="previewUnit">per {{ form.unit.value|default:"job" }}</div>
+          </div>
+          <div class="col-6">
+            <div class="text-muted small">Category</div>
+            <div id="previewCategory">{{ form.instance.category.name|default:"Uncategorized" }}</div>
+          </div>
+        </div>
+        <hr>
+        <div class="mt-2">
+          <div class="text-muted small">Description</div>
+          <p id="previewDesc" class="small text-secondary">{{ form.instance.description|default:"No description provided."|striptags|truncatechars:120 }}</p>
+        </div>
+        <div class="mt-2">
+          <div class="text-muted small">Slug</div>
+          <code id="previewSlug" class="small">—</code>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent text-muted small text-center">
+        <i class="bi bi-info-circle"></i> This is how your service will appear to clients
+      </div>
     </div>
   </div>
 </div>
+
+<!-- Unsaved changes warning script -->
+<script>
+  (function() {
+    const form = document.getElementById('serviceForm');
+    let formChanged = false;
+
+    // Mark form as changed when any input is modified
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => { formChanged = true; });
+      input.addEventListener('change', () => { formChanged = true; });
+    });
+
+    // Warn before leaving if changes exist
+    window.addEventListener('beforeunload', (e) => {
+      if (formChanged) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    });
+
+    // Allow cancel button to bypass warning
+    document.getElementById('cancelBtn')?.addEventListener('click', (e) => {
+      formChanged = false;
+    });
+
+    // Reset warning after successful submit
+    form.addEventListener('submit', () => {
+      formChanged = false;
+    });
+
+    // Live preview update function
+    function updatePreview() {
+      const nameInput = document.querySelector('#{{ form.name.id_for_label }}');
+      const priceInput = document.querySelector('#{{ form.base_price.id_for_label }}');
+      const unitInput = document.querySelector('#{{ form.unit.id_for_label }}');
+      const descInput = document.querySelector('#{{ form.description.id_for_label }}');
+      const activeCheck = document.querySelector('#{{ form.is_active.id_for_label }}');
+      const categorySelect = document.querySelector('#{{ form.category.id_for_label }}');
+      const billingSelect = document.querySelector('#{{ form.billing_type.id_for_label }}');
+      const slugPreview = document.getElementById('slugPreview');
+      const previewSlug = document.getElementById('previewSlug');
+
+      // Name and slug
+      let nameValue = nameInput?.value || 'New Service';
+      document.getElementById('previewName').innerText = nameValue;
+      let slug = slugify(nameValue);
+      if (slugPreview) slugPreview.innerText = slug;
+      if (previewSlug) previewSlug.innerText = slug;
+
+      // Price and unit
+      let price = parseFloat(priceInput?.value || 0).toFixed(2);
+      document.getElementById('previewPrice').innerHTML = `{{ site_config.currency_symbol }}${price}`;
+      let unitValue = unitInput?.value || 'job';
+      document.getElementById('previewUnit').innerHTML = `per ${unitValue}`;
+
+      // Description
+      let desc = descInput?.value || '';
+      let shortDesc = desc.length > 120 ? desc.substring(0,120)+'...' : desc;
+      if (!shortDesc) shortDesc = 'No description provided.';
+      document.getElementById('previewDesc').innerText = shortDesc;
+      document.getElementById('descCounter').innerText = `${desc.length} characters`;
+
+      // Active status
+      let isActive = activeCheck?.checked;
+      let badge = document.getElementById('previewBadge');
+      let statusText = document.getElementById('activeStatusText');
+      if (isActive) {
+        badge.innerText = 'Active';
+        badge.classList.remove('bg-secondary');
+        badge.classList.add('bg-success');
+        statusText.innerText = 'Visible to clients';
+      } else {
+        badge.innerText = 'Inactive';
+        badge.classList.remove('bg-success');
+        badge.classList.add('bg-secondary');
+        statusText.innerText = 'Hidden from clients';
+      }
+
+      // Billing type
+      let billingText = billingSelect?.options[billingSelect.selectedIndex]?.text || 'One Time';
+      document.getElementById('previewBilling').innerText = billingText;
+
+      // Category
+      let categoryText = categorySelect?.options[categorySelect.selectedIndex]?.text || 'Uncategorized';
+      document.getElementById('previewCategory').innerText = categoryText;
+
+      // Icon from category (if available)
+      let categoryIcon = '';
+      if (categorySelect && categorySelect.selectedIndex >= 0) {
+        let selectedOption = categorySelect.options[categorySelect.selectedIndex];
+        let iconMatch = selectedOption.text.match(/^([\u{1F000}-\u{1F9FF}])\s/);
+        if (iconMatch) categoryIcon = iconMatch[1];
+      }
+      document.getElementById('previewIcon').innerText = categoryIcon || '🔧';
+    }
+
+    // Slugify helper
+    function slugify(text) {
+      return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
+    }
+
+    // Attach event listeners to all form fields
+    const allFields = ['#{{ form.name.id_for_label }}', '#{{ form.base_price.id_for_label }}', '#{{ form.unit.id_for_label }}', '#{{ form.description.id_for_label }}', '#{{ form.is_active.id_for_label }}', '#{{ form.category.id_for_label }}', '#{{ form.billing_type.id_for_label }}'];
+    allFields.forEach(selector => {
+      const el = document.querySelector(selector);
+      if (el) el.addEventListener('input', updatePreview);
+    });
+
+    // Initial preview
+    updatePreview();
+
+    // Validation styling: add was-validated class on submit attempt
+    form.addEventListener('submit', (e) => {
+      if (!form.checkValidity()) {
+        e.preventDefault();
+        e.stopPropagation();
+        form.classList.add('was-validated');
+      }
+    });
+  })();
+</script>
 {% endblock %}

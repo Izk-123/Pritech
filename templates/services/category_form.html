@@ -1,34 +1,155 @@
 {% extends "base.html" %}
+{% load sanitize_quill %}
+
 {% block title %}{% if form.instance.pk %}Edit Category{% else %}New Category{% endif %}{% endblock %}
-{% block page_title %}{% if form.instance.pk %}Edit Category{% else %}New Category{% endif %}{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Category{% else %}Create Category{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .icon-preview {
+    font-size: 3rem;
+    transition: transform 0.2s;
+  }
+  .icon-preview:hover {
+    transform: scale(1.1);
+  }
+  .preview-card {
+    position: sticky;
+    top: 80px;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-8 col-xl-6">
-    <div class="page-header">
-      <h1>{% if form.instance.pk %}Edit{% else %}Create{% endif %} Service Category</h1>
+<div class="row g-4">
+  <!-- Form column -->
+  <div class="col-lg-7">
+    <div class="page-header mb-4">
+      <h1><i class="bi bi-tags me-2"></i>{% if form.instance.pk %}Edit{% else %}New{% endif %} Service Category</h1>
+      <p class="text-muted">Organise your services with categories. Choose an icon and provide a description.</p>
     </div>
-    <div class="card">
+
+    <div class="card shadow-sm border-0 rounded-4">
       <div class="card-body p-4">
-        <form method="post" novalidate>
+        <form method="post" novalidate id="categoryForm">
           {% csrf_token %}
-          {% for field in form %}
-            <div class="form-floating-custom">
-              {{ field }}
-              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-              {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>{% endif %}
-              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+          {{ form.non_field_errors }}
+
+          <!-- Name field -->
+          <div class="mb-4">
+            <div class="form-floating">
+              {{ form.name }}
+              <label for="{{ form.name.id_for_label }}">{{ form.name.label }} <span class="text-danger">*</span></label>
             </div>
-          {% endfor %}
-          <div class="d-flex gap-2 mt-4">
+            {% if form.name.errors %}
+              <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Icon dropdown with live preview -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">{{ form.icon.label }}</label>
+            <div class="row g-2">
+              <div class="col-md-8">
+                {{ form.icon }}
+              </div>
+              <div class="col-md-4 text-center">
+                <div class="icon-preview" id="iconPreview">{{ form.instance.icon|default:"🔧" }}</div>
+                <div class="small text-muted">Selected icon</div>
+              </div>
+            </div>
+            {% if form.icon.errors %}
+              <div class="invalid-feedback d-block">{{ form.icon.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Description with Quill and character counter -->
+          <div class="mb-4">
+            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">{{ form.description.label }}</label>
+            {{ form.description }}
+            <div class="character-counter mt-1" id="descCounter">0 characters</div>
+            <div class="form-text">Brief description of what this category covers.</div>
+            {% if form.description.errors %}
+              <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Form actions -->
+          <div class="d-flex gap-2 justify-content-end pt-3 border-top">
+            <a href="{% url 'service_category_list' %}" class="btn btn-outline-secondary px-4" id="cancelBtn">Cancel</a>
             <button type="submit" class="btn btn-primary px-4">
-              {% if form.instance.pk %}Save Changes{% else %}Create Category{% endif %}
+              <i class="bi bi-check-lg"></i> {% if form.instance.pk %}Save Changes{% else %}Create Category{% endif %}
             </button>
-            <a href="{% url 'service_category_list' %}" class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>
       </div>
     </div>
   </div>
+
+  <!-- Sticky preview column -->
+  <div class="col-lg-5">
+    <div class="preview-card card shadow-sm border-0 rounded-4 bg-light">
+      <div class="card-header bg-transparent border-0 pt-3">
+        <h5 class="mb-0"><i class="bi bi-eye me-2"></i>Live Preview</h5>
+      </div>
+      <div class="card-body text-center">
+        <div class="display-1 mb-2" id="previewIcon">{{ form.instance.icon|default:"🔧" }}</div>
+        <h3 id="previewName">{{ form.instance.name|default:"Category Name" }}</h3>
+        <div class="text-muted small mb-3" id="previewDescPreview">{{ form.instance.description|striptags|truncatechars:100|default:"No description" }}</div>
+        <hr>
+        <div class="text-start small text-muted">This category will group related services in the client catalog.</div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+  (function() {
+    const form = document.getElementById('categoryForm');
+    let formChanged = false;
+
+    // Mark form as changed
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('input', () => { formChanged = true; });
+      input.addEventListener('change', () => { formChanged = true; });
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+      if (formChanged) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    });
+    document.getElementById('cancelBtn')?.addEventListener('click', () => { formChanged = false; });
+
+    // Live preview update
+    function updatePreview() {
+      const name = document.querySelector('#{{ form.name.id_for_label }}')?.value || 'Category Name';
+      const iconSelect = document.querySelector('#{{ form.icon.id_for_label }}');
+      let icon = '🔧';
+      if (iconSelect && iconSelect.selectedIndex >= 0) {
+        const selected = iconSelect.options[iconSelect.selectedIndex];
+        icon = selected.value || '🔧';
+      }
+      const descInput = document.querySelector('#{{ form.description.id_for_label }}');
+      let desc = '';
+      if (descInput) {
+        desc = descInput.value;
+        document.getElementById('descCounter').innerText = desc.length + ' characters';
+      }
+      document.getElementById('previewName').innerText = name;
+      document.getElementById('previewIcon').innerText = icon;
+      document.getElementById('iconPreview').innerText = icon;
+      const shortDesc = desc.length > 100 ? desc.substring(0,100)+'...' : desc;
+      document.getElementById('previewDescPreview').innerText = shortDesc || 'No description';
+    }
+
+    document.querySelector('#{{ form.name.id_for_label }}')?.addEventListener('input', updatePreview);
+    document.querySelector('#{{ form.icon.id_for_label }}')?.addEventListener('change', updatePreview);
+    document.querySelector('#{{ form.description.id_for_label }}')?.addEventListener('input', updatePreview);
+    updatePreview();
+  })();
+</script>
 {% endblock %}

@@ -30,12 +30,10 @@
 
         <div class="hero-actions reveal reveal-delay-3">
           <a href="#contact" class="btn btn-primary btn-lg">
-            <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-            Start a Project
+            <i class="fa-solid fa-paper-plane"></i> Start a Project
           </a>
           <a href="#portfolio" class="btn btn-outline btn-lg">
-            <i class="fa-regular fa-eye" aria-hidden="true"></i>
-            View Our Work
+            <i class="fa-regular fa-eye"></i> View Our Work
           </a>
         </div>
 
@@ -87,12 +85,11 @@
   </div>
 
   <!-- Scroll indicator -->
-  <a href="#services" class="scroll-indicator" style="position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text-muted);font-size:.75rem;text-decoration:none;animation:bounce 2s ease infinite;">
+  <a href="#services" class="scroll-indicator" aria-label="Scroll to services">
     <span>Scroll</span>
-    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+    <i class="fa-solid fa-chevron-down"></i>
   </a>
 </section>
-
 
 <!-- ============================================================ -->
 <!-- SERVICES SECTION                                            -->
@@ -100,7 +97,7 @@
 <section class="section services" id="services" aria-labelledby="services-heading">
   <div class="container">
     <div class="section-header reveal">
-      <span class="section-tag"><i class="fa-solid fa-gears" aria-hidden="true"></i> What We Do</span>
+      <span class="section-tag"><i class="fa-solid fa-gears"></i> What We Do</span>
       <h2 id="services-heading">Comprehensive ICT Services</h2>
       <p>From infrastructure to innovation — end‑to‑end technology solutions tailored for your business needs.</p>
     </div>
@@ -115,7 +112,7 @@
     </div>
     {% endif %}
 
-    <!-- Services grid with graceful empty state -->
+    <!-- Services grid -->
     <div class="services-grid">
       {% if services %}
         {% for service in services %}
@@ -126,20 +123,19 @@
             <i class="{{ service.icon|default:'fa-solid fa-microchip' }}"></i>
           </div>
           <h3 class="service-name">{{ service.name }}</h3>
-          <p class="service-desc">{{ service.short_description|default:service.description|truncatewords:20|striptags }}</p>
-          <span class="service-arrow" aria-hidden="true">Learn more <i class="fa-solid fa-arrow-right fa-xs"></i></span>
+          <p class="service-desc">{{ service.description|striptags|truncatewords:20 }}</p>
+          <span class="service-arrow">Learn more <i class="fa-solid fa-arrow-right fa-xs"></i></span>
         </article>
         {% endfor %}
       {% else %}
-        <div class="empty-state" style="grid-column:1/-1; text-align:center; padding:3rem;">
-          <i class="fa-solid fa-cogs" style="font-size:3rem; opacity:0.5; margin-bottom:1rem; display:block;"></i>
+        <div class="empty-state">
+          <i class="fa-solid fa-cogs"></i>
           <p>Our service catalogue is being updated. Please check back soon.</p>
         </div>
       {% endif %}
     </div>
   </div>
 </section>
-
 
 <!-- ============================================================ -->
 <!-- PORTFOLIO SECTION (only if projects exist)                  -->
@@ -148,7 +144,7 @@
 <section class="section" id="portfolio" aria-labelledby="portfolio-heading">
   <div class="container">
     <div class="section-header reveal">
-      <span class="section-tag"><i class="fa-solid fa-briefcase" aria-hidden="true"></i> Our Work</span>
+      <span class="section-tag"><i class="fa-solid fa-briefcase"></i> Our Work</span>
       <h2 id="portfolio-heading">Featured Projects</h2>
       <p>A selection of solutions we've delivered for clients across industries.</p>
     </div>
@@ -157,36 +153,38 @@
       {% for project in projects %}
       <article class="project-card reveal reveal-delay-{{ forloop.counter }}" aria-label="{{ project.title }}">
         <div class="project-img-wrap">
-          {% if project.image %}
-            <img src="{{ project.image.url }}" alt="{{ project.title }}" loading="lazy" width="600" height="375" />
+          {% if project.featured_image %}
+            <img src="{{ project.featured_image.url }}" alt="{{ project.title }}" loading="lazy" width="600" height="375" />
           {% else %}
-            <div class="project-img-placeholder" aria-hidden="true"><i class="fa-solid fa-laptop-code" style="color:var(--accent);opacity:.5;"></i></div>
+            <div class="project-img-placeholder" aria-hidden="true"><i class="fa-solid fa-laptop-code"></i></div>
           {% endif %}
-          <div class="project-overlay" aria-hidden="true"><span class="badge badge-accent">View Project</span></div>
+          <div class="project-overlay"><span class="badge badge-accent">View Project</span></div>
         </div>
         <div class="project-body">
           <div class="project-meta">
             {% if project.client_name %}
-            <span class="project-client"><i class="fa-solid fa-building fa-xs" aria-hidden="true"></i> {{ project.client_name }}</span>
+            <span class="project-client"><i class="fa-solid fa-building fa-xs"></i> {{ project.client_name }}</span>
             {% endif %}
           </div>
           <h3 class="project-title">{{ project.title }}</h3>
-          {% if project.technologies %}
-          <p class="project-tech"><i class="fa-solid fa-tags fa-xs" aria-hidden="true"></i> {{ project.technologies }}</p>
+          {% if project.technologies.exists %}
+          <p class="project-tech"><i class="fa-solid fa-tags fa-xs"></i> {{ project.technologies.all|slice:":3"|join:", " }}{% if project.technologies.count > 3 %} +{{ project.technologies.count|add:"-3" }}{% endif %}</p>
           {% endif %}
         </div>
       </article>
       {% endfor %}
     </div>
+    <div class="text-center mt-4">
+      <a href="{% url 'portfolio_list' %}" class="btn btn-outline">View All Projects →</a>
+    </div>
   </div>
 </section>
 {% endif %}
 
-
 <!-- ============================================================ -->
 <!-- ABOUT SECTION                                               -->
 <!-- ============================================================ -->
-<section class="section" id="about" style="background:var(--bg-secondary);" aria-labelledby="about-heading">
+<section class="section" id="about" aria-labelledby="about-heading">
   <div class="container">
     <div class="about-grid">
       <!-- Image column -->
@@ -195,8 +193,9 @@
           {% if portfolio_settings.about_image %}
             <img src="{{ portfolio_settings.about_image.url }}" alt="Pritech team at work" loading="lazy" width="600" height="450" />
           {% else %}
-            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--card-grad);">
-              <div style="text-align:center;padding:2rem;"><div style="font-size:5rem;margin-bottom:1rem;opacity:.4;">🖥️</div><p style="color:var(--text-muted);font-size:.9rem;">Add your about image in settings</p></div>
+            <div class="about-img-placeholder">
+              <i class="fa-solid fa-users"></i>
+              <p>Add your about image in settings</p>
             </div>
           {% endif %}
           <div class="about-img-badge glass">
@@ -208,17 +207,17 @@
 
       <!-- Text column -->
       <div class="reveal reveal-delay-2">
-        <span class="section-tag"><i class="fa-solid fa-users" aria-hidden="true"></i> About Us</span>
-        <h2 id="about-heading" style="margin-bottom:1rem;">{{ portfolio_settings.about_title|default:"Your Trusted Technology Partner" }}</h2>
-        <p style="margin-bottom:1.5rem;line-height:1.8;">{{ portfolio_settings.about_text|default:"We are a team of passionate engineers, developers, and support specialists dedicated to solving business problems with technology." }}</p>
+        <span class="section-tag"><i class="fa-solid fa-users"></i> About Us</span>
+        <h2 id="about-heading">{{ portfolio_settings.about_title|default:"Your Trusted Technology Partner" }}</h2>
+        <p>{{ portfolio_settings.about_text|default:"We are a team of passionate engineers, developers, and support specialists dedicated to solving business problems with technology." }}</p>
         
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:.75rem;margin-bottom:2rem;">
-          <li style="display:flex;align-items:flex-start;gap:.75rem;"><span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i></span><span style="color:var(--text-secondary);">Certified ICT professionals with 12+ years in the field</span></li>
-          <li style="display:flex;align-items:flex-start;gap:.75rem;"><span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i></span><span style="color:var(--text-secondary);">Transparent communication and regular project updates</span></li>
-          <li style="display:flex;align-items:flex-start;gap:.75rem;"><span style="flex-shrink:0;width:22px;height:22px;background:var(--accent-subtle);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:2px;"><i class="fa-solid fa-check fa-xs" style="color:var(--accent);" aria-hidden="true"></i></span><span style="color:var(--text-secondary);">Post‑delivery support and ongoing maintenance included</span></li>
+        <ul class="about-list">
+          <li><i class="fa-solid fa-check-circle"></i> Certified ICT professionals with 12+ years in the field</li>
+          <li><i class="fa-solid fa-check-circle"></i> Transparent communication and regular project updates</li>
+          <li><i class="fa-solid fa-check-circle"></i> Post‑delivery support and ongoing maintenance included</li>
         </ul>
 
-        <a href="#contact" class="btn btn-primary"><i class="fa-solid fa-handshake" aria-hidden="true"></i> Work With Us</a>
+        <a href="#contact" class="btn btn-primary"><i class="fa-solid fa-handshake"></i> Work With Us</a>
 
         <!-- Stats bento -->
         <div class="stats-bento">
@@ -232,14 +231,13 @@
   </div>
 </section>
 
-
 <!-- ============================================================ -->
 <!-- CONTACT / INQUIRY SECTION                                   -->
 <!-- ============================================================ -->
 <section class="section" id="contact" aria-labelledby="contact-heading">
   <div class="container">
     <div class="section-header reveal">
-      <span class="section-tag"><i class="fa-solid fa-envelope" aria-hidden="true"></i> Contact Us</span>
+      <span class="section-tag"><i class="fa-solid fa-envelope"></i> Contact Us</span>
       <h2 id="contact-heading">Let's Build Something Together</h2>
       <p>Tell us about your project or challenge — we'll get back within 24 hours.</p>
     </div>
@@ -249,30 +247,30 @@
       <div class="reveal">
         <div class="contact-info-card">
           {% if site_config.phone %}
-          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-phone"></i></div><div><div class="contact-item-label">Phone</div><a href="tel:{{ site_config.phone }}" class="contact-item-value">{{ site_config.phone }}</a></div></div>
+          <div class="contact-item"><div class="contact-item-icon"><i class="fa-solid fa-phone"></i></div><div><div class="contact-item-label">Phone</div><a href="tel:{{ site_config.phone }}" class="contact-item-value">{{ site_config.phone }}</a></div></div>
           {% endif %}
           {% if site_config.email %}
-          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></div><div><div class="contact-item-label">Email</div><a href="mailto:{{ site_config.email }}" class="contact-item-value">{{ site_config.email }}</a></div></div>
+          <div class="contact-item"><div class="contact-item-icon"><i class="fa-solid fa-envelope"></i></div><div><div class="contact-item-label">Email</div><a href="mailto:{{ site_config.email }}" class="contact-item-value">{{ site_config.email }}</a></div></div>
           {% endif %}
           {% if site_config.address %}
-          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></div><div><div class="contact-item-label">Office</div><span class="contact-item-value">{{ site_config.address }}</span></div></div>
+          <div class="contact-item"><div class="contact-item-icon"><i class="fa-solid fa-location-dot"></i></div><div><div class="contact-item-label">Office</div><span class="contact-item-value">{{ site_config.address }}</span></div></div>
           {% endif %}
-          <div class="contact-item"><div class="contact-item-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></div><div><div class="contact-item-label">Support Hours</div><span class="contact-item-value">24/7 — Always Available</span></div></div>
+          <div class="contact-item"><div class="contact-item-icon"><i class="fa-solid fa-clock"></i></div><div><div class="contact-item-label">Support Hours</div><span class="contact-item-value">24/7 — Always Available</span></div></div>
           {% if portfolio_settings.whatsapp_number %}
-          <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20Pritech%2C%20I%20would%20like%20to%20discuss%20a%20project." class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp fa-lg" aria-hidden="true"></i> Chat on WhatsApp</a>
+          <a href="https://wa.me/{{ portfolio_settings.whatsapp_number|cut:'+' }}?text=Hello%20Pritech%2C%20I%20would%20like%20to%20discuss%20a%20project." class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp fa-lg"></i> Chat on WhatsApp</a>
           {% endif %}
         </div>
       </div>
 
-      <!-- Inquiry form – action changed to 'home' (the same view handles POST) -->
+      <!-- Inquiry form -->
       <div class="reveal reveal-delay-2">
         <div class="inquiry-form">
-          <h3 style="margin-bottom:1.5rem;font-size:1.2rem;">Send us a Message</h3>
+          <h3>Send us a Message</h3>
           <form method="post" action="{% url 'home' %}" novalidate>
             {% csrf_token %}
             {{ inquiry_form.honeypot }}
 
-            <div class="form-row" style="margin-bottom:1rem;">
+            <div class="form-row">
               <div class="form-group">
                 <label for="{{ inquiry_form.name.id_for_label }}">Full Name <span class="required-star">*</span></label>
                 {{ inquiry_form.name }}
@@ -285,7 +283,7 @@
               </div>
             </div>
 
-            <div class="form-row" style="margin-bottom:1rem;">
+            <div class="form-row">
               <div class="form-group">
                 <label for="{{ inquiry_form.phone.id_for_label }}">Phone Number</label>
                 {{ inquiry_form.phone }}
@@ -297,15 +295,13 @@
               </div>
             </div>
 
-            <div class="form-group form-group--full" style="margin-bottom:1.5rem;">
+            <div class="form-group form-group--full">
               <label for="{{ inquiry_form.message.id_for_label }}">Message <span class="required-star">*</span></label>
               {{ inquiry_form.message }}
               {{ inquiry_form.message.errors }}
             </div>
 
-            <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
-              <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send Message
-            </button>
+            <button type="submit" class="btn btn-primary btn-lg">Send Message <i class="fa-solid fa-paper-plane"></i></button>
           </form>
         </div>
       </div>
@@ -313,43 +309,37 @@
   </div>
 </section>
 
-
 <!-- ============================================================ -->
-<!-- NEWSLETTER FULL WIDTH (GDPR compliant with consent)        -->
+<!-- NEWSLETTER SECTION                                          -->
 <!-- ============================================================ -->
 <div class="newsletter-fullwidth">
   <div class="container">
     <div class="newsletter-section reveal" role="complementary" aria-labelledby="newsletter-heading">
-      <span class="section-tag" style="background:rgba(255,255,255,.2);color:white;border-color:rgba(255,255,255,.3);">
-        <i class="fa-solid fa-bell" aria-hidden="true"></i> Stay Updated
-      </span>
-      <h2 id="newsletter-heading" style="margin-top:.75rem;">Get ICT Tips & Updates</h2>
+      <span class="section-tag"><i class="fa-solid fa-bell"></i> Stay Updated</span>
+      <h2 id="newsletter-heading">Get ICT Tips & Updates</h2>
       <p>Subscribe to our newsletter for tech insights, service updates, and exclusive offers.</p>
 
       <form method="post" action="{% url 'newsletter_subscribe' %}" class="newsletter-form">
         {% csrf_token %}
         {{ newsletter_form.email }}
-        <div style="display:flex; align-items:center; gap:0.5rem; margin:0.5rem 0;">
+        <div class="consent-check">
           {{ newsletter_form.consent }}
-          <label for="{{ newsletter_form.consent.id_for_label }}" style="font-size:0.8rem;">I agree to receive marketing emails</label>
+          <label for="{{ newsletter_form.consent.id_for_label }}">I agree to receive marketing emails</label>
         </div>
         <button type="submit" class="newsletter-btn">Subscribe</button>
       </form>
 
-      <p style="color:rgba(255,255,255,.6); font-size:0.8rem; margin-top:1rem;">
-        <i class="fa-solid fa-lock fa-xs" aria-hidden="true"></i> No spam. Unsubscribe anytime.
-      </p>
+      <p><i class="fa-solid fa-lock fa-xs"></i> No spam. Unsubscribe anytime.</p>
     </div>
   </div>
 </div>
 
 {% endblock %}
 
-<!-- GDPR links in footer (extra_footer block) -->
 {% block extra_footer %}
-<div style="text-align:center; margin-top:1rem; margin-bottom:1rem;">
-  <a href="{% url 'gdpr_export' %}" style="color:var(--text-muted); font-size:0.8rem; margin:0 0.5rem;">📥 Data Export</a> |
-  <a href="{% url 'gdpr_delete' %}" style="color:var(--text-muted); font-size:0.8rem; margin:0 0.5rem;">🗑️ Request Deletion</a> |
-  <a href="{% url 'privacy_policy' %}" style="color:var(--text-muted); font-size:0.8rem; margin:0 0.5rem;">🔒 Privacy Policy</a>
+<div class="gdpr-links">
+  <a href="{% url 'gdpr_export' %}">📥 Data Export</a> |
+  <a href="{% url 'gdpr_delete' %}">🗑️ Request Deletion</a> |
+  <a href="{% url 'privacy_policy' %}">🔒 Privacy Policy</a>
 </div>
 {% endblock %}

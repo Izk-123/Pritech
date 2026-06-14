@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}My Service Requests{% endblock %}
+{% block page_title %}My Service Requests{% endblock %}
+
+{% block content %}
+<div class="page-header"><h1>My Service Requests</h1><a href="{% url 'create_service_request' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> New Request</a></div>
+
+{% if requests %}
+<div class="table-responsive">
+  <table class="modern-table">
+    <thead><tr><th>Service</th><th>Requested</th><th>Status</th><th>Quotation</th></tr></thead>
+    <tbody>
+      {% for req in requests %}
+      <tr>
+        <td>{{ req.service.name }}</td>
+        <td>{{ req.requested_at|date:"Y-m-d" }}</td>
+        <td><span class="badge bg-{% if req.status == 'pending' %}secondary{% elif req.status == 'approved' %}success{% elif req.status == 'rejected' %}danger{% elif req.status == 'quoted' %}primary{% elif req.status == 'in_progress' %}warning{% elif req.status == 'completed' %}info{% else %}dark{% endif %}">{{ req.get_status_display }}</span></td>
+        <td>{% if req.quotation %}<a href="{% url 'client_quotation_detail' req.quotation.pk %}">{{ req.quotation.quotation_number }}</a>{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}<div class="card"><div class="card-body"><div class="empty-state"><div class="empty-icon">📋</div><p>You have not made any service requests yet.</p><a href="{% url 'create_service_request' %}" class="btn btn-primary mt-2">Request a Service</a></div></div></div>{% endif %}
+{% endblock %}

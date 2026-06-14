@@ -1,49 +1,485 @@
-{% extends "generic/form.html" %}
+{% extends "base.html" %}
+{% load static %}
+
 {% block title %}{% if form.instance.pk %}Edit Expense{% else %}New Expense{% endif %}{% endblock %}
-{% block form_title %}Expense{% endblock %}
+{% block page_title %}{% if form.instance.pk %}Edit Expense{% else %}Create Expense{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --transition: all 0.2s ease;
+  }
+  /* Modern floating labels */
+  .form-floating-icon {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .form-floating-icon input,
+  .form-floating-icon select,
+  .form-floating-icon textarea {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 1rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: var(--transition);
+  }
+  .form-floating-icon i.input-icon {
+    position: absolute;
+    left: 1rem;
+    top: 0.9rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .form-floating-icon label {
+    position: absolute;
+    left: 2.5rem;
+    top: 0.8rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    transition: var(--transition);
+    background: transparent;
+    padding: 0 0.25rem;
+  }
+  /* Label floats only when the field has a value or is focused */
+  .form-floating-icon.focused label,
+  .form-floating-icon.has-value label {
+    top: -0.6rem;
+    left: 1.8rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--bg-primary);
+    padding: 0 0.4rem;
+  }
+  .form-floating-icon input:focus,
+  .form-floating-icon select:focus,
+  .form-floating-icon textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65,84,241,0.15);
+    outline: none;
+  }
+  /* Invalid state */
+  .form-floating-icon.is-invalid input,
+  .form-floating-icon.is-invalid select,
+  .form-floating-icon.is-invalid textarea {
+    border-color: var(--danger);
+  }
+  .error-message {
+    font-size: 0.75rem;
+    color: var(--danger);
+    margin-top: 0.25rem;
+    display: none;
+  }
+  .form-floating-icon.is-invalid .error-message {
+    display: block;
+  }
+  /* Category decorative icon */
+  .category-icon-display {
+    position: absolute;
+    right: 1rem;
+    top: 0.9rem;
+    font-size: 1rem;
+    pointer-events: none;
+    color: var(--text-muted);
+  }
+  /* Character counter */
+  .char-counter {
+    text-align: right;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+  /* Dropzone */
+  .dropzone-pro {
+    border: 2px dashed var(--border-color);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    text-align: center;
+    background: var(--bg-tertiary);
+    transition: var(--transition);
+    cursor: pointer;
+  }
+  .dropzone-pro.dragover {
+    border-color: var(--primary);
+    background: rgba(65,84,241,0.05);
+  }
+  .dropzone-pro i {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+  }
+  .receipt-preview {
+    position: relative;
+    display: inline-block;
+    margin: 0.5rem;
+  }
+  .receipt-preview img {
+    max-height: 80px;
+    border-radius: 0.5rem;
+  }
+  .remove-receipt {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--danger);
+    color: white;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7rem;
+  }
+  /* Amount card */
+  .amount-card {
+    background: linear-gradient(135deg, var(--primary), #2f45c5);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    color: white;
+    text-align: center;
+  }
+  .amount-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+  }
+  @media (max-width: 768px) {
+    .amount-card .value { font-size: 1.5rem; }
+    .dropzone-pro { padding: 1rem; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width:640px;">
-  <div class="page-header">
+<div class="container px-3 px-sm-4 py-3 py-md-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
-      {% block breadcrumb %}{% endblock %}
-      <h1>{% if form.instance.pk %}Edit{% else %}New{% endif %} {% block form_title %}Record{% endblock %}</h1>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1 small">
+          <li class="breadcrumb-item"><a href="{% url 'expense_list' %}">Expenses</a></li>
+          <li class="breadcrumb-item active">{% if form.instance.pk %}Edit{% else %}New{% endif %}</li>
+        </ol>
+      </nav>
+      <h1 class="h3 mb-0">{% if form.instance.pk %}Edit Expense{% else %}Record Expense{% endif %}</h1>
+      <p class="text-muted small mt-1">Fill in the details – receipts are optional</p>
     </div>
+    <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill"><i class="bi bi-arrow-left"></i> Back</a>
   </div>
 
-  <div class="card">
-    <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% for field in form %}
-        <div class="form-group">
-          <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {% if field.field.widget.input_type == 'select' %}
-            <select name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control">
-              {% for val, label in field.field.choices %}
-              <option value="{{ val }}" {% if field.value|stringformat:'s' == val|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
-              {% endfor %}
-            </select>
-          {% elif field.field.widget.input_type == 'textarea' %}
-            <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control" rows="3">{{ field.value|default:'' }}</textarea>
-          {% elif field.field.widget.input_type == 'checkbox' %}
-            <div style="display:flex;align-items:center;gap:.5rem;">
-              <input type="checkbox" name="{{ field.html_name }}" id="{{ field.id_for_label }}" {% if field.value %}checked{% endif %}>
-              <label for="{{ field.id_for_label }}" style="font-weight:400;margin:0;">{{ field.label }}</label>
+  <div class="row g-3 g-lg-4">
+    <div class="col-12 col-lg-7 order-2 order-lg-1">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-3 p-md-4">
+          <form method="post" enctype="multipart/form-data" id="expense-form" novalidate>
+            {% csrf_token %}
+
+            <!-- Category -->
+            <div class="form-floating-icon" id="category-group">
+              <i class="input-icon bi bi-tags"></i>
+              <select name="{{ form.category.html_name }}" id="{{ form.category.id_for_label }}" class="form-select" required>
+                <option value="">Select category</option>
+                {% for value, label in form.category.field.choices %}
+                  <option value="{{ value }}" {% if form.category.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <i class="category-icon-display bi bi-receipt" id="selectedCategoryIcon"></i>
+              <label for="{{ form.category.id_for_label }}">Category *</label>
+              <div class="error-message">Please select a category.</div>
             </div>
-          {% else %}
-            <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
-              class="form-control" value="{{ field.value|default:'' }}" {% if field.field.required %}required{% endif %}>
-          {% endif %}
-          {% if field.errors %}<div class="form-error">{{ field.errors }}</div>{% endif %}
-          {% if field.help_text %}<div class="form-hint">{{ field.help_text }}</div>{% endif %}
+
+            <!-- Description -->
+            <div class="form-floating-icon" id="description-group">
+              <i class="input-icon bi bi-pencil"></i>
+              <input type="text" name="{{ form.description.html_name }}" id="{{ form.description.id_for_label }}" class="form-control" placeholder=" " value="{{ form.description.value|default:'' }}" maxlength="300" required>
+              <label for="{{ form.description.id_for_label }}">Description *</label>
+              <div class="char-counter" id="descCounter">0/300</div>
+              <div class="error-message">Description must be at least 3 characters.</div>
+            </div>
+
+            <div class="row g-3">
+              <!-- Amount -->
+              <div class="col-12 col-sm-6">
+                <div class="form-floating-icon" id="amount-group">
+                  <i class="input-icon bi bi-calculator"></i>
+                  <input type="number" step="0.01" min="0.01" name="{{ form.amount.html_name }}" id="{{ form.amount.id_for_label }}" class="form-control" placeholder=" " value="{{ form.amount.value|default:'' }}" required>
+                  <label for="{{ form.amount.id_for_label }}">Amount ({{ site_config.currency_symbol }}) *</label>
+                  <div class="error-message">Amount must be greater than zero.</div>
+                </div>
+              </div>
+              <!-- Date -->
+              <div class="col-12 col-sm-6">
+                <div class="form-floating-icon" id="date-group">
+                  <i class="input-icon bi bi-calendar"></i>
+                  <input type="date" name="{{ form.date.html_name }}" id="{{ form.date.id_for_label }}" class="form-control" placeholder=" " value="{{ form.date.value|date:'Y-m-d'|default:'' }}" required>
+                  <label for="{{ form.date.id_for_label }}">Date *</label>
+                  <div class="error-message">Date cannot be in the future.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Receipt dropzone -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold mb-2"><i class="bi bi-receipt"></i> Receipt (optional)</label>
+              <div class="dropzone-pro" id="dropzone">
+                <i class="bi bi-cloud-upload"></i>
+                <div class="mt-1">Drag & drop or click to upload</div>
+                <div class="small text-muted mt-1">PDF, JPG, PNG (max 5MB)</div>
+                {{ form.receipt }}
+              </div>
+              <div id="receipt-preview-container" class="d-flex flex-wrap gap-2 mt-2"></div>
+              <div class="error-message" id="receipt-error" style="display: none;">File exceeds 5MB.</div>
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row gap-3 mt-4">
+              <button type="submit" class="btn btn-primary rounded-pill px-4 py-2">
+                <i class="bi bi-check-lg"></i> {% if form.instance.pk %}Save Changes{% else %}Submit Expense{% endif %}
+              </button>
+              <a href="{% url 'expense_list' %}" class="btn btn-outline-secondary rounded-pill">Cancel</a>
+            </div>
+          </form>
         </div>
-        {% endfor %}
-        <div style="display:flex;gap:.75rem;margin-top:1.5rem;">
-          <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Save changes{% else %}Create{% endif %}</button>
-          <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-12 col-lg-5 order-1 order-lg-2">
+      <div class="sticky-top" style="top: 80px;">
+        <div class="amount-card mb-3">
+          <div class="small opacity-75">Total Amount</div>
+          <div class="value" id="amountPreview">{{ site_config.currency_symbol }} 0.00</div>
         </div>
-      </form>
+        <div class="card border-0 shadow-sm rounded-4">
+          <div class="card-body">
+            <h5 class="card-title"><i class="bi bi-info-circle-fill text-primary me-2"></i> Approval Workflow</h5>
+            <div class="mt-3">
+              <div class="d-flex mb-2"><i class="bi bi-pencil-square me-2 text-muted"></i> <strong>1. Submit</strong> – Fill details & receipt</div>
+              <div class="d-flex mb-2"><i class="bi bi-hourglass-split me-2 text-warning"></i> <strong>2. Pending Review</strong> – Finance team checks</div>
+              <div class="d-flex mb-2"><i class="bi bi-check-circle me-2 text-success"></i> <strong>3. Approved/Rejected</strong> – You'll be notified</div>
+            </div>
+            <hr>
+            <div class="alert alert-warning small mb-0">Only approved expenses appear in reports. Keep receipts clear.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+  (function() {
+    const form = document.getElementById('expense-form');
+    const amountInput = document.getElementById('{{ form.amount.id_for_label }}');
+    const amountPreview = document.getElementById('amountPreview');
+    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+    const descInput = document.getElementById('{{ form.description.id_for_label }}');
+    const dateInput = document.getElementById('{{ form.date.id_for_label }}');
+    const currency = "{{ site_config.currency_symbol }}";
+
+    // Helper to toggle floating label class based on whether the field has a value
+    function toggleHasValue(field, group) {
+      let hasValue = false;
+      if (field.tagName === 'SELECT') {
+        hasValue = field.value !== '';
+      } else if (field.type === 'checkbox') {
+        hasValue = field.checked;
+      } else {
+        hasValue = field.value.trim() !== '';
+      }
+      if (hasValue) group.classList.add('has-value');
+      else group.classList.remove('has-value');
+    }
+
+    // Initialize all form groups
+    const groups = {
+      category: { field: categorySelect, group: document.getElementById('category-group') },
+      description: { field: descInput, group: document.getElementById('description-group') },
+      amount: { field: amountInput, group: document.getElementById('amount-group') },
+      date: { field: dateInput, group: document.getElementById('date-group') }
+    };
+    for (const key in groups) {
+      const g = groups[key];
+      if (g.field && g.group) {
+        // Set initial state
+        toggleHasValue(g.field, g.group);
+        // Listen for changes
+        g.field.addEventListener('change', () => toggleHasValue(g.field, g.group));
+        g.field.addEventListener('input', () => toggleHasValue(g.field, g.group));
+        // Also on focus/blur to keep the label floating when focused
+        g.field.addEventListener('focus', () => g.group.classList.add('focused'));
+        g.field.addEventListener('blur', () => {
+          g.group.classList.remove('focused');
+          toggleHasValue(g.field, g.group);
+        });
+      }
+    }
+
+    // Live amount preview
+    function updateAmountPreview() {
+      let num = parseFloat(amountInput.value);
+      if (isNaN(num)) num = 0;
+      amountPreview.innerText = currency + ' ' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    amountInput.addEventListener('input', updateAmountPreview);
+    updateAmountPreview();
+
+    // Description char counter
+    function updateCharCounter() {
+      document.getElementById('descCounter').innerText = `${descInput.value.length}/300`;
+    }
+    descInput.addEventListener('input', updateCharCounter);
+    updateCharCounter();
+
+    // Category icon change (decorative)
+    function updateCategoryIcon() {
+      const selected = categorySelect.options[categorySelect.selectedIndex]?.text || 'Expense';
+      const icons = { 'Salaries': 'bi-person-badge', 'Equipment': 'bi-tools', 'Transport': 'bi-truck', 'Utilities': 'bi-lightning', 'Marketing': 'bi-megaphone' };
+      let icon = 'bi-receipt';
+      for (let [key, val] of Object.entries(icons)) {
+        if (selected.includes(key)) icon = val;
+      }
+      document.getElementById('selectedCategoryIcon').className = `category-icon-display ${icon}`;
+    }
+    categorySelect.addEventListener('change', updateCategoryIcon);
+    updateCategoryIcon();
+
+    // Validation functions
+    function validateCategory() {
+      const group = document.getElementById('category-group');
+      const isValid = !!categorySelect.value;
+      if (!isValid) group.classList.add('is-invalid');
+      else group.classList.remove('is-invalid');
+      return isValid;
+    }
+    function validateDescription() {
+      const group = document.getElementById('description-group');
+      const isValid = descInput.value.trim().length >= 3;
+      if (!isValid) group.classList.add('is-invalid');
+      else group.classList.remove('is-invalid');
+      return isValid;
+    }
+    function validateAmount() {
+      const group = document.getElementById('amount-group');
+      const val = parseFloat(amountInput.value);
+      const isValid = !isNaN(val) && val > 0;
+      if (!isValid) group.classList.add('is-invalid');
+      else group.classList.remove('is-invalid');
+      return isValid;
+    }
+    function validateDate() {
+      const group = document.getElementById('date-group');
+      const today = new Date().toISOString().split('T')[0];
+      const isValid = dateInput.value && dateInput.value <= today;
+      if (!isValid) group.classList.add('is-invalid');
+      else group.classList.remove('is-invalid');
+      return isValid;
+    }
+
+    // Blur validation (non-intrusive)
+    categorySelect.addEventListener('blur', validateCategory);
+    descInput.addEventListener('blur', validateDescription);
+    amountInput.addEventListener('blur', validateAmount);
+    dateInput.addEventListener('blur', validateDate);
+
+    // Submit validation
+    form.addEventListener('submit', function(e) {
+      const isCategoryValid = validateCategory();
+      const isDescValid = validateDescription();
+      const isAmountValid = validateAmount();
+      const isDateValid = validateDate();
+
+      if (!isCategoryValid || !isDescValid || !isAmountValid || !isDateValid) {
+        e.preventDefault();
+        const firstInvalid = document.querySelector('.form-floating-icon.is-invalid');
+        if (firstInvalid) firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Drag & drop receipt
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.querySelector('#{{ form.receipt.id_for_label }}');
+    const previewContainer = document.getElementById('receipt-preview-container');
+    const receiptError = document.getElementById('receipt-error');
+    const MAX_SIZE = 5 * 1024 * 1024;
+
+    function clearPreviews() { previewContainer.innerHTML = ''; }
+    function attachRemove(container) {
+      const btn = container.querySelector('.remove-receipt');
+      if (btn) btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.value = '';
+        clearPreviews();
+        receiptError.style.display = 'none';
+      });
+    }
+    function showPreview(file) {
+      if (file.size > MAX_SIZE) {
+        receiptError.style.display = 'block';
+        fileInput.value = '';
+        return;
+      }
+      receiptError.style.display = 'none';
+      clearPreviews();
+      const div = document.createElement('div');
+      div.className = 'receipt-preview';
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          div.innerHTML = `<img src="${e.target.result}" alt="preview"><div class="remove-receipt">✕</div>`;
+          previewContainer.appendChild(div);
+          attachRemove(div);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        div.innerHTML = `<div class="alert alert-secondary py-1 px-2">${file.name}</div><div class="remove-receipt">✕</div>`;
+        previewContainer.appendChild(div);
+        attachRemove(div);
+      }
+    }
+    if (dropzone) {
+      dropzone.addEventListener('click', () => fileInput.click());
+      dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+      dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+          fileInput.files = e.dataTransfer.files;
+          showPreview(e.dataTransfer.files[0]);
+        }
+      });
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) showPreview(e.target.files[0]);
+        else clearPreviews();
+      });
+    }
+
+    // Existing receipt preview (if editing)
+    {% if form.instance.receipt %}
+      (function() {
+        const div = document.createElement('div');
+        div.className = 'receipt-preview';
+        {% if form.instance.receipt.url|lower|slice:"-4:" == ".jpg" or form.instance.receipt.url|lower|slice:"-5:" == ".jpeg" or form.instance.receipt.url|lower|slice:"-4:" == ".png" %}
+          div.innerHTML = `<img src="{{ form.instance.receipt.url }}" alt="receipt"><div class="remove-receipt">✕</div>`;
+        {% else %}
+          div.innerHTML = `<div class="alert alert-secondary py-1 px-2"><a href="{{ form.instance.receipt.url }}" target="_blank">{{ form.instance.receipt.name }}</a></div><div class="remove-receipt">✕</div>`;
+        {% endif %}
+        previewContainer.appendChild(div);
+        attachRemove(div);
+        // Also mark category group as has-value if a category was already selected
+        if (categorySelect.value) {
+          document.getElementById('category-group').classList.add('has-value');
+        }
+      })();
+    {% else %}
+      // For new form, ensure category group doesn't have has-value initially
+      document.getElementById('category-group').classList.remove('has-value');
+    {% endif %}
+  })();
+</script>
 {% endblock %}

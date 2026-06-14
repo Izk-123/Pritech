@@ -1,0 +1,713 @@
+{% extends "portfolio/base.html" %}
+{% load static %}
+
+{% block title %}{{ project.title }} – Pritech Portfolio{% endblock %}
+{% block meta_description %}{{ project.description.html|striptags|truncatechars:160|default:"View this project delivered by Pritech ICT Solutions." }}{% endblock %}
+
+{% block og_title %}{{ project.title }} – Pritech Portfolio{% endblock %}
+{% block og_description %}{{ project.description.html|striptags|truncatechars:200 }}{% endblock %}
+{% block og_image %}{% if project.featured_image %}{{ request.scheme }}://{{ request.get_host }}{{ project.featured_image.url }}{% endif %}{% endblock %}
+
+{# ── Article structured data ─────────────────────────────────── #}
+{% block extra_css %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  "name": "{{ project.title }}",
+  "description": "{{ project.description.html|striptags|truncatechars:200 }}",
+  "creator": {"@type": "Organization", "name": "Pritech ICT Solutions"},
+  {% if project.client_name %}"client": "{{ project.client_name }}",{% endif %}
+  {% if project.completion_date %}"datePublished": "{{ project.completion_date|date:'Y-m-d' }}"{% endif %}
+}
+</script>
+<style>
+/* ── Project detail styles ──────────────────────────────────────── */
+
+/* Back link bar */
+.project-back-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) 0;
+  position: sticky;
+  top: 84px;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+}
+.project-back-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+.back-link:hover { color: var(--accent); }
+
+/* Hero image */
+.project-hero-img {
+  width: 100%;
+  max-height: 520px;
+  object-fit: cover;
+  display: block;
+  background: var(--bg-secondary);
+}
+.project-hero-placeholder {
+  height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  font-size: 5rem;
+  color: var(--text-muted);
+  opacity: .3;
+}
+
+/* Main layout */
+.project-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-10);
+  padding: var(--space-12) 0 var(--space-20);
+}
+@media (min-width: 1024px) {
+  .project-layout { grid-template-columns: 1fr 320px; }
+}
+
+/* Content area */
+.project-content {}
+
+.project-header { margin-bottom: var(--space-8); }
+.project-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.project-main-title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  margin-bottom: var(--space-4);
+  line-height: 1.15;
+}
+
+/* Rich text content (Quill output) */
+.project-body-text {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+.project-body-text h2 { color: var(--text-primary); margin: var(--space-8) 0 var(--space-3); font-size: 1.5rem; }
+.project-body-text h3 { color: var(--text-primary); margin: var(--space-6) 0 var(--space-2); font-size: 1.2rem; }
+.project-body-text p { margin-bottom: var(--space-4); }
+.project-body-text ul, .project-body-text ol { padding-left: 1.5rem; margin-bottom: var(--space-4); }
+.project-body-text li { margin-bottom: var(--space-2); }
+.project-body-text strong { color: var(--text-primary); font-weight: 600; }
+.project-body-text a { color: var(--accent); }
+.project-body-text code {
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: .9em;
+  font-family: 'Courier New', monospace;
+}
+.project-body-text pre {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  overflow-x: auto;
+  margin-bottom: var(--space-4);
+}
+
+/* Gallery */
+.gallery-section { margin-top: var(--space-10); }
+.gallery-section h2 { font-size: 1.4rem; margin-bottom: var(--space-6); }
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+@media (min-width: 640px) {
+  .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.gallery-item {
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  cursor: zoom-in;
+  position: relative;
+}
+.gallery-item img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+.gallery-item:hover img { transform: scale(1.08); }
+.gallery-caption {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: var(--space-2) var(--space-3);
+  background: linear-gradient(0deg, rgba(0,0,0,.8), transparent);
+  color: white;
+  font-size: .75rem;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+.gallery-item:hover .gallery-caption { opacity: 1; }
+
+/* Testimonials */
+.testimonials-section { margin-top: var(--space-10); }
+.testimonials-section h2 { font-size: 1.4rem; margin-bottom: var(--space-6); }
+.testimonial-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+  position: relative;
+}
+.testimonial-quote {
+  font-size: 2.5rem;
+  line-height: 1;
+  color: var(--accent);
+  opacity: .3;
+  font-family: Georgia, serif;
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-5);
+}
+.testimonial-text {
+  font-size: .95rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: var(--space-4);
+}
+.testimonial-meta { display: flex; align-items: center; gap: var(--space-3); }
+.testimonial-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  font-size: .9rem;
+  flex-shrink: 0;
+}
+.testimonial-name { font-weight: 600; color: var(--text-primary); font-size: .9rem; }
+.testimonial-pos { font-size: .8rem; color: var(--text-muted); }
+.stars {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+}
+.stars i { color: #f59e0b; font-size: .8rem; }
+
+/* Sidebar */
+.project-sidebar { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.sidebar-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+.sidebar-widget-title {
+  font-family: var(--font-display);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-list { display: flex; flex-direction: column; gap: var(--space-3); }
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.detail-key {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+.detail-val { font-size: .9rem; color: var(--text-primary); font-weight: 500; }
+.detail-val a { color: var(--accent); }
+
+.tech-pills { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tech-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent-subtle);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-full);
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.service-pill {
+  display: inline-flex;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border-radius: var(--radius-full);
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Related projects */
+.related-section { margin-top: var(--space-16); padding-top: var(--space-12); border-top: 1px solid var(--border); }
+.related-section h2 { font-size: 1.6rem; margin-bottom: var(--space-8); }
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-5);
+}
+@media (min-width: 768px) { .related-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.related-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  transition: all var(--transition-base);
+  display: block;
+}
+.related-card:hover { transform: translateY(-4px); border-color: var(--border-accent); box-shadow: var(--shadow-md); }
+.related-img {
+  aspect-ratio: 16/10;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+.related-img img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--transition-base); }
+.related-card:hover .related-img img { transform: scale(1.06); }
+.related-img-placeholder {
+  width: 100%; height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  opacity: .3;
+}
+.related-body { padding: var(--space-4); }
+.related-cat { font-size: .7rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.related-title { font-size: .9rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+
+/* Lightbox */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.92);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+.lightbox.open { display: flex; }
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+.lightbox-close {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: white;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: background var(--transition-fast);
+}
+.lightbox-close:hover { background: rgba(255,255,255,.3); }
+.lightbox-caption {
+  position: absolute;
+  bottom: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,.8);
+  font-size: .875rem;
+  text-align: center;
+  max-width: 500px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Back bar ──────────────────────────────────────────────────── #}
+<div class="project-back-bar">
+  <div class="container">
+    <div class="project-back-inner">
+      <a href="{% url 'portfolio_list' %}" class="back-link">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        All Projects
+      </a>
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}">Home</a>
+        <i class="fa-solid fa-chevron-right fa-xs" aria-hidden="true"></i>
+        <a href="{% url 'portfolio_list' %}">Portfolio</a>
+        <i class="fa-solid fa-chevron-right fa-xs" aria-hidden="true"></i>
+        <span aria-current="page">{{ project.title|truncatechars:40 }}</span>
+      </nav>
+    </div>
+  </div>
+</div>
+
+{# ── Featured image ─────────────────────────────────────────────── #}
+{% if project.featured_image %}
+<div class="reveal">
+  <img class="project-hero-img"
+       src="{{ project.featured_image.url }}"
+       alt="{{ project.title }}"
+       width="1200" height="520"
+       loading="eager" />
+</div>
+{% else %}
+<div class="project-hero-placeholder" aria-hidden="true">
+  <i class="fa-solid fa-laptop-code"></i>
+</div>
+{% endif %}
+
+{# ── Main content ──────────────────────────────────────────────── #}
+<div class="container">
+  <div class="project-layout">
+
+    {# Left: main content #}
+    <article class="project-content reveal" aria-label="{{ project.title }} project details">
+
+      {# Header #}
+      <header class="project-header">
+        <div class="project-header-top">
+          {% if project.category %}
+          <span class="badge badge-accent">
+            {% if project.category.icon %}<i class="{{ project.category.icon }}" aria-hidden="true"></i>{% endif %}
+            {{ project.category.name }}
+          </span>
+          {% endif %}
+          {% if project.completion_date %}
+          <span style="font-size:.85rem;color:var(--text-muted);">
+            <i class="fa-regular fa-calendar fa-xs" aria-hidden="true"></i>
+            {{ project.completion_date|date:"F Y" }}
+          </span>
+          {% endif %}
+          {% if project.project_url %}
+          <a href="{{ project.project_url }}" target="_blank" rel="noopener noreferrer" class="badge" style="background:rgba(16,185,129,.1);color:var(--success);border:1px solid rgba(16,185,129,.2);">
+            <i class="fa-solid fa-arrow-up-right-from-square fa-xs" aria-hidden="true"></i>
+            Live Project
+          </a>
+          {% endif %}
+        </div>
+
+        <h1 class="project-main-title">{{ project.title }}</h1>
+
+        {% if project.description %}
+        <div class="project-body-text" style="font-size:1.1rem;margin-bottom:0;">
+          {{ project.description.html|safe }}
+        </div>
+        {% endif %}
+      </header>
+
+      {# Full description #}
+      {% if project.full_description %}
+      <div class="project-body-text">
+        {{ project.full_description.html|safe }}
+      </div>
+      {% endif %}
+
+      {# Gallery #}
+      {% if project.images.all %}
+      <section class="gallery-section" aria-labelledby="gallery-heading">
+        <h2 id="gallery-heading">Project Gallery</h2>
+        <div class="gallery-grid">
+          {% for img in project.images.all %}
+          <div class="gallery-item"
+               role="button"
+               tabindex="0"
+               aria-label="View image: {{ img.caption|default:project.title }}"
+               data-lightbox-src="{{ img.image.url }}"
+               data-lightbox-caption="{{ img.caption }}">
+            <img src="{{ img.image.url }}"
+                 alt="{{ img.caption|default:project.title }}"
+                 loading="lazy"
+                 width="400" height="300" />
+            {% if img.caption %}
+            <div class="gallery-caption">{{ img.caption }}</div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {# Testimonials #}
+      {% if project.testimonials.all %}
+      <section class="testimonials-section" aria-labelledby="testimonials-heading">
+        <h2 id="testimonials-heading">Client Feedback</h2>
+        {% for testimonial in project.testimonials.filter(is_approved=True) %}
+        <blockquote class="testimonial-card">
+          <span class="testimonial-quote" aria-hidden="true">"</span>
+
+          {# Stars #}
+          <div class="stars" aria-label="{{ testimonial.rating }} out of 5 stars">
+            {% for i in "12345" %}
+              {% if forloop.counter <= testimonial.rating %}
+              <i class="fa-solid fa-star" aria-hidden="true"></i>
+              {% else %}
+              <i class="fa-regular fa-star" aria-hidden="true"></i>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <p class="testimonial-text">{{ testimonial.testimonial }}</p>
+
+          <footer class="testimonial-meta">
+            <div class="testimonial-avatar" aria-hidden="true">
+              {{ testimonial.client_name|first|upper }}
+            </div>
+            <div>
+              <div class="testimonial-name">{{ testimonial.client_name }}</div>
+              {% if testimonial.client_position %}
+              <div class="testimonial-pos">{{ testimonial.client_position }}</div>
+              {% endif %}
+            </div>
+          </footer>
+        </blockquote>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+    </article>
+
+    {# Right: sidebar #}
+    <aside class="project-sidebar reveal reveal-delay-2" aria-label="Project details">
+
+      {# Project details widget #}
+      <div class="sidebar-widget">
+        <h2 class="sidebar-widget-title">Project Details</h2>
+        <dl class="detail-list">
+          {% if project.client_name %}
+          <div class="detail-item">
+            <dt class="detail-key">Client</dt>
+            <dd class="detail-val">{{ project.client_name }}</dd>
+          </div>
+          {% endif %}
+
+          {% if project.category %}
+          <div class="detail-item">
+            <dt class="detail-key">Category</dt>
+            <dd class="detail-val">{{ project.category.name }}</dd>
+          </div>
+          {% endif %}
+
+          {% if project.start_date %}
+          <div class="detail-item">
+            <dt class="detail-key">Start Date</dt>
+            <dd class="detail-val">{{ project.start_date|date:"M j, Y" }}</dd>
+          </div>
+          {% endif %}
+
+          {% if project.completion_date %}
+          <div class="detail-item">
+            <dt class="detail-key">Completed</dt>
+            <dd class="detail-val">{{ project.completion_date|date:"M j, Y" }}</dd>
+          </div>
+          {% endif %}
+
+          {% if project.project_url %}
+          <div class="detail-item">
+            <dt class="detail-key">Live URL</dt>
+            <dd class="detail-val">
+              <a href="{{ project.project_url }}" target="_blank" rel="noopener noreferrer">
+                View live <i class="fa-solid fa-arrow-up-right-from-square fa-xs" aria-hidden="true"></i>
+              </a>
+            </dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      {# Technologies widget #}
+      {% if project.technologies.all %}
+      <div class="sidebar-widget">
+        <h2 class="sidebar-widget-title">Technologies Used</h2>
+        <div class="tech-pills" role="list" aria-label="Technologies">
+          {% for tech in project.technologies.all %}
+          <span class="tech-pill" role="listitem">
+            {% if tech.icon %}<i class="{{ tech.icon }}" aria-hidden="true"></i>{% endif %}
+            {{ tech.name }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Services used #}
+      {% if project.services.all %}
+      <div class="sidebar-widget">
+        <h2 class="sidebar-widget-title">Services Involved</h2>
+        <div class="tech-pills" role="list" aria-label="Services">
+          {% for service in project.services.all %}
+          <span class="service-pill" role="listitem">{{ service.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# CTA widget #}
+      <div class="sidebar-widget" style="background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;text-align:center;">
+        <p style="color:rgba(255,255,255,.85);font-size:.9rem;margin-bottom:var(--space-4);">
+          Impressed by this project? Let's discuss yours.
+        </p>
+        <a href="{% url 'home' %}#contact" class="btn" style="background:white;color:var(--accent);font-weight:700;width:100%;justify-content:center;">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+          Start a Project
+        </a>
+      </div>
+
+      {# Share widget #}
+      <div class="sidebar-widget">
+        <h2 class="sidebar-widget-title">Share this Project</h2>
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+          <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.build_absolute_uri }}"
+             target="_blank" rel="noopener noreferrer"
+             class="btn btn-outline btn-sm" aria-label="Share on LinkedIn">
+            <i class="fa-brands fa-linkedin-in" aria-hidden="true"></i> LinkedIn
+          </a>
+          <a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri }}&text={{ project.title|urlencode }}+by+Pritech"
+             target="_blank" rel="noopener noreferrer"
+             class="btn btn-outline btn-sm" aria-label="Share on X / Twitter">
+            <i class="fa-brands fa-x-twitter" aria-hidden="true"></i> X
+          </a>
+          <button class="btn btn-outline btn-sm" id="copyLinkBtn" aria-label="Copy link to clipboard">
+            <i class="fa-solid fa-link" aria-hidden="true"></i> Copy
+          </button>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  {# ── Related projects ──────────────────────────────────────────── #}
+  {% if related_projects %}
+  <section class="related-section reveal" aria-labelledby="related-heading">
+    <h2 id="related-heading">Related Projects</h2>
+    <div class="related-grid">
+      {% for rp in related_projects %}
+      <a href="{{ rp.get_absolute_url }}" class="related-card" aria-label="{{ rp.title }}">
+        <div class="related-img">
+          {% if rp.featured_image %}
+          <img src="{{ rp.featured_image.url }}" alt="{{ rp.title }}" loading="lazy" width="300" height="190" />
+          {% else %}
+          <div class="related-img-placeholder" aria-hidden="true">
+            <i class="fa-solid fa-laptop-code"></i>
+          </div>
+          {% endif %}
+        </div>
+        <div class="related-body">
+          {% if rp.category %}
+          <div class="related-cat">{{ rp.category.name }}</div>
+          {% endif %}
+          <div class="related-title">{{ rp.title }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+</div>
+
+{# ── Lightbox ─────────────────────────────────────────────────── #}
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image lightbox">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close lightbox">
+    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+  </button>
+  <img src="" alt="" class="lightbox-img" id="lightboxImg" />
+  <p class="lightbox-caption" id="lightboxCaption"></p>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Gallery lightbox ───────────────────────────────────────────
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightboxImg');
+const lightboxCaption = document.getElementById('lightboxCaption');
+const lightboxClose = document.getElementById('lightboxClose');
+
+document.querySelectorAll('.gallery-item').forEach(item => {
+  const open = () => {
+    lightboxImg.src = item.dataset.lightboxSrc;
+    lightboxImg.alt = item.dataset.lightboxCaption || '';
+    lightboxCaption.textContent = item.dataset.lightboxCaption || '';
+    lightbox.classList.add('open');
+    lightboxClose.focus();
+    document.body.style.overflow = 'hidden';
+  };
+  item.addEventListener('click', open);
+  item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+});
+
+const closeLightbox = () => {
+  lightbox.classList.remove('open');
+  document.body.style.overflow = '';
+  lightboxImg.src = '';
+};
+
+lightboxClose.addEventListener('click', closeLightbox);
+lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && lightbox.classList.contains('open')) closeLightbox(); });
+
+// ── Copy link ─────────────────────────────────────────────────
+const copyBtn = document.getElementById('copyLinkBtn');
+if (copyBtn) {
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      const icon = copyBtn.querySelector('i');
+      icon.className = 'fa-solid fa-check';
+      copyBtn.style.color = 'var(--success)';
+      setTimeout(() => {
+        icon.className = 'fa-solid fa-link';
+        copyBtn.style.color = '';
+      }, 2000);
+    } catch { /* clipboard access denied */ }
+  });
+}
+</script>
+{% endblock %}

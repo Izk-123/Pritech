@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+{% block page_title %}Users{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <div class="page-breadcrumb">Staff</div>
+    <h1>All Users</h1>
+  </div>
+  <a href="{% url 'user_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add User</a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="get" class="row g-2 mb-3">
+      <div class="col-md-4">
+        <input type="text" name="q" class="form-control" placeholder="Search by email or name" value="{{ request.GET.q|default:'' }}">
+      </div>
+      <div class="col-md-3">
+        <select name="user_type" class="form-select">
+          <option value="">All types</option>
+          {% for value, label in user_type_choices %}
+            <option value="{{ value }}" {% if request.GET.user_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-auto">
+        <button type="submit" class="btn btn-secondary">Filter</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr><th>Email</th><th>Name</th><th>Type</th><th>Active</th><th>Roles</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr>
+              <td>{{ u.email }}</td>
+              <td>{{ u.get_full_name|default:"—" }}</td>
+              <td>{{ u.get_user_type_display }}</td>
+              <td>{% if u.is_active %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</td>
+              <td>
+                {% for ur in u.user_roles.all %}
+                  <span class="badge bg-secondary">{{ ur.role.name }}</span>
+                {% empty %}—{% endfor %}
+               </td>
+              <td>
+                <a href="{% url 'user_update' u.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                <a href="{% url 'user_delete' u.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+               </td>
+             </tr>
+          {% empty %}
+            <tr><td colspan="6">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if is_paginated %}
+      <nav>{% include "includes/pagination.html" %}</nav>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

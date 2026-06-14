@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Request a Service{% endblock %}
+{% block page_title %}New Service Request{% endblock %}
+
+{% block extra_css %}
+<style>
+  .request-info {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-radius: 1rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="page-header mb-4">
+      <h1><i class="bi bi-send-plus me-2"></i>Request a Service</h1>
+      <p class="text-muted">Tell us which service you need and provide any additional details. Our team will review and get back to you with a quotation.</p>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-4">
+      <div class="card-body p-4">
+        <form method="post" novalidate id="requestForm">
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+
+          <!-- Service selection -->
+          <div class="mb-4">
+            <div class="form-floating">
+              {{ form.service }}
+              <label for="{{ form.service.id_for_label }}">{{ form.service.label }} <span class="text-danger">*</span></label>
+            </div>
+            <div class="form-text">Select the service you're interested in.</div>
+            {% if form.service.errors %}
+              <div class="invalid-feedback d-block">{{ form.service.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Description / additional info -->
+          <div class="mb-4">
+            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">{{ form.description.label }}</label>
+            {{ form.description }}
+            <div class="character-counter mt-1" id="descCounter">0 characters</div>
+            <div class="form-text">Please provide any specific requirements, deadlines, or questions.</div>
+            {% if form.description.errors %}
+              <div class="invalid-feedback d-block">{{ form.description.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end pt-3 border-top">
+            <a href="{% url 'client_service_catalog' %}" class="btn btn-outline-secondary px-4" id="cancelBtn">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg"></i> Submit Request
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card request-info border-0 rounded-4 shadow-sm">
+      <div class="card-body p-4">
+        <h5 class="card-title"><i class="bi bi-info-circle-fill me-2"></i>What happens next?</h5>
+        <ol class="mt-3">
+          <li>Our team reviews your request (within 24 hours).</li>
+          <li>We may contact you for clarification.</li>
+          <li>You'll receive a quotation via email and your client portal.</li>
+          <li>After approval, we schedule the service delivery.</li>
+        </ol>
+        <hr class="bg-white bg-opacity-25">
+        <div class="small">Need help? Call us at <strong>{{ site_config.phone|default:"+265 999 123 456" }}</strong> or email <strong>{{ site_config.email|default:"info@pritech.mw" }}</strong></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const form = document.getElementById('requestForm');
+    let formChanged = false;
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(i => {
+      i.addEventListener('input', () => formChanged = true);
+      i.addEventListener('change', () => formChanged = true);
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (formChanged) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes.';
+        return e.returnValue;
+      }
+    });
+    document.getElementById('cancelBtn')?.addEventListener('click', () => formChanged = false);
+
+    const descField = document.querySelector('#{{ form.description.id_for_label }}');
+    const counter = document.getElementById('descCounter');
+    if (descField && counter) {
+      descField.addEventListener('input', () => {
+        counter.innerText = descField.value.length + ' characters';
+      });
+      counter.innerText = descField.value.length + ' characters';
+    }
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}System Analytics{% endblock %}
+{% block page_title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">Login Statistics (last 30 days)</div>
+      <div class="card-body">
+        <ul>
+          <li>Successful logins: {{ login_stats.success|default:0 }}</li>
+          <li>Failed logins: {{ login_stats.failed|default:0 }}</li>
+          <li>Logouts: {{ login_stats.logout|default:0 }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">Active Users Now</div>
+      <div class="card-body">
+        <h2>{{ active_users_now }}</h2>
+        <p class="text-muted">Users active in the last 30 minutes</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">Device Usage (last 30 days)</div>
+      <div class="card-body">
+        <ul>
+          {% for dev in device_stats %}
+            <li>{{ dev.device }}: {{ dev.count }}</li>
+          {% empty %}
+            <li>No data</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6 mb-4">
+    <div class="card">
+      <div class="card-header">User Growth (Cumulative)</div>
+      <div class="card-body">
+        <canvas id="userGrowthChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('userGrowthChart').getContext('2d');
+  const labels = [{% for item in cumulative_users %}'{{ item.day|date:"Y-m-d" }}',{% endfor %}];
+  const data = [{% for item in cumulative_users %}{{ item.total }},{% endfor %}];
+  new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label: 'Total Users', data: data, borderColor: 'blue', fill: false }] }
+  });
+</script>
+{% endblock %}

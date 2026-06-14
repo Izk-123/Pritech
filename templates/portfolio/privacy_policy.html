@@ -1,17 +1,477 @@
 {% extends "portfolio/base.html" %}
+{% load static %}
+
 {% block title %}Privacy Policy – Pritech ICT Solutions{% endblock %}
+{% block meta_description %}Read Pritech ICT Solutions' Privacy Policy — how we collect, use, and protect your personal data in compliance with GDPR and Malawi data protection laws.{% endblock %}
+
 {% block content %}
-<div class="container" style="padding: 4rem 1rem;">
-    <h1>Privacy Policy</h1>
-    <p>Last updated: {% now "F j, Y" %}</p>
-    <p>Your privacy is important to us. This policy explains how we collect, use, and protect your personal data.</p>
-    <h2>Information We Collect</h2>
-    <p>When you contact us via the inquiry form or subscribe to our newsletter, we collect your name, email address, phone number (optional), and IP address.</p>
-    <h2>How We Use Your Data</h2>
-    <p>We use your data only to respond to inquiries, send newsletters, and improve our services. We do not sell or share your data with third parties.</p>
-    <h2>Your Rights</h2>
-    <p>You can request a copy of your data or ask for deletion via the <a href="{% url 'gdpr_export' %}">Data Export</a> and <a href="{% url 'gdpr_delete' %}">Request Deletion</a> links in our footer.</p>
-    <p>For any questions, contact us at {{ site_config.email }}.</p>
-    <p><a href="{% url 'home' %}">← Back to Home</a></p>
-</div>
+
+{# ── Page hero ─────────────────────────────────────────────────── #}
+<section class="page-hero" style="padding-bottom:var(--space-8);" aria-labelledby="privacy-heading">
+  <div class="container">
+    <div class="page-hero-inner reveal">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{% url 'home' %}">Home</a>
+        <i class="fa-solid fa-chevron-right fa-xs" aria-hidden="true"></i>
+        <span aria-current="page">Privacy Policy</span>
+      </nav>
+      <span class="section-tag">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        Legal
+      </span>
+      <h1 id="privacy-heading">Privacy Policy</h1>
+      <p>Last updated: <time datetime="{% now 'Y-m-d' %}">{% now "F j, Y" %}</time></p>
+    </div>
+  </div>
+</section>
+
+{# ── Main layout ───────────────────────────────────────────────── #}
+<section class="section" style="padding-top:var(--space-10);">
+  <div class="container">
+    <div class="privacy-layout">
+
+      {# ── Content ───────────────────────────────────────────────── #}
+      <article class="privacy-content reveal" aria-label="Privacy policy content">
+
+        <div class="privacy-alert">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <div>
+            <strong>Your privacy matters to us.</strong>
+            This policy explains what data we collect, why we collect it, and your rights regarding that data.
+            We do not sell your personal information — ever.
+          </div>
+        </div>
+
+        <h2 id="who-we-are">1. Who We Are</h2>
+        <p>
+          <strong>{{ site_config.company_name|default:"Pritech ICT Solutions" }}</strong> ("we", "us", "our") is an ICT company
+          based in Blantyre, Malawi.
+          {% if site_config.email %}We can be reached at <a href="mailto:{{ site_config.email }}">{{ site_config.email }}</a>.{% endif %}
+          {% if site_config.phone %}Phone: <a href="tel:{{ site_config.phone }}">{{ site_config.phone }}</a>.{% endif %}
+        </p>
+
+        <h2 id="data-we-collect">2. Information We Collect</h2>
+        <p>We collect information in the following ways:</p>
+
+        <h3>2.1 Inquiry / Contact Form</h3>
+        <p>When you submit our contact form we collect:</p>
+        <ul>
+          <li>Full name</li>
+          <li>Email address</li>
+          <li>Phone number (optional)</li>
+          <li>Your message and subject</li>
+        </ul>
+
+        <h3>2.2 Newsletter Subscription</h3>
+        <p>When you subscribe to our newsletter we collect:</p>
+        <ul>
+          <li>Email address</li>
+          <li>IP address (for spam/fraud prevention and legal consent record)</li>
+          <li>Subscription date and confirmation date</li>
+          <li>Your explicit consent (checkbox)</li>
+        </ul>
+
+        <h3>2.3 Client Portal (Registered Users)</h3>
+        <p>If you create an account we additionally collect:</p>
+        <ul>
+          <li>First and last name</li>
+          <li>Phone number and National ID (optional, for account verification)</li>
+          <li>Company/organisation name</li>
+          <li>Physical address</li>
+          <li>Login IP address (security logging)</li>
+          <li>Two-factor authentication device data (if enabled)</li>
+        </ul>
+
+        <h3>2.4 Automatically Collected Data</h3>
+        <p>When you visit our website, we may automatically collect:</p>
+        <ul>
+          <li>IP address and approximate location (country/city level)</li>
+          <li>Browser type and version</li>
+          <li>Pages visited and time spent</li>
+          <li>Referral source</li>
+        </ul>
+        <p>You can <a href="{% url 'tracking_opt_out' %}">opt out of page visit tracking</a> at any time.</p>
+
+        <h2 id="how-we-use">3. How We Use Your Data</h2>
+        <div class="privacy-table-wrap">
+          <table class="privacy-table" aria-label="Data use purposes">
+            <thead>
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Purpose</th>
+                <th scope="col">Legal Basis</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Inquiry form data</td>
+                <td>Respond to your enquiry and provide a quote</td>
+                <td>Legitimate interest / Contract</td>
+              </tr>
+              <tr>
+                <td>Newsletter email</td>
+                <td>Send ICT tips, updates, and offers</td>
+                <td>Explicit consent</td>
+              </tr>
+              <tr>
+                <td>Account data</td>
+                <td>Provide client portal access, billing, and support</td>
+                <td>Contract performance</td>
+              </tr>
+              <tr>
+                <td>IP / login logs</td>
+                <td>Security monitoring and fraud prevention</td>
+                <td>Legitimate interest</td>
+              </tr>
+              <tr>
+                <td>Page visit data</td>
+                <td>Improve website content and UX</td>
+                <td>Legitimate interest (opt-out available)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2 id="data-sharing">4. Who We Share Data With</h2>
+        <p>We <strong>do not sell</strong> your personal data. We may share data with:</p>
+        <ul>
+          <li><strong>Email service providers</strong> — to send newsletters and transactional emails (e.g., Mailgun, SendGrid)</li>
+          <li><strong>Hosting providers</strong> — our servers are hosted by reputable providers who are bound by data processing agreements</li>
+          <li><strong>Law enforcement</strong> — only when legally required to do so</li>
+        </ul>
+
+        <h2 id="retention">5. How Long We Keep Your Data</h2>
+        <ul>
+          <li><strong>Inquiry data</strong> — 3 years (for follow-up and legal record-keeping)</li>
+          <li><strong>Newsletter subscribers</strong> — Until you unsubscribe, then deleted within 30 days</li>
+          <li><strong>Account data</strong> — For the duration of the account, plus 2 years after closure</li>
+          <li><strong>Security logs</strong> — 90 days</li>
+        </ul>
+
+        <h2 id="your-rights">6. Your Rights</h2>
+        <p>Depending on your location you may have the following rights regarding your personal data:</p>
+
+        <div class="rights-grid">
+          {% for right in "123456"|make_list %}
+          <div class="right-card">
+            <div class="right-icon" aria-hidden="true">
+              {% cycle '📋' '✏️' '🗑️' '📦' '⛔' '⚡' %}
+            </div>
+            <h3>{% cycle 'Right to Access' 'Right to Rectification' 'Right to Erasure' 'Right to Portability' 'Right to Object' 'Right to Restrict' %}</h3>
+            <p>{% cycle 'Request a copy of all personal data we hold about you.' 'Request correction of inaccurate or incomplete data.' 'Request deletion of your personal data ("right to be forgotten").' 'Receive your data in a structured, machine-readable format.' 'Object to processing based on legitimate interest.' 'Request restriction of processing in certain circumstances.' %}</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <h2 id="cookies">7. Cookies</h2>
+        <p>
+          We use only essential cookies (session management, CSRF protection, and theme preference storage).
+          We do not use third-party advertising or tracking cookies.
+          Your theme preference (dark/light mode) is stored in <code>localStorage</code> on your device only.
+        </p>
+
+        <h2 id="security">8. Security</h2>
+        <p>
+          We implement industry-standard security measures including HTTPS encryption, hashed passwords,
+          database access controls, and optional two-factor authentication for client portal accounts.
+          However, no method of transmission over the internet is 100% secure.
+        </p>
+
+        <h2 id="children">9. Children's Privacy</h2>
+        <p>
+          Our services are not directed to individuals under the age of 18. We do not knowingly collect
+          personal data from children. If you believe a child has provided us with personal data,
+          please contact us immediately.
+        </p>
+
+        <h2 id="changes">10. Changes to This Policy</h2>
+        <p>
+          We may update this policy from time to time. We will notify registered users by email of
+          any significant changes. The "last updated" date at the top of this page reflects the most recent revision.
+        </p>
+
+        <h2 id="contact-us">11. Contact Us</h2>
+        <p>
+          For any privacy-related questions or to exercise your rights, please contact us:
+        </p>
+        <address style="font-style:normal;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:var(--space-5);margin-top:var(--space-4);">
+          <strong>{{ site_config.company_name|default:"Pritech ICT Solutions" }}</strong><br>
+          {% if site_config.address %}{{ site_config.address }}<br>{% endif %}
+          {% if site_config.email %}<a href="mailto:{{ site_config.email }}">{{ site_config.email }}</a><br>{% endif %}
+          {% if site_config.phone %}<a href="tel:{{ site_config.phone }}">{{ site_config.phone }}</a>{% endif %}
+        </address>
+
+      </article>
+
+      {# ── Sidebar / GDPR actions ────────────────────────────────── #}
+      <aside class="privacy-sidebar reveal reveal-delay-2" aria-label="GDPR data rights">
+
+        {# Table of contents #}
+        <div class="privacy-widget">
+          <h2 class="privacy-widget-title">Contents</h2>
+          <nav aria-label="Privacy policy sections">
+            <ol class="toc-list">
+              <li><a href="#who-we-are">Who We Are</a></li>
+              <li><a href="#data-we-collect">Information We Collect</a></li>
+              <li><a href="#how-we-use">How We Use Your Data</a></li>
+              <li><a href="#data-sharing">Who We Share Data With</a></li>
+              <li><a href="#retention">Data Retention</a></li>
+              <li><a href="#your-rights">Your Rights</a></li>
+              <li><a href="#cookies">Cookies</a></li>
+              <li><a href="#security">Security</a></li>
+              <li><a href="#children">Children's Privacy</a></li>
+              <li><a href="#changes">Policy Changes</a></li>
+              <li><a href="#contact-us">Contact Us</a></li>
+            </ol>
+          </nav>
+        </div>
+
+        {# Data export #}
+        <div class="privacy-widget">
+          <h2 class="privacy-widget-title">
+            <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+            Export Your Data
+          </h2>
+          <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:var(--space-4);">
+            Download all personal data we hold for your email address as a JSON file.
+          </p>
+          <form method="post" action="{% url 'gdpr_export' %}" aria-label="Data export form">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:var(--space-3);">
+              <label class="form-label" for="export-email">Email address</label>
+              <input type="email"
+                     id="export-email"
+                     name="email"
+                     class="form-control"
+                     placeholder="your@email.com"
+                     required
+                     autocomplete="email"
+                     aria-required="true" />
+            </div>
+            <button type="submit" class="btn btn-outline" style="width:100%;">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              Download My Data
+            </button>
+          </form>
+        </div>
+
+        {# Data deletion #}
+        <div class="privacy-widget privacy-widget--danger">
+          <h2 class="privacy-widget-title" style="color:var(--error);">
+            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+            Delete Your Data
+          </h2>
+          <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:var(--space-4);">
+            Request permanent deletion of your newsletter subscriber data. This action cannot be undone.
+          </p>
+          <form method="post" action="{% url 'gdpr_delete' %}" aria-label="Data deletion form"
+                onsubmit="return confirm('Are you sure? This will permanently delete your data and cannot be undone.');">
+            {% csrf_token %}
+            <div class="form-group" style="margin-bottom:var(--space-3);">
+              <label class="form-label" for="delete-email">Email address</label>
+              <input type="email"
+                     id="delete-email"
+                     name="email"
+                     class="form-control"
+                     placeholder="your@email.com"
+                     required
+                     autocomplete="email"
+                     aria-required="true" />
+            </div>
+            <button type="submit" class="btn" style="width:100%;background:var(--error);color:white;border:none;">
+              <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+              Delete My Data
+            </button>
+          </form>
+        </div>
+
+        {# Opt out tracking #}
+        <div class="privacy-widget">
+          <h2 class="privacy-widget-title">
+            <i class="fa-solid fa-eye-slash" aria-hidden="true"></i>
+            Page Tracking
+          </h2>
+          <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:var(--space-4);">
+            You can opt out of anonymous page visit tracking at any time.
+          </p>
+          <a href="{% url 'tracking_opt_out' %}" class="btn btn-outline" style="width:100%;">
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+            Opt Out of Tracking
+          </a>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Page hero */
+.page-hero { padding: calc(72px + var(--space-16)) 0 var(--space-12); background: var(--hero-grad); text-align: center; }
+.page-hero-inner { max-width: 680px; margin: 0 auto; }
+.page-hero h1 { margin: var(--space-4) 0 var(--space-3); }
+.page-hero p { font-size: 1rem; color: var(--text-secondary); }
+.breadcrumb { display: inline-flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); font-size: .85rem; color: var(--text-muted); }
+.breadcrumb a { color: var(--text-muted); }
+.breadcrumb a:hover { color: var(--accent); }
+
+/* Layout */
+.privacy-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-10);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (min-width: 1024px) {
+  .privacy-layout { grid-template-columns: 1fr 320px; }
+}
+
+/* Content */
+.privacy-content h2 {
+  font-size: 1.35rem;
+  margin: var(--space-10) 0 var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.privacy-content h2:first-of-type { border-top: none; margin-top: 0; }
+.privacy-content h3 { font-size: 1.05rem; margin: var(--space-6) 0 var(--space-2); }
+.privacy-content p { color: var(--text-secondary); line-height: 1.8; margin-bottom: var(--space-4); }
+.privacy-content ul, .privacy-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: var(--space-4);
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+.privacy-content li { margin-bottom: var(--space-2); }
+.privacy-content a { color: var(--accent); }
+.privacy-content strong { color: var(--text-primary); }
+.privacy-content code {
+  background: var(--surface);
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: .875em;
+  font-family: 'Courier New', monospace;
+}
+
+/* Alert box */
+.privacy-alert {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  background: var(--accent-subtle);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  margin-bottom: var(--space-8);
+  font-size: .95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.privacy-alert i { color: var(--accent); font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+
+/* Table */
+.privacy-table-wrap { overflow-x: auto; margin-bottom: var(--space-6); }
+.privacy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+.privacy-table th, .privacy-table td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.privacy-table th {
+  background: var(--bg-secondary);
+  font-weight: 700;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.privacy-table td { color: var(--text-secondary); }
+
+/* Rights grid */
+.rights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin: var(--space-5) 0 var(--space-6);
+}
+@media (max-width: 480px) { .rights-grid { grid-template-columns: 1fr; } }
+.right-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  transition: border-color var(--transition-fast);
+}
+.right-card:hover { border-color: var(--border-accent); }
+.right-icon { font-size: 1.5rem; margin-bottom: var(--space-3); }
+.right-card h3 { font-size: .9rem; font-weight: 700; margin-bottom: var(--space-2); }
+.right-card p { font-size: .825rem; color: var(--text-muted); line-height: 1.5; margin: 0; }
+
+/* Sidebar */
+.privacy-sidebar { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.privacy-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  position: sticky;
+  top: 120px;
+}
+.privacy-widget--danger { border-color: rgba(239,68,68,.2); }
+
+.privacy-widget-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Table of contents */
+.toc-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  counter-reset: toc;
+}
+.toc-list li { counter-increment: toc; }
+.toc-list li a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: .875rem;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+.toc-list li a::before {
+  content: counter(toc) '.';
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 20px;
+}
+.toc-list li a:hover { background: var(--accent-subtle); color: var(--accent); }
+</style>
 {% endblock %}

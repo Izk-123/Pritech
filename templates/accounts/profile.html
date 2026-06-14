@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+
 {% block title %}My Profile{% endblock %}
 {% block page_title %}My Profile{% endblock %}
 
@@ -18,7 +18,7 @@
         <p><strong>Role:</strong> {{ request.user.get_user_type_display }}</p>
         {% if request.user.user_type == 'client' %}
           <p><strong>Client role:</strong> {{ request.user.get_client_role_display }}</p>
-          <p><strong>Organization:</strong> {{ request.user.client_organization.name|default:"—" }}</p>
+          <p><strong>Organisation:</strong> {{ request.user.client_organization.name|default:"—" }}</p>
         {% endif %}
         <p><strong>Member since:</strong> {{ request.user.date_joined|date:"d M Y" }}</p>
         <p><strong>Last login:</strong> {{ request.user.last_login|date:"d M Y H:i" }}</p>
@@ -28,11 +28,11 @@
   </div>
 
   <div class="col-md-8">
-    <!-- Security Card (2FA) -->
+    <!-- Security Card (2FA + Recovery Codes) -->
     <div class="card mb-4">
       <div class="card-header">Security</div>
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <strong>Two‑factor authentication (2FA)</strong>
             <p class="text-muted small mb-0">Add an extra layer of security to your account.</p>
@@ -47,6 +47,11 @@
             {% endif %}
           </div>
         </div>
+        {% if request.user.is_2fa_enabled %}
+          <div class="mt-2">
+            <a href="{% url 'recovery_codes' %}" class="btn btn-sm btn-outline-secondary">View / Regenerate Recovery Codes</a>
+          </div>
+        {% endif %}
       </div>
     </div>
 
@@ -79,19 +84,11 @@
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
-            <tr>
-              <th>Action</th>
-              <th>IP Address</th>
-              <th>Time</th>
-            </tr>
+            <tr><th>Action</th><th>IP Address</th><th>Time</th></tr>
           </thead>
           <tbody>
             {% for log in request.user.userauditlog_set.all|slice:":5" %}
-              <tr>
-                <td>{{ log.action }}</td>
-                <td>{{ log.ip_address|default:"—" }}</td>
-                <td>{{ log.timestamp|date:"d M H:i" }}</td>
-              </tr>
+              <tr><td>{{ log.action }}</td><td>{{ log.ip_address|default:"—" }}</td><td>{{ log.timestamp|date:"d M H:i" }}</td></tr>
             {% empty %}
               <tr><td colspan="3">No recent activity.</td></tr>
             {% endfor %}

@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Enable Two‑Factor Authentication{% endblock %}
-{% block page_title %}Set up 2FA{% endblock %}
+
+{% block title %}Enable 2FA{% endblock %}
+{% block page_title %}Set up Two‑Factor Authentication{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -20,6 +21,9 @@
           </div>
           <button type="submit" class="btn btn-primary">Verify and Enable</button>
         </form>
+        <div class="alert alert-info mt-3 small">
+          After enabling, you will be able to generate recovery codes from your profile page.
+        </div>
       </div>
     </div>
   </div>
