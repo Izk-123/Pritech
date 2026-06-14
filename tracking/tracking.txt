@@ -1,0 +1,756 @@
+# 📊 Tracking App — Complete System Design
+
+The **Tracking App** is the intelligence and monitoring layer of the Pritech System. Its purpose is to capture, monitor, analyze, and provide insights from every meaningful activity occurring within the system and on the public website.
+
+Unlike the other apps, the Tracking App does not directly manage business operations. Instead, it observes and analyzes them.
+
+---
+
+# 🎯 Purpose
+
+The Tracking App enables Pritech to:
+
+* Track user activities
+* Track client behavior
+* Track website visitors
+* Monitor service performance
+* Monitor ticket performance
+* Monitor financial performance
+* Generate business intelligence
+* Feed data into the AI Engine
+* Detect anomalies and security threats
+
+---
+
+# 👥 Users Involved
+
+## 👨‍💼 Administrator
+
+Can:
+
+* View system analytics
+* Monitor user activity
+* View audit reports
+* Investigate incidents
+
+---
+
+## 👨‍💼 Management
+
+Can:
+
+* View business performance
+* View revenue trends
+* View service demand
+* View operational KPIs
+
+---
+
+## 💰 Finance Officer
+
+Can:
+
+* View financial analytics
+* Monitor revenue trends
+* Analyze client payments
+
+---
+
+## 🧑‍🔧 Service Manager
+
+Can:
+
+* View ticket performance
+* Monitor technician workload
+* Monitor SLA compliance
+
+---
+
+## 📈 Marketing Team (Future)
+
+Can:
+
+* Monitor website traffic
+* Track lead generation
+* Analyze visitor behavior
+
+---
+
+## 🤖 AI Engine
+
+Uses tracking data for:
+
+* Predictions
+* Recommendations
+* Forecasting
+* Anomaly detection
+
+---
+
+# 🗄 Database Schema
+
+---
+
+## 1️⃣ UserActivity
+
+Tracks every user action.
+
+```python
+class UserActivity(models.Model):
+    user
+
+    action
+
+    module
+
+    description
+
+    ip_address
+
+    user_agent
+
+    timestamp
+```
+
+---
+
+### Examples
+
+```text
+Created Ticket
+
+Logged In
+
+Generated Invoice
+
+Accepted Quotation
+```
+
+---
+
+## 2️⃣ PageVisit
+
+Tracks website and portal visits.
+
+```python
+class PageVisit(models.Model):
+    user
+
+    url
+
+    page_title
+
+    referrer
+
+    ip_address
+
+    duration
+
+    timestamp
+```
+
+---
+
+### Examples
+
+```text
+Home Page
+
+Portfolio Page
+
+Service Page
+
+Client Dashboard
+```
+
+---
+
+## 3️⃣ VisitorSession
+
+Tracks visitors.
+
+```python
+class VisitorSession(models.Model):
+    session_key
+
+    ip_address
+
+    country
+
+    city
+
+    device_type
+
+    browser
+
+    operating_system
+
+    started_at
+
+    ended_at
+```
+
+---
+
+## 4️⃣ SystemEvent
+
+Tracks important events.
+
+```python
+class SystemEvent(models.Model):
+    event_type
+
+    module
+
+    description
+
+    severity
+
+    created_at
+```
+
+---
+
+### Examples
+
+```text
+Invoice Created
+
+Ticket Escalated
+
+User Registered
+
+Payment Received
+```
+
+---
+
+## 5️⃣ LoginHistory
+
+Tracks authentication activity.
+
+```python
+class LoginHistory(models.Model):
+    user
+
+    login_time
+
+    logout_time
+
+    ip_address
+
+    device
+
+    browser
+```
+
+---
+
+## 6️⃣ SearchHistory
+
+Tracks searches.
+
+```python
+class SearchHistory(models.Model):
+    user
+
+    query
+
+    module
+
+    created_at
+```
+
+---
+
+### Examples
+
+```text
+Search Client
+
+Search Invoice
+
+Search Ticket
+```
+
+---
+
+## 7️⃣ FinancialMetric
+
+Stores finance KPIs.
+
+```python
+class FinancialMetric(models.Model):
+    date
+
+    revenue
+
+    expenses
+
+    profit
+
+    invoices_count
+```
+
+---
+
+## 8️⃣ TicketMetric
+
+Stores support KPIs.
+
+```python
+class TicketMetric(models.Model):
+    date
+
+    tickets_opened
+
+    tickets_closed
+
+    avg_resolution_time
+
+    sla_compliance
+```
+
+---
+
+## 9️⃣ ServiceMetric
+
+Tracks service performance.
+
+```python
+class ServiceMetric(models.Model):
+    service
+
+    date
+
+    requests
+
+    revenue
+```
+
+---
+
+# 🔗 Relationships
+
+```text
+Accounts
+     ↓
+UserActivity
+
+Portfolio
+     ↓
+PageVisits
+
+Services
+     ↓
+ServiceMetrics
+
+Tickets
+     ↓
+TicketMetrics
+
+Finance
+     ↓
+FinancialMetrics
+```
+
+---
+
+# 🌐 Website Visitor Tracking
+
+The public website should track:
+
+### Visitor Information
+
+* IP Address
+* Country
+* City
+* Device Type
+* Browser
+* Operating System
+
+---
+
+### Visitor Behavior
+
+* Pages visited
+* Time spent
+* Entry page
+* Exit page
+* Number of visits
+
+---
+
+### Marketing Metrics
+
+* Portfolio views
+* Service views
+* Quotation requests
+* Contact form submissions
+
+---
+
+# 📈 Business Analytics
+
+---
+
+## Client Analytics
+
+Track:
+
+```text
+Most Valuable Clients
+
+Client Lifetime Value
+
+Service Usage
+
+Retention Rate
+```
+
+---
+
+## Service Analytics
+
+Track:
+
+```text
+Most Requested Service
+
+Least Requested Service
+
+Revenue by Service
+
+Service Growth
+```
+
+---
+
+## Ticket Analytics
+
+Track:
+
+```text
+Average Resolution Time
+
+Open Tickets
+
+SLA Performance
+
+Technician Performance
+```
+
+---
+
+## Finance Analytics
+
+Track:
+
+```text
+Revenue Trends
+
+Expense Trends
+
+Profit Trends
+
+Outstanding Balances
+```
+
+---
+
+# ⚡ Real-Time Features
+
+Using:
+
+* Django Channels
+* Redis
+* WebSockets
+
+---
+
+## Live Visitor Monitoring
+
+```text
+Visitors Online: 23
+```
+
+---
+
+## Live User Monitoring
+
+```text
+Users Logged In: 15
+```
+
+---
+
+## Live Revenue Updates
+
+```text
+New Payment Received
+↓
+Dashboard Updates
+```
+
+---
+
+## Live Ticket Monitoring
+
+```text
+New Ticket Created
+↓
+Service Manager Alerted
+```
+
+---
+
+## Live System Activity Feed
+
+```text
+09:30
+Invoice #INV001 Created
+
+09:32
+Ticket #TK100 Assigned
+
+09:35
+Payment Received
+```
+
+---
+
+# 🔐 Security Monitoring
+
+Track:
+
+### Failed Login Attempts
+
+```text
+Multiple failed logins
+```
+
+---
+
+### Suspicious Activity
+
+```text
+Access denied attempts
+```
+
+---
+
+### Session Tracking
+
+```text
+User logged in from multiple locations
+```
+
+---
+
+### Audit Trails
+
+```text
+Who did what?
+When?
+Where?
+```
+
+---
+
+# 📊 Dashboards
+
+## Executive Dashboard
+
+Shows:
+
+* Revenue
+* Profit
+* Active Clients
+* Open Tickets
+* Service Growth
+
+---
+
+## Operations Dashboard
+
+Shows:
+
+* Technician Workload
+* Ticket Backlog
+* SLA Compliance
+
+---
+
+## Marketing Dashboard
+
+Shows:
+
+* Website Visitors
+* Portfolio Views
+* Leads Generated
+* Conversion Rate
+
+---
+
+# 🤖 AI Integration
+
+The Tracking App is the primary data source for the AI Engine.
+
+---
+
+## Revenue Forecasting
+
+Predict:
+
+```text
+Expected monthly revenue
+```
+
+---
+
+## Client Churn Prediction
+
+Identify:
+
+```text
+Clients likely to leave
+```
+
+---
+
+## Service Recommendations
+
+Determine:
+
+```text
+Which service to promote
+```
+
+---
+
+## Lead Scoring
+
+Score visitors based on:
+
+* Pages visited
+* Time spent
+* Services viewed
+
+---
+
+## Anomaly Detection
+
+Detect:
+
+```text
+Revenue anomalies
+
+Unusual login activity
+
+Ticket spikes
+```
+
+---
+
+# 📋 Views (Class-Based Views)
+
+```python
+AnalyticsDashboardView
+
+UserActivityListView
+
+VisitorAnalyticsView
+
+TicketAnalyticsView
+
+FinancialAnalyticsView
+
+ServiceAnalyticsView
+```
+
+---
+
+# 📋 Forms
+
+Mostly filter/report forms:
+
+```python
+AnalyticsFilterForm
+
+DateRangeForm
+
+ExportReportForm
+```
+
+---
+
+# 🎯 Key KPIs
+
+### System
+
+* Active Users
+* Online Users
+* Daily Logins
+
+### Clients
+
+* New Clients
+* Retention Rate
+
+### Services
+
+* Service Demand
+* Revenue by Service
+
+### Tickets
+
+* Resolution Time
+* SLA Compliance
+
+### Finance
+
+* Revenue
+* Expenses
+* Profit
+
+### Website
+
+* Visitors
+* Page Views
+* Leads
+
+---
+
+# 🚨 Important Design Decision
+
+The Tracking App should **not duplicate data** from Finance, Tickets, Services, or Clients.
+
+Instead:
+
+```text
+Finance App
+      ↓
+Provides financial data
+
+Tickets App
+      ↓
+Provides support data
+
+Services App
+      ↓
+Provides service data
+
+Tracking App
+      ↓
+Aggregates and analyzes everything
+```
+
+This reduces redundancy and keeps the architecture clean.
+
+---
+
+# 🎯 Main Goal of the Tracking App
+
+> **To collect, monitor, analyze, and visualize operational, financial, customer, and website activity data across the entire Pritech System, providing real-time business intelligence, performance monitoring, security auditing, and the data foundation for AI-driven decision making.** 🚀📊🤖
+
+The Tracking App is essentially the **eyes and ears of the Pritech System**, turning raw system activity into actionable insights for management and future AI capabilities.
