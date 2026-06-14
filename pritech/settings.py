@@ -1,17 +1,19 @@
 """
 Pritech Production Settings
-===========================
-Environment: Production (VPS)
-Python: 3.11+
-Django: 5.2.7
+============================
+Environment: Production
+Database: PostgreSQL
+Email: SMTP (cPanel)
+Debug: False
+Celery: Redis broker
 """
 
 import os
 from pathlib import Path
 from decouple import config
+from celery.schedules import crontab
 from django.templatetags.static import static
 from django.urls import reverse_lazy
-from celery.schedules import crontab
 
 # -----------------------------------------------------------------------------
 # PATH CONFIGURATION
@@ -19,37 +21,44 @@ from celery.schedules import crontab
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -----------------------------------------------------------------------------
-# SECURITY
+# SECURITY (production)
 # -----------------------------------------------------------------------------
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
 # -----------------------------------------------------------------------------
-# APPLICATION DEFINITION
+# INSTALLED APPS
 # -----------------------------------------------------------------------------
 INSTALLED_APPS = [
+    # Unfold admin theme (must be first)
     'unfold',
     'unfold.contrib.inlines',
+
+    # Django core
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',               # Required for allauth
+    'django.contrib.sites',
+
+    # Third‑party
     'django_quill',
     'django_htmx',
     'django_otp',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
-    'django_celery_beat',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.linkedin_oauth2',
     'simple_history',
+    'channels',
+
+    # Local apps
     'core',
     'accounts',
     'clients',
@@ -60,6 +69,9 @@ INSTALLED_APPS = [
     'tracking',
 ]
 
+# -----------------------------------------------------------------------------
+# MIDDLEWARE
+# -----------------------------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -67,17 +79,21 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
     'django_otp.middleware.OTPMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware',
     'tracking.middleware.ActivityMiddleware',
     'accounts.middleware.LastLoginIPMiddleware',
+    'core.middleware.MaintenanceModeMiddleware',
 ]
 
 ROOT_URLCONF = 'pritech.urls'
 
+# -----------------------------------------------------------------------------
+# TEMPLATES
+# -----------------------------------------------------------------------------
 TEMPLATES = [{
     'BACKEND': 'django.template.backends.django.DjangoTemplates',
     'DIRS': [BASE_DIR / 'templates'],
@@ -91,12 +107,15 @@ TEMPLATES = [{
             'core.context_processors.site_config',
             'core.context_processors.sidebar_recent_items',
             'core.context_processors.pending_expenses_count',
+            'core.context_processors.announcements',
+            'core.context_processors.online_users_count',
             'portfolio.context_processors.portfolio_settings',
         ],
     },
 }]
 
 WSGI_APPLICATION = 'pritech.wsgi.application'
+ASGI_APPLICATION = 'pritech.asgi.application'
 
 # -----------------------------------------------------------------------------
 # DATABASE (PostgreSQL)
@@ -107,13 +126,13 @@ DATABASES = {
         'NAME': config('DB_NAME'),
         'USER': config('DB_USER'),
         'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', 'localhost'),
-        'PORT': config('DB_PORT', '5432'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 
 # -----------------------------------------------------------------------------
-# AUTHENTICATION
+# AUTHENTICATION & AUTHORISATION
 # -----------------------------------------------------------------------------
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -126,30 +145,34 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # -----------------------------------------------------------------------------
-# DJANGO-ALLAUTH (Updated to remove deprecation warnings)
+# DJANGO-ALLAUTH (production)
 # -----------------------------------------------------------------------------
 SITE_ID = 1
-# New allauth settings (replaces deprecated ACCOUNT_EMAIL_REQUIRED, ACCOUNT_USERNAME_REQUIRED, ACCOUNT_AUTHENTICATION_METHOD)
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
-SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'   # enforce email verification
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+SOCIALACCOUNT_AUTO_SIGNUP = False
+SOCIALACCOUNT_LOGIN_METHODS = {'email'}
 SOCIALACCOUNT_ADAPTER = 'accounts.adapters.SocialAccountAdapter'
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': ['profile', 'email'],
         'AUTH_PARAMS': {'access_type': 'online'},
+        'CLIENT_ID': config('GOOGLE_CLIENT_ID'),
+        'SECRET': config('GOOGLE_SECRET'),
     },
     'linkedin_oauth2': {
         'SCOPE': ['r_emailaddress', 'r_liteprofile'],
         'PROFILE_FIELDS': ['id', 'first-name', 'last-name', 'email-address'],
+        'CLIENT_ID': config('LINKEDIN_CLIENT_ID'),
+        'SECRET': config('LINKEDIN_SECRET'),
     }
 }
 
 # -----------------------------------------------------------------------------
-# PASSWORD VALIDATION
+# PASSWORD VALIDATION (production strength)
 # -----------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -167,7 +190,7 @@ USE_I18N = True
 USE_TZ = True
 
 # -----------------------------------------------------------------------------
-# STATIC & MEDIA
+# STATIC & MEDIA FILES (production – served by web server)
 # -----------------------------------------------------------------------------
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
@@ -177,35 +200,48 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # -----------------------------------------------------------------------------
-# BUSINESS CONFIG
+# BUSINESS CONFIGURATION
 # -----------------------------------------------------------------------------
 VAT_RATE = 0.175
 CURRENCY = 'MWK'
 CURRENCY_SYMBOL = 'K'
 
 # -----------------------------------------------------------------------------
-# EMAIL (SMTP)
+# SESSION & SECURITY (HTTPS enforcement)
+# -----------------------------------------------------------------------------
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_AGE = 1209600
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=True, cast=bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=True, cast=bool)
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=31536000, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True, cast=bool)
+SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=True, cast=bool)
+
+# -----------------------------------------------------------------------------
+# EMAIL (SMTP via cPanel)
 # -----------------------------------------------------------------------------
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 
 # -----------------------------------------------------------------------------
-# CELERY & REDIS
+# Portfolio App & GDPR Settings
 # -----------------------------------------------------------------------------
-REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@pritech.mw')
+
+# -----------------------------------------------------------------------------
+# CELERY (production – Redis broker)
+# -----------------------------------------------------------------------------
+CELERY_BROKER_URL = config('REDIS_URL')
+CELERY_RESULT_BACKEND = config('REDIS_URL')
+CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TIMEZONE = TIME_ZONE
-
 CELERY_BEAT_SCHEDULE = {
     'generate-subscription-invoices': {
         'task': 'finance.tasks.generate_subscription_invoices',
@@ -215,6 +251,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'tickets.tasks.check_sla_breaches',
         'schedule': crontab(minute='*/30'),
     },
+    "cleanup-tracking-data": {
+        "task": "tracking.tasks.cleanup_tracking_data",
+        "schedule": crontab(hour=2, minute=0),
+    },
 }
 
 # -----------------------------------------------------------------------------
@@ -223,33 +263,27 @@ CELERY_BEAT_SCHEDULE = {
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
+        'LOCATION': config('REDIS_URL'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
+        }
     }
 }
 
 # -----------------------------------------------------------------------------
-# SECURITY (HTTPS, HSTS)
+# CHANNELS (Redis for WebSocket)
 # -----------------------------------------------------------------------------
-if not DEBUG:
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_AGE = 1209600
-
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 10240
-DATA_UPLOAD_MAX_NUMBER_FILES = 100
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [config('REDIS_URL')],
+        },
+    },
+}
 
 # -----------------------------------------------------------------------------
-# UNFOLD ADMIN CONFIGURATION (with full SIDEBAR and TABS)
+# UNFOLD ADMIN CONFIGURATION (full SIDEBAR and TABS)
 # -----------------------------------------------------------------------------
 UNFOLD = {
     "SITE_TITLE": "PriTech Admin",
@@ -266,7 +300,7 @@ UNFOLD = {
     "SHOW_HISTORY": True,
     "SHOW_VIEW_ON_SITE": True,
     "SHOW_BACK_BUTTON": True,
-    "ENVIRONMENT": "Production" if not DEBUG else "Development",
+    "ENVIRONMENT": "Production",
     "COLORS": {
         "primary": {
             "50": "238 242 255", "100": "224 231 255", "200": "199 210 255",
@@ -304,6 +338,9 @@ UNFOLD = {
                     {"title": "Services", "icon": "miscellaneous_services", "link": reverse_lazy("admin:services_service_changelist")},
                     {"title": "Categories", "icon": "category", "link": reverse_lazy("admin:services_servicecategory_changelist")},
                     {"title": "Packages", "icon": "package_2", "link": reverse_lazy("admin:services_servicepackage_changelist")},
+                    {"title": "Service Requests", "icon": "request_quote", "link": reverse_lazy("admin:services_servicerequest_changelist")},
+                    {"title": "Client Services", "icon": "shopping_cart", "link": reverse_lazy("admin:services_clientservice_changelist")},
+                    {"title": "Assignments", "icon": "assignment", "link": reverse_lazy("admin:services_serviceassignment_changelist")},
                 ],
             },
             {
@@ -385,15 +422,24 @@ UNFOLD = {
             ],
         },
         {
-            "models": ["services.service", "services.servicecategory", "services.servicepackage"],
+            "models": [
+                "services.service", "services.servicecategory", "services.servicepackage",
+                "services.servicerequest", "services.clientservice", "services.serviceassignment"
+            ],
             "items": [
                 {"title": "Services", "link": reverse_lazy("admin:services_service_changelist")},
                 {"title": "Categories", "link": reverse_lazy("admin:services_servicecategory_changelist")},
                 {"title": "Packages", "link": reverse_lazy("admin:services_servicepackage_changelist")},
+                {"title": "Service Requests", "link": reverse_lazy("admin:services_servicerequest_changelist")},
+                {"title": "Client Services", "link": reverse_lazy("admin:services_clientservice_changelist")},
+                {"title": "Assignments", "link": reverse_lazy("admin:services_serviceassignment_changelist")},
             ],
         },
         {
-            "models": ["tickets.ticket", "tickets.ticketcomment", "tickets.ticketworklog", "tickets.ticketattachment", "tickets.ticketsla", "tickets.cannedresponse"],
+            "models": [
+                "tickets.ticket", "tickets.ticketcomment", "tickets.ticketworklog",
+                "tickets.ticketattachment", "tickets.ticketsla", "tickets.cannedresponse",
+            ],
             "items": [
                 {"title": "Tickets", "link": reverse_lazy("admin:tickets_ticket_changelist")},
                 {"title": "Comments", "link": reverse_lazy("admin:tickets_ticketcomment_changelist")},
@@ -414,16 +460,18 @@ UNFOLD = {
             ],
         },
         {
-            "models": ["portfolio.portfolioproject", "portfolio.inquiry", "portfolio.newslettersubscriber", "portfolio.portfoliosettings"],
+            "models": ["portfolio.portfolioproject", "portfolio.inquiry", "portfolio.newslettersubscriber"],
             "items": [
                 {"title": "Projects", "link": reverse_lazy("admin:portfolio_portfolioproject_changelist")},
                 {"title": "Inquiries", "link": reverse_lazy("admin:portfolio_inquiry_changelist")},
-                {"title": "Newsletter", "link": reverse_lazy("admin:portfolio_newslettersubscriber_changelist")},
-                {"title": "Portfolio Settings", "link": reverse_lazy("admin:portfolio_portfoliosettings_changelist")},
+                {"title": "Subscribers", "link": reverse_lazy("admin:portfolio_newslettersubscriber_changelist")},
             ],
         },
         {
-            "models": ["accounts.user", "accounts.role", "accounts.permission", "accounts.userrole", "socialaccount.socialapp", "socialaccount.socialaccount"],
+            "models": [
+                "accounts.user", "accounts.role", "accounts.permission", "accounts.userrole",
+                "socialaccount.socialapp", "socialaccount.socialaccount"
+            ],
             "items": [
                 {"title": "Users", "link": reverse_lazy("admin:accounts_user_changelist")},
                 {"title": "Roles", "link": reverse_lazy("admin:accounts_role_changelist")},
@@ -460,7 +508,7 @@ UNFOLD = {
 }
 
 # -----------------------------------------------------------------------------
-# QUILL EDITOR CONFIG
+# QUILL EDITOR CONFIGURATION
 # -----------------------------------------------------------------------------
 QUILL_CONFIGS = {
     "default": {
@@ -479,8 +527,6 @@ QUILL_CONFIGS = {
         "placeholder": "Write something great...",
     },
 }
-
-
 
 # -----------------------------------------------------------------------------
 # LOGGING (Error tracking for production)
