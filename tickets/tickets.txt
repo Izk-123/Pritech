@@ -1,0 +1,813 @@
+# 🎫 Tickets App — Complete System Design
+
+The **Tickets App** is the operational heart of the Pritech System. It manages all client support requests, incidents, service requests, maintenance tasks, project issues, and internal technical work.
+
+This module ensures that every client issue is tracked, assigned, monitored, resolved, and analyzed efficiently.
+
+---
+
+# 🎯 Purpose
+
+The Tickets App enables Pritech to:
+
+* Receive client support requests
+* Manage incidents and problems
+* Assign technicians
+* Monitor service delivery
+* Enforce Service Level Agreements (SLAs)
+* Track work progress
+* Improve response times
+* Measure technician performance
+* Maintain support history
+
+---
+
+# 👥 Users Involved
+
+## 🏢 Client
+
+Can:
+
+* Create tickets
+* View own tickets
+* Upload attachments
+* Communicate with technicians
+* Track progress
+* Close or reopen tickets
+
+---
+
+## 🧑‍🔧 Technician
+
+Can:
+
+* View assigned tickets
+* Update status
+* Log work performed
+* Upload evidence
+* Communicate with clients
+* Resolve tickets
+
+---
+
+## 👨‍💼 Service Manager
+
+Can:
+
+* Monitor all tickets
+* Assign technicians
+* Escalate issues
+* Monitor SLAs
+* Generate reports
+
+---
+
+## 👨‍💼 Administrator
+
+Can:
+
+* View all tickets
+* Configure ticket settings
+* Configure priorities
+* Configure SLAs
+* Access analytics
+
+---
+
+## 💰 Finance Officer
+
+Limited access:
+
+* View billable tickets
+* Convert work into invoices
+
+---
+
+# 🗄 Database Schema
+
+---
+
+## 1️⃣ TicketCategory
+
+Groups tickets.
+
+```python
+class TicketCategory(models.Model):
+    name
+    description
+```
+
+Examples:
+
+```text
+Network Issue
+Website Issue
+Software Support
+Hardware Repair
+CCTV Support
+Server Maintenance
+```
+
+---
+
+## 2️⃣ TicketPriority
+
+Defines urgency.
+
+```python
+class TicketPriority(models.Model):
+    name
+    response_time
+    resolution_time
+```
+
+Examples:
+
+```text
+Low
+Medium
+High
+Critical
+```
+
+---
+
+## 3️⃣ Ticket
+
+Main support request.
+
+```python
+class Ticket(models.Model):
+    id
+
+    ticket_number
+
+    client
+
+    service
+
+    category
+
+    priority
+
+    title
+
+    description
+
+    status
+
+    created_by
+
+    assigned_to
+
+    opened_at
+
+    closed_at
+```
+
+---
+
+## Ticket Status
+
+```text
+Open
+Assigned
+In Progress
+Waiting for Client
+Resolved
+Closed
+Cancelled
+Reopened
+```
+
+---
+
+## 4️⃣ TicketAssignment
+
+Tracks assignments.
+
+```python
+class TicketAssignment(models.Model):
+    ticket
+
+    technician
+
+    assigned_by
+
+    assigned_at
+```
+
+---
+
+## 5️⃣ TicketComment
+
+Internal and external communication.
+
+```python
+class TicketComment(models.Model):
+    ticket
+
+    author
+
+    comment
+
+    is_internal
+
+    created_at
+```
+
+---
+
+## 6️⃣ TicketWorkLog
+
+Records work done.
+
+```python
+class TicketWorkLog(models.Model):
+    ticket
+
+    technician
+
+    description
+
+    hours_spent
+
+    created_at
+```
+
+---
+
+### Example
+
+```text
+Configured Mikrotik Router
+Hours Spent: 2.5
+```
+
+---
+
+## 7️⃣ TicketAttachment
+
+Stores files.
+
+```python
+class TicketAttachment(models.Model):
+    ticket
+
+    uploaded_by
+
+    file
+
+    uploaded_at
+```
+
+---
+
+### Examples
+
+```text
+Screenshots
+Photos
+PDF Documents
+Configuration Files
+```
+
+---
+
+## 8️⃣ TicketSLA
+
+Defines service standards.
+
+```python
+class TicketSLA(models.Model):
+    category
+
+    priority
+
+    response_hours
+
+    resolution_hours
+```
+
+---
+
+### Example
+
+```text
+Critical Ticket
+
+Response:
+30 Minutes
+
+Resolution:
+4 Hours
+```
+
+---
+
+## 9️⃣ TicketEscalation
+
+Tracks escalated issues.
+
+```python
+class TicketEscalation(models.Model):
+    ticket
+
+    escalated_by
+
+    reason
+
+    escalated_at
+```
+
+---
+
+# 🔗 Relationships
+
+```text
+Client
+   ↓
+Ticket
+   ↓
+ ┌────────────┬────────────┬────────────┐
+ ↓            ↓            ↓
+Comments   WorkLogs   Attachments
+      ↓
+Assignments
+      ↓
+Technicians
+```
+
+---
+
+# ⚙️ Ticket Workflow
+
+## Step 1
+
+Client creates ticket.
+
+```text
+Client
+↓
+Create Ticket
+↓
+Status = Open
+```
+
+---
+
+## Step 2
+
+Service Manager reviews.
+
+```text
+Open
+↓
+Assign Technician
+```
+
+---
+
+## Step 3
+
+Technician starts work.
+
+```text
+Assigned
+↓
+In Progress
+```
+
+---
+
+## Step 4
+
+Technician updates work logs.
+
+```text
+Troubleshooting
+↓
+Configuration
+↓
+Testing
+```
+
+---
+
+## Step 5
+
+Issue resolved.
+
+```text
+Resolved
+↓
+Client Verification
+```
+
+---
+
+## Step 6
+
+Client confirms.
+
+```text
+Closed
+```
+
+---
+
+# 📊 Ticket Types
+
+---
+
+## Incident
+
+Unexpected issue.
+
+Example:
+
+```text
+Internet not working
+```
+
+---
+
+## Service Request
+
+Client requesting work.
+
+Example:
+
+```text
+Install new Wi-Fi network
+```
+
+---
+
+## Maintenance
+
+Scheduled work.
+
+Example:
+
+```text
+Monthly server maintenance
+```
+
+---
+
+## Change Request
+
+System modifications.
+
+Example:
+
+```text
+Website redesign
+```
+
+---
+
+# 🌐 Client Portal Features
+
+Clients can:
+
+### Create Ticket
+
+```text
+Title
+Description
+Priority
+Attachments
+```
+
+---
+
+### View Ticket Status
+
+```text
+Open
+Assigned
+In Progress
+Resolved
+```
+
+---
+
+### Add Comments
+
+```text
+Client ↔ Technician
+```
+
+---
+
+### Upload Files
+
+```text
+Logs
+Screenshots
+Photos
+```
+
+---
+
+# ⚡ Real-Time Features
+
+Using:
+
+* Django Channels
+* Redis
+* WebSockets
+
+---
+
+## New Ticket Alert
+
+```text
+Client creates ticket
+↓
+Service Manager notified instantly
+```
+
+---
+
+## Technician Assignment
+
+```text
+Ticket assigned
+↓
+Technician receives notification
+```
+
+---
+
+## Live Comments
+
+```text
+Client message
+↓
+Technician sees immediately
+```
+
+Like WhatsApp-style support.
+
+---
+
+## Status Updates
+
+```text
+Ticket resolved
+↓
+Client notified instantly
+```
+
+---
+
+## SLA Monitoring
+
+```text
+Approaching SLA breach
+↓
+Manager alerted
+```
+
+---
+
+# 📈 Dashboard KPIs
+
+---
+
+## Service Manager Dashboard
+
+Shows:
+
+```text
+Open Tickets
+Critical Tickets
+SLA Breaches
+Technician Workload
+```
+
+---
+
+## Technician Dashboard
+
+Shows:
+
+```text
+Assigned Tickets
+Completed Tickets
+Hours Worked
+```
+
+---
+
+## Client Dashboard
+
+Shows:
+
+```text
+My Open Tickets
+My Resolved Tickets
+Average Resolution Time
+```
+
+---
+
+# 💰 Integration with Finance App
+
+Some tickets may be billable.
+
+Example:
+
+```text
+Client Requests:
+Network Upgrade
+↓
+Technician Completes
+↓
+Billable Hours Recorded
+↓
+Invoice Generated
+```
+
+---
+
+## TicketBilling
+
+```python
+class TicketBilling(models.Model):
+    ticket
+
+    hours
+
+    hourly_rate
+
+    amount
+```
+
+---
+
+# 🔗 Integration with Services App
+
+Every ticket can be linked to a service.
+
+Example:
+
+```text
+Service:
+Website Hosting
+
+Ticket:
+Website Down
+```
+
+Relationship:
+
+```text
+Service
+   ↓
+Many Tickets
+```
+
+---
+
+# 📊 Analytics
+
+Track:
+
+### Most Common Issues
+
+```text
+Network Issues
+40%
+```
+
+---
+
+### Resolution Time
+
+```text
+Average:
+3.5 Hours
+```
+
+---
+
+### Technician Performance
+
+```text
+Tickets Resolved
+Average Rating
+Response Time
+```
+
+---
+
+### Client Satisfaction
+
+```text
+Rating After Ticket Closure
+```
+
+---
+
+# 🤖 AI Features
+
+Future AI can:
+
+---
+
+## Auto Categorization
+
+```text
+Client submits issue
+↓
+AI predicts category
+```
+
+---
+
+## Priority Prediction
+
+```text
+AI recommends urgency level
+```
+
+---
+
+## Knowledge Suggestions
+
+```text
+Issue detected
+↓
+AI suggests solution
+```
+
+---
+
+## Ticket Forecasting
+
+```text
+Predict future workload
+```
+
+---
+
+## SLA Risk Prediction
+
+```text
+AI predicts likely SLA breach
+```
+
+---
+
+# 🔐 Permissions
+
+### Client
+
+* Create tickets
+* View own tickets
+
+---
+
+### Technician
+
+* Manage assigned tickets
+
+---
+
+### Service Manager
+
+* Manage all tickets
+
+---
+
+### Administrator
+
+* Full access
+
+---
+
+# 🎯 Main Goal of the Tickets App
+
+> **To provide a structured, real-time support and service management platform that enables Pritech to efficiently receive, assign, monitor, resolve, and analyze client issues while ensuring high service quality, SLA compliance, customer satisfaction, and operational accountability.**
+
+## Position Within Pritech ERP
+
+```text
+Accounts App
+      ↓
+Clients App
+      ↓
+Services App
+      ↓
+Tickets App
+      ↓
+Finance App
+      ↓
+Tracking & AI
+```
+
+The **Tickets App is the operational engine of Pritech**, connecting clients, technicians, services, and finance into a complete service delivery workflow. 🚀🎫🛠️

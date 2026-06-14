@@ -1,30 +1,25 @@
 """
 Portfolio App Models
 ====================
-- PortfolioProject: Showcase work.
-- Inquiry: Contact form submissions.
-- NewsletterSubscriber: GDPR-compliant newsletter signups.
-- PortfolioSettings: Singleton model for homepage content.
+Complete portfolio showcase with categories, technologies, galleries, testimonials,
+and integration with Services app.
 All models support audit logging (simple_history) and proper indexes.
 """
 
 import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django.utils.text import slugify
 from django_quill.fields import QuillField
 from simple_history.models import HistoricalRecords
 import bleach
 
-# -----------------------------------------------------------------------------
-# Custom QuillField that sanitizes HTML before saving (XSS prevention)
-# -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Custom QuillField that sanitizes HTML (XSS prevention)
+# -----------------------------------------------------------------------------
 class SanitizingQuillField(QuillField):
-    """
-    Extends QuillField to automatically sanitize HTML content using bleach.
-    Prevents XSS attacks from user-generated content (e.g., project descriptions).
-    """
     def pre_save(self, model_instance, add):
         value = getattr(model_instance, self.attname)
         if value and isinstance(value, dict) and "html" in value:
@@ -44,33 +39,187 @@ class SanitizingQuillField(QuillField):
 
 
 # -----------------------------------------------------------------------------
-# Portfolio Project
+# Portfolio Category
 # -----------------------------------------------------------------------------
-
-class PortfolioProject(models.Model):
-    """A showcased project on the homepage portfolio section."""
-    title = models.CharField(max_length=200)
-    description = SanitizingQuillField(blank=True)  # Auto-sanitized
-    image = models.ImageField(upload_to="portfolio/", null=True, blank=True)
-    client_name = models.CharField(max_length=200, blank=True)
-    technologies = models.CharField(max_length=300, blank=True)
-    is_featured = models.BooleanField(default=False)
+class PortfolioCategory(models.Model):
+    """Organise projects by type (e.g., Web Development, Networking)."""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=50, blank=True, help_text="Font Awesome icon class, e.g., 'fa-solid fa-globe'")
+    is_active = models.BooleanField(default=True)
     order = models.IntegerField(default=0)
-    history = HistoricalRecords()  # Audit log
+    history = HistoricalRecords()
 
     class Meta:
-        ordering = ["order", "-pk"]
+        ordering = ["order", "name"]
+        verbose_name_plural = "Portfolio Categories"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+            original_slug = self.slug
+            counter = 1
+            while PortfolioCategory.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
+
+
+# -----------------------------------------------------------------------------
+# Portfolio Technology
+# -----------------------------------------------------------------------------
+class PortfolioTechnology(models.Model):
+    """Technologies used in projects (e.g., Django, Cisco)."""
+    name = models.CharField(max_length=100)
+    icon = models.CharField(max_length=50, blank=True, help_text="Font Awesome or custom class")
+    website = models.URLField(blank=True, help_text="Official technology website")
+    is_active = models.BooleanField(default=True)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "Portfolio Technologies"
+
+    def __str__(self):
+        return self.name
+
+
+# -----------------------------------------------------------------------------
+# Portfolio Project (main model)
+# -----------------------------------------------------------------------------
+class PortfolioProject(models.Model):
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("published", "Published"),
+        ("archived", "Archived"),
+    ]
+
+    # Basic info
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
+    category = models.ForeignKey(
+        PortfolioCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="projects"
+    )
+    client_name = models.CharField(max_length=200, blank=True)
+    description = SanitizingQuillField(blank=True)
+    full_description = SanitizingQuillField(blank=True, help_text="Detailed project description (optional)")
+
+    # Media
+    featured_image = models.ImageField(upload_to="portfolio/", null=True, blank=True)
+    project_url = models.URLField(blank=True, help_text="Live project URL (if applicable)")
+
+    # Dates
+    start_date = models.DateField(null=True, blank=True)
+    completion_date = models.DateField(null=True, blank=True)
+
+    # Status & visibility
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="published")
+    is_featured = models.BooleanField(default=False, help_text="Show on homepage")
+    order = models.IntegerField(default=0, help_text="Order for featured projects")
+
+    # Relationships
+    services = models.ManyToManyField(
+        "services.Service",
+        related_name="portfolio_projects",
+        blank=True,
+        help_text="Select the services that were used in this project."
+    )
+    technologies = models.ManyToManyField(
+        PortfolioTechnology,
+        related_name="projects",
+        blank=True
+    )
+
+    # Meta
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["-is_featured", "order", "-completion_date", "-created_at"]
+        indexes = [
+            models.Index(fields=["slug"]),
+            models.Index(fields=["status", "is_featured"]),
+            models.Index(fields=["completion_date"]),
+        ]
 
     def __str__(self):
         return self.title
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+            original_slug = self.slug
+            counter = 1
+            while PortfolioProject.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
+                self.slug = f"{original_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse("project_detail", kwargs={"slug": self.slug})
+
 
 # -----------------------------------------------------------------------------
-# Inquiry (Contact Form)
+# Portfolio Image (gallery)
 # -----------------------------------------------------------------------------
+class PortfolioImage(models.Model):
+    project = models.ForeignKey(PortfolioProject, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="portfolio/gallery/")
+    caption = models.CharField(max_length=200, blank=True)
+    order = models.IntegerField(default=0)
+    history = HistoricalRecords()
 
+    class Meta:
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"Image for {self.project.title}"
+
+
+# -----------------------------------------------------------------------------
+# Testimonial (client feedback)
+# -----------------------------------------------------------------------------
+class Testimonial(models.Model):
+    project = models.ForeignKey(
+        PortfolioProject,
+        on_delete=models.CASCADE,
+        related_name="testimonials",
+        null=True,
+        blank=True
+    )
+    client_name = models.CharField(max_length=150)
+    client_position = models.CharField(max_length=150, blank=True)
+    testimonial = models.TextField()
+    rating = models.PositiveSmallIntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="1–5 stars"
+    )
+    is_approved = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Testimonial from {self.client_name}"
+
+
+# -----------------------------------------------------------------------------
+# Inquiry (contact form submission)
+# -----------------------------------------------------------------------------
 class Inquiry(models.Model):
-    """Contact form submission from public visitors."""
     name = models.CharField(max_length=150)
     email = models.EmailField()
     phone = models.CharField(
@@ -87,7 +236,7 @@ class Inquiry(models.Model):
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    history = HistoricalRecords()  # Audit log
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ["-created_at"]
@@ -104,22 +253,17 @@ class Inquiry(models.Model):
 # -----------------------------------------------------------------------------
 # Newsletter Subscriber (GDPR compliant)
 # -----------------------------------------------------------------------------
-
 class NewsletterSubscriber(models.Model):
-    """Email newsletter subscriber with double opt-in and consent tracking."""
     email = models.EmailField(unique=True)
     subscribed_at = models.DateTimeField(auto_now_add=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     is_confirmed = models.BooleanField(default=False)
     unsubscribed_at = models.DateTimeField(null=True, blank=True)
-    confirmation_token = models.UUIDField(
-        default=uuid.uuid4, editable=False, unique=True
-    )
-    # Consent tracking (GDPR)
+    confirmation_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     consent_given = models.BooleanField(default=False)
     consent_ip = models.GenericIPAddressField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
-    history = HistoricalRecords()  # Audit log
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ["-subscribed_at"]
@@ -134,86 +278,37 @@ class NewsletterSubscriber(models.Model):
         return self.email
 
     def is_active(self):
-        """Active = confirmed and not unsubscribed."""
         return self.is_confirmed and self.unsubscribed_at is None
 
 
 # -----------------------------------------------------------------------------
-# Portfolio Settings (Singleton)
+# Portfolio Settings (singleton)
 # -----------------------------------------------------------------------------
-
 def validate_image_size(value):
-    """Ensure uploaded images are ≤ 2MB."""
     if value.size > 2 * 1024 * 1024:
         raise ValidationError("Image file too large (max 2MB).")
 
 
 class PortfolioSettings(models.Model):
-    """
-    Singleton model for homepage content (hero, about, social links, etc.).
-    Only one instance can exist.
-    """
-    # Hero section
-    hero_title = models.CharField(
-        max_length=200, blank=True,
-        default="Smart ICT Solutions for Modern Businesses"
-    )
-    hero_subtitle = models.TextField(
-        blank=True,
-        default=(
-            "From managed IT support to custom software, "
-            "we deliver technology that drives growth."
-        )
-    )
-    hero_image = models.ImageField(
-        upload_to="hero/", null=True, blank=True,
-        validators=[validate_image_size]
-    )
-
-    # About section
-    about_title = models.CharField(
-        max_length=200, blank=True,
-        default="Your Trusted Technology Partner"
-    )
-    about_text = models.TextField(
-        blank=True,
-        default=(
-            "We are a team of passionate engineers, developers, and support "
-            "specialists dedicated to solving business problems with technology."
-        )
-    )
-    about_image = models.ImageField(
-        upload_to="about/", null=True, blank=True,
-        validators=[validate_image_size]
-    )
-
-    # Achievements counters
+    hero_title = models.CharField(max_length=200, blank=True, default="Smart ICT Solutions for Modern Businesses")
+    hero_subtitle = models.TextField(blank=True, default="From managed IT support to custom software...")
+    hero_image = models.ImageField(upload_to="hero/", null=True, blank=True, validators=[validate_image_size])
+    about_title = models.CharField(max_length=200, blank=True, default="Your Trusted Technology Partner")
+    about_text = models.TextField(blank=True)
+    about_image = models.ImageField(upload_to="about/", null=True, blank=True, validators=[validate_image_size])
     projects_count = models.PositiveIntegerField(default=150)
     satisfaction_percent = models.PositiveIntegerField(default=98)
     support_hours = models.PositiveIntegerField(default=24)
     years_experience = models.PositiveIntegerField(default=12)
-
-    # Social links
     facebook_url = models.URLField(blank=True)
     twitter_url = models.URLField(blank=True)
     instagram_url = models.URLField(blank=True)
     linkedin_url = models.URLField(blank=True)
-    whatsapp_number = models.CharField(
-        max_length=20, blank=True, default="265888888888",
-        help_text="International format without '+' or with '+', e.g., 265888888888 or +265888888888"
-    )
-
-    # SEO
+    whatsapp_number = models.CharField(max_length=20, blank=True, default="265888888888")
     meta_description = models.CharField(max_length=300, blank=True)
     meta_keywords = models.CharField(max_length=200, blank=True)
-
-    # Footer
-    footer_copyright = models.CharField(
-        max_length=200, blank=True,
-        default="All Right Reserved."
-    )
-
-    history = HistoricalRecords()  # Audit log
+    footer_copyright = models.CharField(max_length=200, blank=True, default="All Right Reserved.")
+    history = HistoricalRecords()
 
     class Meta:
         verbose_name = "Portfolio Settings"
@@ -224,12 +319,10 @@ class PortfolioSettings(models.Model):
 
     @classmethod
     def get(cls):
-        """Get or create the singleton instance."""
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
 
     def save(self, *args, **kwargs):
-        """Enforce singleton: prevent creating a second instance."""
         if not self.pk and PortfolioSettings.objects.exists():
             raise ValidationError("Only one PortfolioSettings instance allowed.")
         super().save(*args, **kwargs)

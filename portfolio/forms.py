@@ -10,10 +10,6 @@ from .models import Inquiry
 
 
 class InquiryForm(forms.ModelForm):
-    """
-    Contact inquiry form.
-    Includes a hidden honeypot field to trap spam bots.
-    """
     honeypot = forms.CharField(required=False, widget=forms.HiddenInput)
 
     class Meta:
@@ -28,16 +24,12 @@ class InquiryForm(forms.ModelForm):
         }
 
     def clean_honeypot(self):
-        """If honeypot field is filled, reject as spam."""
         if self.cleaned_data.get("honeypot"):
             raise forms.ValidationError("Spam detected.")
         return self.cleaned_data["honeypot"]
 
 
 class NewsletterForm(forms.Form):
-    """
-    Newsletter subscription form with explicit consent (GDPR).
-    """
     email = forms.EmailField(
         label="Email address",
         widget=forms.EmailInput(attrs={"class": "newsletter-input", "placeholder": "Your email address"}),
