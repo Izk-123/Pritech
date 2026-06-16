@@ -64,16 +64,31 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write('Seeding database with real‑world Pritech data...')
 
-        # ── Site config ──────────────────────────────────────────────────────
-        cfg = SiteConfig.get()
+        # ── Site config (fixed length issues) ────────────────────────────
+        cfg, created = SiteConfig.objects.get_or_create(
+            pk=1,
+            defaults={
+                'company_name': 'Pritech ICT Solutions',
+                'tagline': 'Delivering reliable ICT solutions for businesses across Malawi',
+                'email': 'info@pritechmw.com',
+                'phone': '999777822',           # fits max_length=10
+                'address': 'Area 3, Lilongwe, Malawi',
+                'bank_name': 'National Bank of Malawi',
+                'bank_account': '1234567890',   # 10 digits, fits
+                'mobile_money': '888123456',    # fits max_length=10
+                'invoice_footer': 'Thank you for your business! Payment due within 30 days.',
+                'maintenance_mode': False,
+            }
+        )
+        # Override fields in case default values differ (they are already set)
         cfg.company_name = 'Pritech ICT Solutions'
         cfg.tagline = 'Delivering reliable ICT solutions for businesses across Malawi'
         cfg.email = 'info@pritechmw.com'
-        cfg.phone = '+265 999 777 822'
+        cfg.phone = '999777822'
         cfg.address = 'Area 3, Lilongwe, Malawi'
         cfg.bank_name = 'National Bank of Malawi'
         cfg.bank_account = '1234567890'
-        cfg.mobile_money = '+265 888 123 456'
+        cfg.mobile_money = '888123456'
         cfg.invoice_footer = 'Thank you for your business! Payment due within 30 days.'
         cfg.maintenance_mode = False
         cfg.save()
