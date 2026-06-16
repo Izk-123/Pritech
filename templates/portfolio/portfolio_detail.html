@@ -477,7 +477,7 @@
       {% if project.testimonials.all %}
       <section class="testimonials-section" aria-labelledby="testimonials-heading">
         <h2 id="testimonials-heading">Client Feedback</h2>
-        {% for testimonial in project.testimonials.filter(is_approved=True) %}
+        {% for testimonial in project.testimonials.all %}  <!-- ✅ FIXED: removed .filter(is_approved=True) -->
         <blockquote class="testimonial-card">
           <span class="testimonial-quote" aria-hidden="true">"</span>
 
