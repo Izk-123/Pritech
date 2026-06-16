@@ -64,33 +64,19 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write('Seeding database with real‑world Pritech data...')
 
-        # ── Site config (fixed length issues) ────────────────────────────
-        cfg, created = SiteConfig.objects.get_or_create(
-            pk=1,
-            defaults={
-                'company_name': 'Pritech ICT Solutions',
-                'tagline': 'Delivering reliable ICT solutions for businesses across Malawi',
-                'email': 'info@pritechmw.com',
-                'phone': '999777822',           # fits max_length=10
-                'address': 'Area 3, Lilongwe, Malawi',
-                'bank_name': 'National Bank of Malawi',
-                'bank_account': '1234567890',   # 10 digits, fits
-                'mobile_money': '888123456',    # fits max_length=10
-                'invoice_footer': 'Thank you for your business! Payment due within 30 days.',
-                'maintenance_mode': False,
-            }
-        )
-        # Override fields in case default values differ (they are already set)
+        # ── Site config ──────────────────────────────────────────────────────
+        cfg = SiteConfig.get()
         cfg.company_name = 'Pritech ICT Solutions'
         cfg.tagline = 'Delivering reliable ICT solutions for businesses across Malawi'
         cfg.email = 'info@pritechmw.com'
-        cfg.phone = '999777822'
-        cfg.address = 'Area 3, Lilongwe, Malawi'
+        cfg.phone = '+265 999 777 822'
+        cfg.address = 'Area 51/24 Kanengo, Lilongwe, Malawi'
         cfg.bank_name = 'National Bank of Malawi'
         cfg.bank_account = '1234567890'
-        cfg.mobile_money = '888123456'
+        cfg.mobile_money = '+265 888 123 456'
         cfg.invoice_footer = 'Thank you for your business! Payment due within 30 days.'
         cfg.maintenance_mode = False
+        cfg.vat_rate = 0.175   # ensure correct VAT for calculations
         cfg.save()
         self.stdout.write('  ✓ Site config')
 
@@ -98,7 +84,7 @@ class Command(BaseCommand):
         CompanyBranch.objects.get_or_create(
             name='Head Office - Lilongwe',
             defaults={
-                'address': 'Area 3, Lilongwe, Malawi',
+                'address': 'Area 51/24 Kanengo, Lilongwe, Malawi',
                 'phone': '+265 999 777 822',
                 'email': 'info@pritechmw.com',
                 'is_main': True
@@ -202,7 +188,6 @@ class Command(BaseCommand):
         self.stdout.write('  ✓ Roles & permissions')
 
         # ── REAL STAFF USERS ──────────────────────────────────────────────
-        # 1. Isaac Ndoka – Administrator
         isaac = self._create_user(
             email='isaacndoka7@gmail.com',
             first='Isaac',
@@ -215,7 +200,6 @@ class Command(BaseCommand):
         UserRole.objects.get_or_create(user=isaac, role=roles['ADMIN'])
         UserProfile.objects.get_or_create(user=isaac, defaults={'bio': 'Co-founder & ICT Director'})
 
-        # 2. Prince Chipeta – Administrator
         prince = self._create_user(
             email='info@pritechmw.com',
             first='Prince',
@@ -228,7 +212,6 @@ class Command(BaseCommand):
         UserRole.objects.get_or_create(user=prince, role=roles['ADMIN'])
         UserProfile.objects.get_or_create(user=prince, defaults={'bio': 'Co-founder & Technical Lead'})
 
-        # 3. Portia Domasi – Sales & Finance Officer
         portia = self._create_user(
             email='sales@pritechmw.com',
             first='Portia',
@@ -428,7 +411,6 @@ class Command(BaseCommand):
         # Process clients
         clients = []
         for cd in clients_data:
-            # Create organisation
             org, created = ClientOrganization.objects.get_or_create(
                 email=cd['email'],
                 defaults={
@@ -442,7 +424,6 @@ class Command(BaseCommand):
             )
             clients.append(org)
 
-            # Create client user
             client_user = User.objects.filter(email=cd['client_user_email']).first()
             if not client_user:
                 client_user = User.objects.create_user(
@@ -459,7 +440,6 @@ class Command(BaseCommand):
                 client_user.client_organization = org
                 client_user.save(update_fields=['client_organization'])
 
-            # Create contact
             ClientContact.objects.get_or_create(
                 client=org,
                 email=cd['contact_email'],
@@ -471,7 +451,7 @@ class Command(BaseCommand):
                 }
             )
 
-            # Create portfolio project
+            # Portfolio project
             project_data = cd['website_project']
             web_cat, _ = PortfolioCategory.objects.get_or_create(name='Web Development', defaults={'icon': 'fa-solid fa-globe', 'is_active': True})
             tech_objs = []
@@ -631,13 +611,62 @@ class Command(BaseCommand):
                 TicketService.create_sla(t)
         self.stdout.write('  ✓ Tickets created for real clients')
 
-        # ── Quotations and Invoices (for real clients) ──────────────────
+        # ── Quotations and Invoices (including real QUO-0001) ──────────────
         from finance.models import Quotation, QuotationItem, Invoice, InvoiceItem, Payment
         from finance.services import QuotationService
 
+        # We'll find the Villa Grande client
+        villa_client = ClientOrganization.objects.filter(name='Villa Grande Motel').first()
+
+        # Create the exact QUO-0001 for Villa Grande
+        if villa_client and not Quotation.objects.filter(quotation_number='QUO-0001').exists():
+            # Prepare the items as per the PDF
+            items = [
+                {'description': 'Switch', 'qty': 1, 'unit_price': 750000},
+                {'description': 'Ethernet Cable Roll', 'qty': 1, 'unit_price': 650000},
+                {'description': 'Cable Clips', 'qty': 1, 'unit_price': 0},   # zero amount
+                {'description': 'Routers', 'qty': 16, 'unit_price': 150000},
+                {'description': 'Conduit Bend', 'qty': 1, 'unit_price': 0},
+                {'description': 'Switch Cabinet', 'qty': 1, 'unit_price': 0},
+                {'description': 'Starlink', 'qty': 1, 'unit_price': 0},
+                {'description': 'Nails 2inch', 'qty': 1, 'unit_price': 0},
+                {'description': 'Conduits Saddles', 'qty': 1, 'unit_price': 0},
+                {'description': 'Conduits 25mm & 30mm', 'qty': 1, 'unit_price': 0},
+                {'description': 'DVR 8 Channels', 'qty': 1, 'unit_price': 550000},
+            ]
+            subtotal = sum(i['qty'] * i['unit_price'] for i in items)  # = 4,350,000
+            tax_rate = 0.175  # 17.5%
+            tax_amount = subtotal * tax_rate   # = 761,250
+            total = subtotal + tax_amount      # = 5,111,250
+
+            # Create quotation
+            quote = Quotation.objects.create(
+                client=villa_client,
+                quotation_number='QUO-0001',
+                issue_date=date(2026, 6, 8),
+                valid_until=date(2026, 6, 19),
+                status='sent',
+                created_by=portia,
+                subtotal=subtotal,
+                tax_amount=tax_amount,
+                total_amount=total,
+                notes=to_quill_json("Thank you for your business! Payment due within 30 days.")
+            )
+            # Add items
+            for it in items:
+                if it['unit_price'] > 0:  # skip zero‑price items (optional)
+                    QuotationItem.objects.create(
+                        quotation=quote,
+                        description=it['description'],
+                        quantity=it['qty'],
+                        unit_price=it['unit_price'],
+                        total=it['qty'] * it['unit_price']
+                    )
+            self.stdout.write(f'  ✓ Created QUO-0001 for Villa Grande (MWK {total:,.2f})')
+
+        # Other quotations (keep existing)
         quote_data = [
             (clients[0], [('Website Development', 1, 250000), ('Hosting Setup', 1, 50000)], 'sent'),
-            (clients[2], [('Booking System', 1, 180000), ('Mobile App Integration', 1, 90000)], 'approved'),
             (clients[4], [('School Website', 1, 120000), ('Student Portal', 1, 80000)], 'sent'),
         ]
         for client, items, target_status in quote_data:
@@ -667,7 +696,7 @@ class Command(BaseCommand):
             quote.save()
             if target_status == 'approved':
                 QuotationService.convert_to_invoice(quote, created_by=portia)
-        self.stdout.write('  ✓ Quotations and invoices created')
+        self.stdout.write('  ✓ Additional quotations created')
 
         # ── Expenses ────────────────────────────────────────────────────
         from finance.models import Expense
