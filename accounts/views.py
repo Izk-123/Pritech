@@ -317,7 +317,7 @@ class UserCreateView(CreateView):
     model = User
     form_class = StaffUserCreationForm
     template_name = 'accounts/staff_user_form.html'
-    success_url = reverse_lazy('accounts:user_list')
+    success_url = reverse_lazy('user_list')
 
     def form_valid(self, form):
         user = form.save(commit=False)
@@ -335,7 +335,7 @@ class UserUpdateView(UpdateView):
     model = User
     form_class = StaffUserChangeForm
     template_name = 'accounts/staff_user_form.html'
-    success_url = reverse_lazy('accounts:user_list')
+    success_url = reverse_lazy('user_list')
 
     def get_initial(self):
         initial = super().get_initial()
@@ -360,13 +360,13 @@ class UserUpdateView(UpdateView):
 class UserDeleteView(DeleteView):
     model = User
     template_name = 'accounts/staff_user_confirm_delete.html'
-    success_url = reverse_lazy('accounts:user_list')
+    success_url = reverse_lazy('user_list')
 
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
         if user.is_superuser:
             messages.error(request, "Cannot delete superuser.")
-            return redirect('accounts:user_list')
+            return redirect('user_list')
         messages.success(request, f"User {user.email} deleted.")
         return super().delete(request, *args, **kwargs)
     
@@ -453,6 +453,7 @@ class PermissionDeleteView(DeleteView):
 # Analytics Dashboard
 # -----------------------------------------------------------------------------
 
+# accounts/views.py – update AnalyticsView
 @method_decorator(staff_member_required, name='dispatch')
 class AnalyticsView(TemplateView):
     template_name = 'accounts/analytics.html'
@@ -493,7 +494,16 @@ class AnalyticsView(TemplateView):
             cumulative.append({'day': item['day'], 'total': total})
         ctx['cumulative_users'] = cumulative
 
+        # Total users
+        ctx['total_users'] = User.objects.count()
+
         return ctx
+
+    def render_to_response(self, context, **response_kwargs):
+        # If HTMX request, return only the container partial
+        if self.request.headers.get('HX-Request'):
+            return render(self.request, 'accounts/analytics_partial.html', context)
+        return super().render_to_response(context, **response_kwargs)
 
 
 # -----------------------------------------------------------------------------
