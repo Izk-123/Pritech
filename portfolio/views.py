@@ -18,7 +18,7 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Prefetch   # <-- added Prefetch
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -33,7 +33,7 @@ from services.models import Service, ServiceCategory
 from .forms import InquiryForm, NewsletterForm
 from .models import (
     PortfolioProject, PortfolioCategory, PortfolioTechnology,
-    PortfolioSettings, Inquiry, NewsletterSubscriber
+    PortfolioSettings, Inquiry, NewsletterSubscriber, Testimonial   # <-- added Testimonial
 )
 
 
@@ -121,7 +121,7 @@ class PortfolioListView(ListView):
 
 
 # -----------------------------------------------------------------------------
-# Portfolio Detail
+# Portfolio Detail (fixed: only approved testimonials)
 # -----------------------------------------------------------------------------
 class PortfolioDetailView(DetailView):
     model = PortfolioProject
@@ -130,8 +130,12 @@ class PortfolioDetailView(DetailView):
     slug_url_kwarg = "slug"
 
     def get_queryset(self):
+        # Prefetch only approved testimonials
         return PortfolioProject.objects.filter(status="published").select_related("category").prefetch_related(
-            "technologies", "services", "images", "testimonials"
+            "technologies",
+            "services",
+            "images",
+            Prefetch("testimonials", queryset=Testimonial.objects.filter(is_approved=True))
         )
 
     def get_context_data(self, **kwargs):
