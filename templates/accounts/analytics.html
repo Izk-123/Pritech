@@ -4,64 +4,201 @@
 {% block title %}System Analytics{% endblock %}
 {% block page_title %}Analytics Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* ========== STAT CARDS ========== */
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    animation: fadeSlideUp 0.5s cubic-bezier(0.2, 0.9, 0.4, 1.1) forwards;
+    opacity: 0;
+    height: 100%;
+  }
+  .stat-card:nth-child(1) { animation-delay: 0.05s; }
+  .stat-card:nth-child(2) { animation-delay: 0.1s; }
+  .stat-card:nth-child(3) { animation-delay: 0.15s; }
+  .stat-card:nth-child(4) { animation-delay: 0.2s; }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+  }
+  .stat-card .stat-icon {
+    font-size: 2rem;
+    opacity: 0.6;
+  }
+  .stat-card .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .stat-card .stat-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .stat-card .stat-trend {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .stat-trend.up { color: var(--success); background: rgba(16, 185, 129, 0.12); }
+  .stat-trend.down { color: var(--danger); background: rgba(239, 68, 68, 0.12); }
+  .stat-trend.neutral { color: var(--text-muted); background: var(--bg-tertiary); }
+
+  /* ========== CARD ANIMATIONS ========== */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(65, 84, 241, 0.3); }
+    50% { box-shadow: 0 0 0 8px rgba(65, 84, 241, 0); }
+  }
+  .pulse-online {
+    animation: pulseGlow 1.5s ease-in-out infinite;
+  }
+
+  /* ========== CHART CONTAINERS ========== */
+  .chart-container {
+    position: relative;
+    height: 250px;
+  }
+  .chart-wrapper {
+    animation: fadeSlideUp 0.5s ease-out forwards;
+    opacity: 0;
+    transition-delay: 0.2s;
+  }
+  .chart-wrapper:nth-child(1) { animation-delay: 0.25s; }
+  .chart-wrapper:nth-child(2) { animation-delay: 0.35s; }
+
+  /* ========== REFRESH BUTTON ========== */
+  .refresh-btn {
+    transition: all 0.3s ease;
+  }
+  .refresh-btn:hover {
+    transform: rotate(90deg);
+  }
+  .htmx-request .refresh-btn i {
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* ========== DEVICE LIST ========== */
+  .device-list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .device-list-item:last-child {
+    border-bottom: none;
+  }
+  .device-list-item .device-name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .device-list-item .device-count {
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .device-progress {
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 0.3rem;
+  }
+  .device-progress-bar {
+    height: 100%;
+    border-radius: 6px;
+    background: var(--primary);
+    transition: width 0.8s ease;
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 768px) {
+    .stat-card .stat-number { font-size: 1.5rem; }
+    .chart-container { height: 180px; }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row">
-  <div class="col-md-6 mb-4">
-    <div class="card h-100">
-      <div class="card-header">Login Statistics (last 30 days)</div>
-      <div class="card-body">
-        <ul>
-          <li>Successful logins: {{ login_stats.success|default:0 }}</li>
-          <li>Failed logins: {{ login_stats.failed|default:0 }}</li>
-          <li>Logouts: {{ login_stats.logout|default:0 }}</li>
-        </ul>
-      </div>
-    </div>
+<!-- ========== HEADER WITH REFRESH ========== -->
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div>
+    <h1 class="mb-0" style="font-size: 1.75rem;">Analytics Dashboard</h1>
+    <p class="text-muted small mb-0">
+      <i class="bi bi-clock-history"></i>
+      <span id="lastUpdated">Last updated: {% now "H:i:s" %}</span>
+    </p>
   </div>
-  <div class="col-md-6 mb-4">
-    <div class="card h-100">
-      <div class="card-header">Active Users Now</div>
-      <div class="card-body">
-        <h2>{{ active_users_now }}</h2>
-        <p class="text-muted">Users active in the last 30 minutes</p>
-      </div>
-    </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-secondary refresh-btn"
+            hx-get="{% url 'analytics' %}"
+            hx-target="#analytics-container"
+            hx-swap="outerHTML"
+            hx-indicator="#analytics-container .htmx-indicator">
+      <i class="bi bi-arrow-repeat"></i> Refresh
+    </button>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-md-6 mb-4">
-    <div class="card">
-      <div class="card-header">Device Usage (last 30 days)</div>
-      <div class="card-body">
-        <ul>
-          {% for dev in device_stats %}
-            <li>{{ dev.device }}: {{ dev.count }}</li>
-          {% empty %}
-            <li>No data</li>
-          {% endfor %}
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6 mb-4">
-    <div class="card">
-      <div class="card-header">User Growth (Cumulative)</div>
-      <div class="card-body">
-        <canvas id="userGrowthChart" height="200"></canvas>
-      </div>
-    </div>
+<!-- ========== HTMX INDICATOR ========== -->
+<div class="htmx-indicator d-flex justify-content-center my-3">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- ========== MAIN CONTAINER ========== -->
+<div id="analytics-container"
+     hx-get="{% url 'analytics' %}"
+     hx-trigger="every 60s"
+     hx-swap="outerHTML"
+     hx-indicator="#analytics-container .htmx-indicator">
+  {% include "accounts/analytics_partial.html" %}
+</div>
+
+<!-- ========== REAL-TIME ACTIVE USERS UPDATE ========== -->
 <script>
-  const ctx = document.getElementById('userGrowthChart').getContext('2d');
-  const labels = [{% for item in cumulative_users %}'{{ item.day|date:"Y-m-d" }}',{% endfor %}];
-  const data = [{% for item in cumulative_users %}{{ item.total }},{% endfor %}];
-  new Chart(ctx, {
-    type: 'line',
-    data: { labels: labels, datasets: [{ label: 'Total Users', data: data, borderColor: 'blue', fill: false }] }
+  (function() {
+    const lastUpdatedSpan = document.getElementById('lastUpdated');
+    if (lastUpdatedSpan) {
+      setInterval(() => {
+        const now = new Date();
+        const timeStr = now.toTimeString().slice(0,8);
+        lastUpdatedSpan.textContent = 'Last updated: ' + timeStr;
+      }, 1000);
+    }
+  })();
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Load Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Ensure charts are re-initialized after HTMX swaps -->
+<script>
+  document.addEventListener('htmx:afterSwap', function() {
+    // The partial's script will handle re-init, but we need to trigger it
+    if (window.initAnalyticsCharts) {
+      window.initAnalyticsCharts();
+    }
   });
 </script>
 {% endblock %}

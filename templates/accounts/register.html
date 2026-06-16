@@ -10,9 +10,15 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/mobile-first.css' %}">
-  <style> 
-    body { background: var(--bg-secondary); } 
+  <style>
+    body { background: var(--bg-secondary); }
     .register-card { max-width: 550px; border-radius: 20px; }
+    .password-wrapper {
+      position: relative;
+    }
+    .password-wrapper input {
+      padding-right: 40px;
+    }
     .password-toggle {
       position: absolute;
       right: 12px;
@@ -24,11 +30,19 @@
       border: none;
       z-index: 10;
     }
-    .password-wrapper {
-      position: relative;
+    .password-match-feedback {
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
     }
-    .password-wrapper input {
-      padding-right: 40px;
+    .password-match-feedback.valid {
+      color: var(--success);
+    }
+    .password-match-feedback.invalid {
+      color: var(--danger);
+    }
+    .password-strength {
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
     }
   </style>
 </head>
@@ -54,7 +68,7 @@
           {% if form.non_field_errors %}
             <div class="alert alert-danger">{{ form.non_field_errors }}</div>
           {% endif %}
-          <form method="post">
+          <form method="post" id="registerForm" novalidate>
             {% csrf_token %}
             <div class="row g-3">
               <div class="col-12">
@@ -89,15 +103,17 @@
                     <i class="bi bi-eye-slash"></i>
                   </button>
                 </div>
+                <div class="password-strength" id="passwordStrength"></div>
               </div>
               <div class="col-sm-6">
-                <label class="form-label fw-semibold" style="color: var(--text-primary);">Confirm</label>
+                <label class="form-label fw-semibold" style="color: var(--text-primary);">Confirm password</label>
                 <div class="password-wrapper">
                   <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
                   <button type="button" class="password-toggle" id="toggleConfirmPassword">
                     <i class="bi bi-eye-slash"></i>
                   </button>
                 </div>
+                <div class="password-match-feedback" id="passwordMatchFeedback"></div>
               </div>
             </div>
             <button type="submit" class="btn btn-primary w-100 py-2 mt-4 fw-semibold">Create account</button>
@@ -112,38 +128,88 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // Theme toggle
-  const html = document.documentElement;
-  const themeToggle = document.getElementById('themeToggle');
-  function setTheme(theme) {
-    html.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-    document.querySelector('.light-icon').style.display = theme === 'dark' ? 'none' : 'inline-block';
-    document.querySelector('.dark-icon').style.display = theme === 'dark' ? 'inline-block' : 'none';
-  }
-  const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  setTheme(savedTheme);
-  themeToggle?.addEventListener('click', () => setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
+  (function() {
+    // Theme toggle
+    const html = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+    function setTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      const lightIcon = document.querySelector('.light-icon');
+      const darkIcon = document.querySelector('.dark-icon');
+      if (theme === 'dark') {
+        lightIcon.style.display = 'none';
+        darkIcon.style.display = 'inline-block';
+      } else {
+        lightIcon.style.display = 'inline-block';
+        darkIcon.style.display = 'none';
+      }
+    }
+    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(savedTheme);
+    themeToggle?.addEventListener('click', () => setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
 
-  // Password toggle for password field
-  const togglePassword = document.getElementById('togglePassword');
-  const passwordField = document.getElementById('password');
-  togglePassword.addEventListener('click', function() {
-    const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
-    passwordField.setAttribute('type', type);
-    this.querySelector('i').classList.toggle('bi-eye');
-    this.querySelector('i').classList.toggle('bi-eye-slash');
-  });
+    // Password visibility toggles
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordField = document.getElementById('password');
+    togglePassword?.addEventListener('click', function() {
+      const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordField.setAttribute('type', type);
+      this.querySelector('i').classList.toggle('bi-eye');
+      this.querySelector('i').classList.toggle('bi-eye-slash');
+    });
 
-  // Password toggle for confirm password field
-  const toggleConfirm = document.getElementById('toggleConfirmPassword');
-  const confirmField = document.getElementById('confirm_password');
-  toggleConfirm.addEventListener('click', function() {
-    const type = confirmField.getAttribute('type') === 'password' ? 'text' : 'password';
-    confirmField.setAttribute('type', type);
-    this.querySelector('i').classList.toggle('bi-eye');
-    this.querySelector('i').classList.toggle('bi-eye-slash');
-  });
+    const toggleConfirm = document.getElementById('toggleConfirmPassword');
+    const confirmField = document.getElementById('confirm_password');
+    toggleConfirm?.addEventListener('click', function() {
+      const type = confirmField.getAttribute('type') === 'password' ? 'text' : 'password';
+      confirmField.setAttribute('type', type);
+      this.querySelector('i').classList.toggle('bi-eye');
+      this.querySelector('i').classList.toggle('bi-eye-slash');
+    });
+
+    // Real‑time password match validation
+    const password = document.getElementById('password');
+    const confirm = document.getElementById('confirm_password');
+    const feedback = document.getElementById('passwordMatchFeedback');
+
+    function validatePasswordMatch() {
+      if (password.value === '' && confirm.value === '') {
+        feedback.textContent = '';
+        feedback.className = 'password-match-feedback';
+        return;
+      }
+      if (password.value === confirm.value) {
+        feedback.textContent = '✓ Passwords match';
+        feedback.className = 'password-match-feedback valid';
+      } else {
+        feedback.textContent = '✗ Passwords do not match';
+        feedback.className = 'password-match-feedback invalid';
+      }
+    }
+
+    password?.addEventListener('input', validatePasswordMatch);
+    confirm?.addEventListener('input', validatePasswordMatch);
+
+    // Optional: simple password strength indicator (basic)
+    const strengthDiv = document.getElementById('passwordStrength');
+    function checkStrength() {
+      const val = password.value;
+      if (!val) {
+        strengthDiv.textContent = '';
+        return;
+      }
+      let strength = 'Weak';
+      if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val)) {
+        strength = 'Strong';
+      } else if (val.length >= 6 && (/[A-Z]/.test(val) || /[0-9]/.test(val))) {
+        strength = 'Medium';
+      }
+      strengthDiv.textContent = `Password strength: ${strength}`;
+      strengthDiv.style.color = strength === 'Strong' ? 'var(--success)' : (strength === 'Medium' ? 'var(--warning)' : 'var(--danger)');
+    }
+    password?.addEventListener('input', checkStrength);
+  })();
 </script>
 </body>
 </html>

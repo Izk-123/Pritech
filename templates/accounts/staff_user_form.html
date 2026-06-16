@@ -1,23 +1,425 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{{ view.action|default:"User" }}{% endblock %}
-{% block page_title %}{{ view.action|default:"User" }}{% endblock %}
+{% block title %}{% if request.resolver_match.url_name == 'user_create' %}Create User{% else %}Edit User{% endif %}{% endblock %}
+{% block page_title %}{% if request.resolver_match.url_name == 'user_create' %}Create Staff User{% else %}Edit Staff User{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-floating-custom {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .form-floating-custom input,
+  .form-floating-custom select,
+  .form-floating-custom textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .form-floating-custom input:focus,
+  .form-floating-custom select:focus,
+  .form-floating-custom textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(65, 84, 241, 0.15);
+    outline: none;
+    transform: translateY(-2px);
+  }
+  .form-floating-custom label {
+    position: absolute;
+    left: 1rem;
+    top: 0.75rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    pointer-events: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background: transparent;
+    padding: 0 0.25rem;
+  }
+  .form-floating-custom input:focus ~ label,
+  .form-floating-custom input:not(:placeholder-shown) ~ label,
+  .form-floating-custom select:focus ~ label,
+  .form-floating-custom select:not([value=""]) ~ label,
+  .form-floating-custom textarea:focus ~ label,
+  .form-floating-custom textarea:not(:placeholder-shown) ~ label {
+    top: -0.55rem;
+    left: 0.75rem;
+    font-size: 0.75rem;
+    color: var(--primary);
+    background: var(--bg-primary);
+    font-weight: 600;
+    padding: 0 0.3rem;
+  }
+
+  /* Password wrapper with toggle button */
+  .password-wrapper {
+    position: relative;
+  }
+  .password-wrapper input {
+    padding-right: 3rem;
+  }
+  .password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+    z-index: 5;
+  }
+  .password-toggle:hover {
+    color: var(--primary);
+  }
+
+  .password-match-feedback {
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    padding-left: 0.25rem;
+    transition: all 0.2s ease;
+  }
+  .password-match-feedback.valid {
+    color: var(--success);
+    animation: slideDown 0.2s ease-out;
+  }
+  .password-match-feedback.invalid {
+    color: var(--danger);
+    animation: shake 0.3s ease-out;
+  }
+  .password-match-feedback.empty {
+    color: var(--text-muted);
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .password-strength {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    transition: all 0.2s;
+  }
+  .form-error {
+    color: var(--danger);
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+  }
+  .form-error ul {
+    margin: 0;
+    padding-left: 1.2rem;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-body">
-        <form method="post">
+  <div class="col-md-8 col-lg-7">
+    <div class="card shadow-lg border-0 rounded-4">
+      <div class="card-header bg-transparent border-0 pt-4 pb-0">
+        <h3 class="mb-0 fw-bold">
+          {% if request.resolver_match.url_name == 'user_create' %}
+            Create Staff User
+          {% else %}
+            Edit Staff User
+          {% endif %}
+        </h3>
+        <p class="text-muted mt-1">
+          {% if request.resolver_match.url_name == 'user_create' %}
+            Add a new staff member to the system.
+          {% else %}
+            Update user details and permissions.
+          {% endif %}
+        </p>
+      </div>
+      <div class="card-body p-4">
+
+        <!-- Display non‑field errors (e.g., form-level validation) -->
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            <strong>Error:</strong> {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <form method="post" id="userForm" novalidate
+              action="{% if request.resolver_match.url_name == 'user_create' %}{% url 'user_create' %}{% else %}{% url 'user_update' form.instance.pk %}{% endif %}">
           {% csrf_token %}
-          {{ form.as_p }}
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{% url 'user_list' %}" class="btn btn-secondary">Cancel</a>
+
+          <!-- Email -->
+          <div class="form-floating-custom mb-4">
+            <input type="email" name="email" id="id_email" class="form-control" placeholder=" " value="{{ form.email.value|default:'' }}" required>
+            <label for="id_email">Email address *</label>
+            {% if form.email.errors %}
+              <div class="form-error"><ul>{% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}</ul></div>
+            {% endif %}
+          </div>
+
+          <!-- First / Last name -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-floating-custom mb-4">
+                <input type="text" name="first_name" id="id_first_name" class="form-control" placeholder=" " value="{{ form.first_name.value|default:'' }}">
+                <label for="id_first_name">First name</label>
+                {% if form.first_name.errors %}<div class="form-error">{{ form.first_name.errors }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-floating-custom mb-4">
+                <input type="text" name="last_name" id="id_last_name" class="form-control" placeholder=" " value="{{ form.last_name.value|default:'' }}">
+                <label for="id_last_name">Last name</label>
+                {% if form.last_name.errors %}<div class="form-error">{{ form.last_name.errors }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Phone -->
+          <div class="form-floating-custom mb-4">
+            <input type="text" name="phone_number" id="id_phone_number" class="form-control" placeholder=" " value="{{ form.phone_number.value|default:'' }}">
+            <label for="id_phone_number">Phone number</label>
+            {% if form.phone_number.errors %}<div class="form-error">{{ form.phone_number.errors }}</div>{% endif %}
+          </div>
+
+          <!-- User type (staff only) -->
+          <div class="form-floating-custom mb-4">
+            <select name="user_type" id="id_user_type" class="form-select">
+              <option value="staff" selected>Staff</option>
+            </select>
+            <label for="id_user_type">User type</label>
+            {% if form.user_type.errors %}<div class="form-error">{{ form.user_type.errors }}</div>{% endif %}
+          </div>
+
+          <!-- Roles (multiple select) -->
+          <div class="form-floating-custom mb-4">
+            <select name="roles" id="id_roles" multiple class="form-control" style="min-height: 100px;">
+              {% for role in form.roles.field.queryset %}
+                <option value="{{ role.pk }}" {% if role.pk in form.roles.value %}selected{% endif %}>{{ role.name }} ({{ role.code }})</option>
+              {% endfor %}
+            </select>
+            <label for="id_roles">Roles (hold Ctrl/Cmd to select multiple)</label>
+            <div class="small text-muted mt-1">Assign one or more roles to this user.</div>
+            {% if form.roles.errors %}<div class="form-error">{{ form.roles.errors }}</div>{% endif %}
+          </div>
+
+          <!-- Checkboxes -->
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-check mb-3">
+                <input type="checkbox" name="is_active" id="id_is_active" class="form-check-input" {% if form.is_active.value %}checked{% endif %}>
+                <label class="form-check-label" for="id_is_active">Active</label>
+                {% if form.is_active.errors %}<div class="form-error">{{ form.is_active.errors }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mb-3">
+                <input type="checkbox" name="is_staff" id="id_is_staff" class="form-check-input" {% if form.is_staff.value %}checked{% endif %}>
+                <label class="form-check-label" for="id_is_staff">Staff status</label>
+                {% if form.is_staff.errors %}<div class="form-error">{{ form.is_staff.errors }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-check mb-3">
+                <input type="checkbox" name="is_superuser" id="id_is_superuser" class="form-check-input" {% if form.is_superuser.value %}checked{% endif %}>
+                <label class="form-check-label" for="id_is_superuser">Superuser</label>
+                {% if form.is_superuser.errors %}<div class="form-error">{{ form.is_superuser.errors }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Password section -->
+          <hr class="my-3">
+          {% if request.resolver_match.url_name == 'user_create' %}
+            <!-- Creation mode: always show password fields -->
+            <h5 class="fw-semibold mt-3">Set password</h5>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-floating-custom password-wrapper mb-3">
+                  <input type="password" name="password1" id="id_password1" class="form-control" placeholder=" " required>
+                  <label for="id_password1">Password *</label>
+                  <button type="button" class="password-toggle" data-target="id_password1" aria-label="Toggle password visibility">
+                    <i class="bi bi-eye-slash"></i>
+                  </button>
+                </div>
+                {% if form.password1.errors %}<div class="form-error">{{ form.password1.errors }}</div>{% endif %}
+                <div class="password-strength" id="passwordStrength"></div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-floating-custom password-wrapper mb-3">
+                  <input type="password" name="password2" id="id_password2" class="form-control" placeholder=" " required>
+                  <label for="id_password2">Confirm password *</label>
+                  <button type="button" class="password-toggle" data-target="id_password2" aria-label="Toggle password visibility">
+                    <i class="bi bi-eye-slash"></i>
+                  </button>
+                </div>
+                {% if form.password2.errors %}<div class="form-error">{{ form.password2.errors }}</div>{% endif %}
+                <div class="password-match-feedback" id="passwordMatchFeedback"></div>
+              </div>
+            </div>
+          {% else %}
+            <!-- Edit mode: optional password change -->
+            <div class="form-check mb-2">
+              <input type="checkbox" id="changePasswordCheckbox" class="form-check-input">
+              <label class="form-check-label" for="changePasswordCheckbox">Change password</label>
+            </div>
+            <div id="passwordChangeSection" style="display: none;">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-floating-custom password-wrapper mb-3">
+                    <input type="password" name="password1" id="id_password1" class="form-control" placeholder=" ">
+                    <label for="id_password1">New password</label>
+                    <button type="button" class="password-toggle" data-target="id_password1" aria-label="Toggle password visibility">
+                      <i class="bi bi-eye-slash"></i>
+                    </button>
+                  </div>
+                  {% if form.password1.errors %}<div class="form-error">{{ form.password1.errors }}</div>{% endif %}
+                  <div class="password-strength" id="passwordStrength"></div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-floating-custom password-wrapper mb-3">
+                    <input type="password" name="password2" id="id_password2" class="form-control" placeholder=" ">
+                    <label for="id_password2">Confirm new password</label>
+                    <button type="button" class="password-toggle" data-target="id_password2" aria-label="Toggle password visibility">
+                      <i class="bi bi-eye-slash"></i>
+                    </button>
+                  </div>
+                  {% if form.password2.errors %}<div class="form-error">{{ form.password2.errors }}</div>{% endif %}
+                  <div class="password-match-feedback" id="passwordMatchFeedback"></div>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
+          <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn btn-primary px-4 py-2">
+              {% if request.resolver_match.url_name == 'user_create' %}Create User{% else %}Update User{% endif %}
+            </button>
+            <a href="{% url 'user_list' %}" class="btn btn-outline-secondary px-4 py-2">Cancel</a>
           </div>
         </form>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  (function() {
+    // ========== PASSWORD VISIBILITY TOGGLES ==========
+    const toggleButtons = document.querySelectorAll('.password-toggle');
+    toggleButtons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const targetId = this.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        const icon = this.querySelector('i');
+        if (icon) {
+          icon.classList.toggle('bi-eye');
+          icon.classList.toggle('bi-eye-slash');
+        }
+      });
+    });
+
+    // ========== PASSWORD MATCH & STRENGTH ==========
+    const password1 = document.getElementById('id_password1');
+    const password2 = document.getElementById('id_password2');
+    const matchFeedback = document.getElementById('passwordMatchFeedback');
+    const strengthDiv = document.getElementById('passwordStrength');
+
+    function checkPasswordMatch() {
+      if (!password1 || !password2 || !matchFeedback) return;
+      const val1 = password1.value;
+      const val2 = password2.value;
+      if (val1 === '' && val2 === '') {
+        matchFeedback.textContent = '';
+        matchFeedback.className = 'password-match-feedback empty';
+        return;
+      }
+      if (val1 === val2) {
+        matchFeedback.textContent = '✓ Passwords match';
+        matchFeedback.className = 'password-match-feedback valid';
+      } else {
+        matchFeedback.textContent = '✗ Passwords do not match';
+        matchFeedback.className = 'password-match-feedback invalid';
+      }
+    }
+
+    function checkPasswordStrength() {
+      if (!password1 || !strengthDiv) return;
+      const val = password1.value;
+      if (!val) {
+        strengthDiv.textContent = '';
+        return;
+      }
+      let strength = 'Weak';
+      let color = 'var(--danger)';
+      if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val)) {
+        strength = 'Strong';
+        color = 'var(--success)';
+      } else if (val.length >= 6 && (/[A-Z]/.test(val) || /[0-9]/.test(val))) {
+        strength = 'Medium';
+        color = 'var(--warning)';
+      }
+      strengthDiv.textContent = `Password strength: ${strength}`;
+      strengthDiv.style.color = color;
+    }
+
+    if (password1 && password2) {
+      password1.addEventListener('input', function() { checkPasswordMatch(); checkPasswordStrength(); });
+      password2.addEventListener('input', checkPasswordMatch);
+    }
+
+    // ========== EDIT MODE: SHOW/HIDE PASSWORD CHANGE SECTION ==========
+    const changeCheckbox = document.getElementById('changePasswordCheckbox');
+    const passwordSection = document.getElementById('passwordChangeSection');
+    if (changeCheckbox && passwordSection) {
+      changeCheckbox.addEventListener('change', function() {
+        passwordSection.style.display = this.checked ? 'block' : 'none';
+        if (!this.checked) {
+          // Clear password fields and hide feedback
+          if (password1) password1.value = '';
+          if (password2) password2.value = '';
+          if (matchFeedback) matchFeedback.textContent = '';
+          if (strengthDiv) strengthDiv.textContent = '';
+        }
+      });
+    }
+
+    // ========== FORM SUBMIT VALIDATION ==========
+    const form = document.getElementById('userForm');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        // Only validate if password fields exist and are visible (not hidden by edit mode checkbox)
+        const p1 = document.getElementById('id_password1');
+        const p2 = document.getElementById('id_password2');
+        if (p1 && p2) {
+          // If either password field has a value, they must match
+          if (p1.value || p2.value) {
+            if (p1.value !== p2.value) {
+              e.preventDefault();
+              if (matchFeedback) {
+                matchFeedback.textContent = '✗ Passwords do not match';
+                matchFeedback.className = 'password-match-feedback invalid';
+              }
+              alert('Passwords do not match. Please correct.');
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+    }
+  })();
+</script>
 {% endblock %}
