@@ -2,6 +2,12 @@
 """
 Comprehensive seeding script for Pritech ERP – with realistic data.
 Seeds all apps: accounts, clients, services, tickets, finance, portfolio, and core.
+Includes:
+- Real staff: Isaac Ndoka, Prince Chipeta, Portia Domasi
+- Real clients: J&N, MAME (2 projects), Villa Grande, Abby Investment, Hillcrest Primary
+- Exact QUO-0001 for Villa Grande
+- Subscriptions, tickets, invoices, quotations, expenses, analytics
+- Core models: site config, branches, widgets, announcements, activity feed
 """
 
 import json
@@ -76,7 +82,7 @@ class Command(BaseCommand):
         cfg.mobile_money = '+265 888 123 456'
         cfg.invoice_footer = 'Thank you for your business! Payment due within 30 days.'
         cfg.maintenance_mode = False
-        cfg.vat_rate = 0.175   # ensure correct VAT for calculations
+        cfg.vat_rate = 0.175   # 17.5%
         cfg.save()
         self.stdout.write('  ✓ Site config')
 
@@ -238,146 +244,7 @@ class Command(BaseCommand):
                 }
             )
 
-        # ── CLIENT ORGANISATIONS (with linked client users) ──────────────
-        clients_data = [
-            {
-                'name': 'J&N Private Ltd',
-                'industry': 'construction',
-                'email': 'info@jandn.mw',
-                'phone': '+265 999 261 921',
-                'address': 'Area 51/24 Kanengo, Lilongwe, Malawi',
-                'website': 'https://jandn.mw',
-                'contact_name': 'James Banda',
-                'contact_role': 'Managing Director',
-                'contact_email': 'james@jandn.mw',
-                'contact_phone': '+265 999 261 921',
-                'client_user_email': 'client.jn@pritech.mw',
-                'client_user_first': 'James',
-                'client_user_last': 'Banda',
-                'password': 'client123',
-                'client_role': 'admin',
-                'website_project': {
-                    'title': 'J&N Private Ltd – Corporate Website',
-                    'description': 'Professional corporate website for J&N Private Ltd, showcasing construction projects, company profile, and contact information.',
-                    'project_url': 'https://jandn.mw',
-                    'completion_date': date(2024, 3, 15),
-                    'is_featured': True,
-                    'order': 1,
-                    'technologies': ['Django', 'React', 'PostgreSQL'],
-                    'services': ['Website Development'],
-                }
-            },
-            {
-                'name': 'MAME Foods & Car Hire',
-                'industry': 'food',
-                'email': 'info@mamefoods.mw',
-                'phone': '+265 999 950 489',
-                'address': 'MAME House, Plot 10/069, Luther Street, Area 10, Lilongwe',
-                'website': 'https://mamefoods.com',
-                'contact_name': 'Mary Mwale',
-                'contact_role': 'Managing Director',
-                'contact_email': 'mary@mamefoods.mw',
-                'contact_phone': '+265 999 950 489',
-                'client_user_email': 'client.mame@pritech.mw',
-                'client_user_first': 'Mary',
-                'client_user_last': 'Mwale',
-                'password': 'client123',
-                'client_role': 'admin',
-                'website_project': {
-                    'title': 'MAME Foods & Car Hire',
-                    'description': 'E‑commerce and booking platform for MAME, offering food delivery and car rental services. Includes online ordering and fleet management.',
-                    'project_url': 'https://mamefoods.com',
-                    'completion_date': date(2024, 6, 20),
-                    'is_featured': True,
-                    'order': 2,
-                    'technologies': ['Django', 'Flutter', 'PostgreSQL'],
-                    'services': ['Website Development', 'Software Installation'],
-                }
-            },
-            {
-                'name': 'Villa Grande Motel',
-                'industry': 'hospitality',
-                'email': 'reservations@villagrandemw.com',
-                'phone': '+265 997 000 019',
-                'address': 'M1 Kaphiri, Area 38, Lilongwe, Malawi',
-                'website': 'https://villagrandemw.com',
-                'contact_name': 'Grace Mhango',
-                'contact_role': 'Manager',
-                'contact_email': 'grace@villagrandemw.com',
-                'contact_phone': '+265 997 000 019',
-                'client_user_email': 'client.villa@pritech.mw',
-                'client_user_first': 'Grace',
-                'client_user_last': 'Mhango',
-                'password': 'client123',
-                'client_role': 'admin',
-                'website_project': {
-                    'title': 'Villa Grande Motel',
-                    'description': 'Online booking system for Villa Grande Motel, with room management, reservation engine, and real‑time availability.',
-                    'project_url': 'https://villagrandemw.com',
-                    'completion_date': date(2024, 9, 10),
-                    'is_featured': True,
-                    'order': 3,
-                    'technologies': ['Django', 'React', 'PostgreSQL'],
-                    'services': ['Website Development'],
-                }
-            },
-            {
-                'name': 'Abby Investment – Cleaning Services',
-                'industry': 'services',
-                'email': 'emwikho@abbysinvestment.com',
-                'phone': '+265 994 883 759',
-                'address': 'Kawale 1, Behind Enjen Filling Station, Lilongwe, Malawi',
-                'website': 'https://abbysinvestment.com',
-                'contact_name': 'Abigail Chimwaza',
-                'contact_role': 'CEO',
-                'contact_email': 'abigail@abbysinvestment.com',
-                'contact_phone': '+265 994 883 759',
-                'client_user_email': 'client.abby@pritech.mw',
-                'client_user_first': 'Abigail',
-                'client_user_last': 'Chimwaza',
-                'password': 'client123',
-                'client_role': 'admin',
-                'website_project': {
-                    'title': 'Abby Investment – Cleaning Services',
-                    'description': 'Corporate website for Abby Investment, showcasing professional cleaning services, client testimonials, and service packages.',
-                    'project_url': 'https://abbysinvestment.com',
-                    'completion_date': date(2024, 11, 5),
-                    'is_featured': False,
-                    'order': 4,
-                    'technologies': ['Django', 'PostgreSQL'],
-                    'services': ['Website Development'],
-                }
-            },
-            {
-                'name': 'Hillcrest Primary School',
-                'industry': 'education',
-                'email': 'info@hillcrest.mw',
-                'phone': '+265 888 555 666',
-                'address': 'Area 18, Lilongwe, Malawi',
-                'website': 'https://hillcrest.mw',
-                'contact_name': 'Dr. Peter Mwale',
-                'contact_role': 'Principal',
-                'contact_email': 'peter@hillcrest.mw',
-                'contact_phone': '+265 999 555 666',
-                'client_user_email': 'client.hillcrest@pritech.mw',
-                'client_user_first': 'Peter',
-                'client_user_last': 'Mwale',
-                'password': 'client123',
-                'client_role': 'admin',
-                'website_project': {
-                    'title': 'Hillcrest Primary School',
-                    'description': 'School website with student portal, fees management, event calendar, and parent communication features.',
-                    'project_url': 'https://hillcrest.mw',
-                    'completion_date': date(2025, 1, 20),
-                    'is_featured': False,
-                    'order': 5,
-                    'technologies': ['Django', 'React', 'PostgreSQL'],
-                    'services': ['Website Development', 'Software Installation'],
-                }
-            },
-        ]
-
-        # Ensure services exist (reuse from earlier)
+        # ── Services (needed for projects and tickets) ──────────────────
         cats = {}
         for name, icon in [('Networking', '🌐'), ('Hardware', '🖥'), ('Software', '💻'),
                            ('Security', '🔒'), ('Training', '🎓')]:
@@ -407,10 +274,176 @@ class Command(BaseCommand):
                 }
             )
             svcs[name] = s
+        self.stdout.write('  ✓ Services created')
 
-        # Process clients
+        # ── CLIENT ORGANISATIONS (with linked client users and projects) ──
+        clients_data = [
+            {
+                'name': 'J&N Private Ltd',
+                'industry': 'construction',
+                'email': 'info@jandn.mw',
+                'phone': '+265 999 261 921',
+                'address': 'Area 51/24 Kanengo, Lilongwe, Malawi',
+                'website': 'https://jandn.mw',
+                'contact_name': 'James Banda',
+                'contact_role': 'Managing Director',
+                'contact_email': 'james@jandn.mw',
+                'contact_phone': '+265 999 261 921',
+                'client_user_email': 'client.jn@pritech.mw',
+                'client_user_first': 'James',
+                'client_user_last': 'Banda',
+                'password': 'client123',
+                'client_role': 'admin',
+                'website_projects': [
+                    {
+                        'title': 'J&N Private Ltd – Corporate Website',
+                        'description': 'Professional corporate website for J&N Private Ltd, showcasing construction projects, company profile, and contact information.',
+                        'project_url': 'https://jandn.mw',
+                        'completion_date': date(2024, 3, 15),
+                        'is_featured': True,
+                        'order': 1,
+                        'technologies': ['Django', 'React', 'PostgreSQL'],
+                        'services': ['Website Development'],
+                    }
+                ]
+            },
+            {
+                'name': 'MAME Foods & Car Hire',
+                'industry': 'food',
+                'email': 'info@mamefoods.mw',
+                'phone': '+265 999 950 489',
+                'address': 'MAME House, Plot 10/069, Luther Street, Area 10, Lilongwe',
+                'website': 'https://mamefoods.com',
+                'contact_name': 'Mary Mwale',
+                'contact_role': 'Managing Director',
+                'contact_email': 'mary@mamefoods.mw',
+                'contact_phone': '+265 999 950 489',
+                'client_user_email': 'client.mame@pritech.mw',
+                'client_user_first': 'Mary',
+                'client_user_last': 'Mwale',
+                'password': 'client123',
+                'client_role': 'admin',
+                'website_projects': [
+                    {
+                        'title': 'MAME Car Hire – Online Booking',
+                        'description': 'Fleet management and online booking platform for MAME Car Hire, allowing customers to reserve vehicles, view availability, and manage bookings in real time.',
+                        'project_url': 'https://mamecarhire.com',
+                        'completion_date': date(2024, 6, 20),
+                        'is_featured': True,
+                        'order': 2,
+                        'technologies': ['Django', 'Flutter', 'PostgreSQL'],
+                        'services': ['Website Development', 'Software Installation'],
+                    },
+                    {
+                        'title': 'MAME Foods – E‑Commerce & Delivery',
+                        'description': 'E‑commerce platform for MAME Foods, enabling online ordering, payment integration, and delivery tracking for food products.',
+                        'project_url': 'https://mamefoods.com',
+                        'completion_date': date(2024, 8, 15),
+                        'is_featured': True,
+                        'order': 3,
+                        'technologies': ['Django', 'React', 'PostgreSQL'],
+                        'services': ['Website Development'],
+                    }
+                ]
+            },
+            {
+                'name': 'Villa Grande Motel',
+                'industry': 'hospitality',
+                'email': 'reservations@villagrandemw.com',
+                'phone': '+265 997 000 019',
+                'address': 'M1 Kaphiri, Area 38, Lilongwe, Malawi',
+                'website': 'https://villagrandemw.com',
+                'contact_name': 'Grace Mhango',
+                'contact_role': 'Manager',
+                'contact_email': 'grace@villagrandemw.com',
+                'contact_phone': '+265 997 000 019',
+                'client_user_email': 'client.villa@pritech.mw',
+                'client_user_first': 'Grace',
+                'client_user_last': 'Mhango',
+                'password': 'client123',
+                'client_role': 'admin',
+                'website_projects': [
+                    {
+                        'title': 'Villa Grande Motel',
+                        'description': 'Online booking system for Villa Grande Motel, with room management, reservation engine, and real‑time availability.',
+                        'project_url': 'https://villagrandemw.com',
+                        'completion_date': date(2024, 9, 10),
+                        'is_featured': True,
+                        'order': 4,
+                        'technologies': ['Django', 'React', 'PostgreSQL'],
+                        'services': ['Website Development'],
+                    }
+                ]
+            },
+            {
+                'name': 'Abby Investment – Cleaning Services',
+                'industry': 'services',
+                'email': 'emwikho@abbysinvestment.com',
+                'phone': '+265 994 883 759',
+                'address': 'Kawale 1, Behind Enjen Filling Station, Lilongwe, Malawi',
+                'website': 'https://abbysinvestment.com',
+                'contact_name': 'Abigail Chimwaza',
+                'contact_role': 'CEO',
+                'contact_email': 'abigail@abbysinvestment.com',
+                'contact_phone': '+265 994 883 759',
+                'client_user_email': 'client.abby@pritech.mw',
+                'client_user_first': 'Abigail',
+                'client_user_last': 'Chimwaza',
+                'password': 'client123',
+                'client_role': 'admin',
+                'website_projects': [
+                    {
+                        'title': 'Abby Investment – Cleaning Services',
+                        'description': 'Corporate website for Abby Investment, showcasing professional cleaning services, client testimonials, and service packages.',
+                        'project_url': 'https://abbysinvestment.com',
+                        'completion_date': date(2024, 11, 5),
+                        'is_featured': False,
+                        'order': 5,
+                        'technologies': ['Django', 'PostgreSQL'],
+                        'services': ['Website Development'],
+                    }
+                ]
+            },
+            {
+                'name': 'Hillcrest Primary School',
+                'industry': 'education',
+                'email': 'info@hillcrest.mw',
+                'phone': '+265 888 555 666',
+                'address': 'Area 18, Lilongwe, Malawi',
+                'website': 'https://hillcrest.mw',
+                'contact_name': 'Dr. Peter Mwale',
+                'contact_role': 'Principal',
+                'contact_email': 'peter@hillcrest.mw',
+                'contact_phone': '+265 999 555 666',
+                'client_user_email': 'client.hillcrest@pritech.mw',
+                'client_user_first': 'Peter',
+                'client_user_last': 'Mwale',
+                'password': 'client123',
+                'client_role': 'admin',
+                'website_projects': [
+                    {
+                        'title': 'Hillcrest Primary School',
+                        'description': 'School website with student portal, fees management, event calendar, and parent communication features.',
+                        'project_url': 'https://hillcrest.mw',
+                        'completion_date': date(2025, 1, 20),
+                        'is_featured': False,
+                        'order': 6,
+                        'technologies': ['Django', 'React', 'PostgreSQL'],
+                        'services': ['Website Development', 'Software Installation'],
+                    }
+                ]
+            },
+        ]
+
+        # Process clients and create organisations, users, contacts, and projects
         clients = []
+        web_cat, _ = PortfolioCategory.objects.get_or_create(
+            name='Web Development',
+            defaults={'icon': 'fa-solid fa-globe', 'is_active': True}
+        )
+
         for cd in clients_data:
+            # Create organisation
             org, created = ClientOrganization.objects.get_or_create(
                 email=cd['email'],
                 defaults={
@@ -424,6 +457,7 @@ class Command(BaseCommand):
             )
             clients.append(org)
 
+            # Create client user
             client_user = User.objects.filter(email=cd['client_user_email']).first()
             if not client_user:
                 client_user = User.objects.create_user(
@@ -440,6 +474,7 @@ class Command(BaseCommand):
                 client_user.client_organization = org
                 client_user.save(update_fields=['client_organization'])
 
+            # Create primary contact
             ClientContact.objects.get_or_create(
                 client=org,
                 email=cd['contact_email'],
@@ -451,39 +486,42 @@ class Command(BaseCommand):
                 }
             )
 
-            # Portfolio project
-            project_data = cd['website_project']
-            web_cat, _ = PortfolioCategory.objects.get_or_create(name='Web Development', defaults={'icon': 'fa-solid fa-globe', 'is_active': True})
-            tech_objs = []
-            for tech_name in project_data['technologies']:
-                tech, _ = PortfolioTechnology.objects.get_or_create(name=tech_name, defaults={'is_active': True})
-                tech_objs.append(tech)
+            # Create portfolio projects
+            for project_data in cd.get('website_projects', []):
+                tech_objs = []
+                for tech_name in project_data['technologies']:
+                    tech, _ = PortfolioTechnology.objects.get_or_create(
+                        name=tech_name,
+                        defaults={'is_active': True}
+                    )
+                    tech_objs.append(tech)
 
-            proj, created = PortfolioProject.objects.get_or_create(
-                title=project_data['title'],
-                defaults={
-                    'client_name': cd['name'],
-                    'category': web_cat,
-                    'description': to_quill_json(project_data['description']),
-                    'full_description': to_quill_json(project_data['description'] + ' (detailed)'),
-                    'completion_date': project_data['completion_date'],
-                    'is_featured': project_data['is_featured'],
-                    'order': project_data['order'],
-                    'status': 'published',
-                    'project_url': project_data.get('project_url', ''),
-                }
-            )
-            if created:
-                svc_objs = [svcs[name] for name in project_data['services'] if name in svcs]
-                proj.services.set(svc_objs)
-                proj.technologies.set(tech_objs)
-                if HAS_PIL and not proj.featured_image:
-                    img_file = create_placeholder_image(text=proj.title[:20], bg_color=(14, 165, 233))
-                    if img_file:
-                        proj.featured_image.save(f"{proj.title.replace(' ', '_')}.jpg", img_file, save=True)
-                proj.save()
+                proj, created = PortfolioProject.objects.get_or_create(
+                    title=project_data['title'],
+                    defaults={
+                        'client_name': cd['name'],
+                        'category': web_cat,
+                        'description': to_quill_json(project_data['description']),
+                        'full_description': to_quill_json(project_data['description'] + ' (detailed)'),
+                        'completion_date': project_data['completion_date'],
+                        'is_featured': project_data['is_featured'],
+                        'order': project_data['order'],
+                        'status': 'published',
+                        'project_url': project_data.get('project_url', ''),
+                    }
+                )
+                if created:
+                    # Link services
+                    svc_objs = [svcs[name] for name in project_data['services'] if name in svcs]
+                    proj.services.set(svc_objs)
+                    proj.technologies.set(tech_objs)
+                    if HAS_PIL and not proj.featured_image:
+                        img_file = create_placeholder_image(text=proj.title[:20], bg_color=(14, 165, 233))
+                        if img_file:
+                            proj.featured_image.save(f"{proj.title.replace(' ', '_')}.jpg", img_file, save=True)
+                    proj.save()
 
-        self.stdout.write('  ✓ Realistic clients (J&N, MAME, Villa Grande, Abby, Hillcrest) created with website projects')
+        self.stdout.write('  ✓ Realistic clients created with website projects (including 2 for MAME)')
 
         # ── Portfolio Settings (with Facebook link) ──────────────────────
         ps, _ = PortfolioSettings.objects.get_or_create(pk=1)
@@ -611,20 +649,15 @@ class Command(BaseCommand):
                 TicketService.create_sla(t)
         self.stdout.write('  ✓ Tickets created for real clients')
 
-        # ── Quotations and Invoices (including real QUO-0001) ──────────────
-        from finance.models import Quotation, QuotationItem, Invoice, InvoiceItem, Payment
-        from finance.services import QuotationService
+        # ── QUO-0001 for Villa Grande (exact as PDF) ────────────────────
+        from finance.models import Quotation, QuotationItem
 
-        # We'll find the Villa Grande client
         villa_client = ClientOrganization.objects.filter(name='Villa Grande Motel').first()
-
-        # Create the exact QUO-0001 for Villa Grande
         if villa_client and not Quotation.objects.filter(quotation_number='QUO-0001').exists():
-            # Prepare the items as per the PDF
             items = [
                 {'description': 'Switch', 'qty': 1, 'unit_price': 750000},
                 {'description': 'Ethernet Cable Roll', 'qty': 1, 'unit_price': 650000},
-                {'description': 'Cable Clips', 'qty': 1, 'unit_price': 0},   # zero amount
+                {'description': 'Cable Clips', 'qty': 1, 'unit_price': 0},
                 {'description': 'Routers', 'qty': 16, 'unit_price': 150000},
                 {'description': 'Conduit Bend', 'qty': 1, 'unit_price': 0},
                 {'description': 'Switch Cabinet', 'qty': 1, 'unit_price': 0},
@@ -634,12 +667,11 @@ class Command(BaseCommand):
                 {'description': 'Conduits 25mm & 30mm', 'qty': 1, 'unit_price': 0},
                 {'description': 'DVR 8 Channels', 'qty': 1, 'unit_price': 550000},
             ]
-            subtotal = sum(i['qty'] * i['unit_price'] for i in items)  # = 4,350,000
-            tax_rate = 0.175  # 17.5%
-            tax_amount = subtotal * tax_rate   # = 761,250
-            total = subtotal + tax_amount      # = 5,111,250
+            subtotal = sum(i['qty'] * i['unit_price'] for i in items)  # 4,350,000
+            tax_rate = float(cfg.vat_rate)
+            tax_amount = subtotal * tax_rate   # 761,250
+            total = subtotal + tax_amount      # 5,111,250
 
-            # Create quotation
             quote = Quotation.objects.create(
                 client=villa_client,
                 quotation_number='QUO-0001',
@@ -650,11 +682,10 @@ class Command(BaseCommand):
                 subtotal=subtotal,
                 tax_amount=tax_amount,
                 total_amount=total,
-                notes=to_quill_json("Thank you for your business! Payment due within 30 days.")
+                notes=to_quill_json("Thank you for your business! Payment due within 30 days. This quotation is valid until June 19, 2026.")
             )
-            # Add items
             for it in items:
-                if it['unit_price'] > 0:  # skip zero‑price items (optional)
+                if it['unit_price'] > 0:
                     QuotationItem.objects.create(
                         quotation=quote,
                         description=it['description'],
@@ -664,7 +695,11 @@ class Command(BaseCommand):
                     )
             self.stdout.write(f'  ✓ Created QUO-0001 for Villa Grande (MWK {total:,.2f})')
 
-        # Other quotations (keep existing)
+        # ── Other quotations and invoices ──────────────────────────────
+        from finance.models import Invoice, InvoiceItem, Payment
+        from finance.services import QuotationService
+
+        # Additional quotations for J&N and Hillcrest
         quote_data = [
             (clients[0], [('Website Development', 1, 250000), ('Hosting Setup', 1, 50000)], 'sent'),
             (clients[4], [('School Website', 1, 120000), ('Student Portal', 1, 80000)], 'sent'),
@@ -753,7 +788,6 @@ class Command(BaseCommand):
                     timestamp=timestamp,
                     reason='' if random.random() > 0.3 else 'Invalid password'
                 )
-
         self.stdout.write('  ✓ Session and login events added')
 
         self.stdout.write(self.style.SUCCESS('\n✅ Seeding complete!'))
