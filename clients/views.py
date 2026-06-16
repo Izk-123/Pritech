@@ -15,6 +15,7 @@ Includes:
 
 import csv
 
+from django.db.models.deletion import ProtectedError
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -146,19 +147,40 @@ class ClientUpdateView(RoleRequiredMixin, UpdateView):
 class ClientDeleteView(RoleRequiredMixin, DeleteView):
     """
     Delete a client organisation (staff only).
-    Only inactive clients can be deleted.
+    Only inactive clients can be deleted, and must have no protected related objects.
     """
     model = ClientOrganization
     template_name = 'clients/client_confirm_delete.html'
     success_url = reverse_lazy('client_list')
     required_roles = ['ADMIN']
+    context_object_name = 'client'
 
     def delete(self, request, *args, **kwargs):
-        client = self.get_object()
-        if client.status != 'inactive':
-            messages.error(request, f"Cannot delete '{client.name}' – only inactive clients can be deleted.")
+        self.object = self.get_object()
+
+        # 1. Check status
+        if self.object.status != 'inactive':
+            messages.error(request, f"Cannot delete '{self.object.name}' – only inactive clients can be deleted.")
             return redirect('client_list')
-        return super().delete(request, *args, **kwargs)
+
+        # 2. Attempt deletion with ProtectedError handling
+        try:
+            self.object.delete()
+            messages.success(request, f"Client '{self.object.name}' deleted successfully.")
+            return redirect(self.success_url)
+        except ProtectedError as e:
+            # Build a user-friendly list of related objects
+            related_objects = e.protected_objects
+            obj_names = ', '.join(str(obj) for obj in related_objects[:5])
+            if len(related_objects) > 5:
+                obj_names += f' and {len(related_objects) - 5} more'
+            # Use warning (yellow) instead of error (red)
+            messages.warning(
+                request,
+                f"Cannot delete '{self.object.name}' – it is referenced by: {obj_names}. "
+                "Please delete or reassign those records first."
+            )
+            return redirect('client_detail', pk=self.object.pk)
 
 
 class ClientBulkActionView(RoleRequiredMixin, View):
