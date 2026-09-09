@@ -50,7 +50,8 @@ def generate_subscription_invoices():
             issue_date=today,
             due_date=today + timezone.timedelta(days=30),
             notes=f"Monthly subscription fee for {sub.plan.name}.",
-            created_by=None  # system user
+            created_by=None,  # system user
+            include_vat=True  # ✅ NEW: keep VAT for subscriptions (adjust if needed)
         )
         # Link invoice to subscription
         invoice.subscription = sub

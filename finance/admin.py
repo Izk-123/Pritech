@@ -20,12 +20,12 @@ from .models import (
 @admin.register(Invoice)
 class InvoiceAdmin(ModelAdmin, SimpleHistoryAdmin):
     """Admin for invoices with history tracking."""
-    list_display = ('invoice_number', 'client', 'total_amount', 'status', 'issue_date', 'due_date')
-    list_filter = ('status', 'issue_date', 'client')
+    list_display = ('invoice_number', 'client', 'total_amount', 'include_vat', 'status', 'issue_date', 'due_date')
+    list_filter = ('status', 'issue_date', 'client', 'include_vat')
     search_fields = ('invoice_number', 'client__name')
     readonly_fields = ('invoice_number', 'created_at', 'history')
     fieldsets = (
-        (None, {'fields': ('invoice_number', 'client', 'ticket', 'status')}),
+        (None, {'fields': ('invoice_number', 'client', 'ticket', 'status', 'include_vat')}),
         ('Dates', {'fields': ('issue_date', 'due_date')}),
         ('Amounts', {'fields': ('subtotal', 'tax_amount', 'total_amount', 'amount_paid')}),
         ('Notes', {'fields': ('notes',)}),
@@ -55,12 +55,12 @@ class PaymentAdmin(ModelAdmin, SimpleHistoryAdmin):
 @admin.register(Quotation)
 class QuotationAdmin(ModelAdmin, SimpleHistoryAdmin):
     """Admin for quotations with status workflow."""
-    list_display = ('quotation_number', 'client', 'total_amount', 'status', 'issue_date', 'valid_until')
-    list_filter = ('status', 'issue_date')
+    list_display = ('quotation_number', 'client', 'total_amount', 'include_vat', 'status', 'issue_date', 'valid_until')
+    list_filter = ('status', 'issue_date', 'include_vat')
     search_fields = ('quotation_number', 'client__name')
     readonly_fields = ('quotation_number', 'created_at', 'history')
     fieldsets = (
-        (None, {'fields': ('quotation_number', 'client', 'status')}),
+        (None, {'fields': ('quotation_number', 'client', 'status', 'include_vat')}),
         ('Dates', {'fields': ('issue_date', 'valid_until')}),
         ('Amounts', {'fields': ('subtotal', 'tax_amount', 'total_amount')}),
         ('Notes & Feedback', {'fields': ('notes', 'client_feedback')}),

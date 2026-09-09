@@ -32,11 +32,12 @@ class QuotationForm(forms.ModelForm):
 
     class Meta:
         model = Quotation
-        fields = ['client', 'issue_date', 'valid_until', 'notes']
+        fields = ['client', 'issue_date', 'valid_until', 'include_vat', 'notes']
         widgets = {
             'client': forms.Select(attrs={'class': 'form-control'}),
             'issue_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'valid_until': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'include_vat': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'Terms, delivery notes, etc.'}),
         }
 
@@ -78,12 +79,13 @@ class InvoiceForm(forms.ModelForm):
 
     class Meta:
         model = Invoice
-        fields = ['client', 'ticket', 'issue_date', 'due_date', 'notes']
+        fields = ['client', 'ticket', 'issue_date', 'due_date', 'include_vat', 'notes']
         widgets = {
             'client': forms.Select(attrs={'class': 'form-control'}),
             'ticket': forms.Select(attrs={'class': 'form-control'}),
             'issue_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'include_vat': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
 

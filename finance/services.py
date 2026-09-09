@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 def get_vat_rate():
     """Return VAT rate as Decimal from settings."""
-    rate = getattr(settings, 'VAT_RATE', 0.165)
+    rate = getattr(settings, 'VAT_RATE', 0.175)
     return Decimal(str(rate))
 
 
@@ -42,7 +42,7 @@ class InvoiceService:
 
     @staticmethod
     @transaction.atomic
-    def create_invoice(client, items_data, issue_date, due_date, ticket=None, notes='', created_by=None):
+    def create_invoice(client, items_data, issue_date, due_date, ticket=None, notes='', created_by=None, include_vat=True):
         """
         Create a draft invoice with line items.
         """
@@ -52,7 +52,8 @@ class InvoiceService:
 
         invoice = Invoice.objects.create(
             client=client, ticket=ticket, issue_date=issue_date,
-            due_date=due_date, notes=notes, created_by=created_by, status='draft'
+            due_date=due_date, notes=notes, created_by=created_by, status='draft',
+            include_vat=include_vat
         )
         subtotal = Decimal('0')
         for item in items_data:
@@ -64,7 +65,7 @@ class InvoiceService:
                 quantity=qty, unit_price=price, total=total
             )
             subtotal += total
-        vat = get_vat_rate()
+        vat = get_vat_rate() if include_vat else Decimal('0')
         tax = subtotal * vat
         invoice.subtotal = subtotal
         invoice.tax_amount = tax
@@ -76,7 +77,7 @@ class InvoiceService:
     def recalculate(invoice):
         """Recalculate invoice totals based on current line items."""
         subtotal = sum(i.total for i in invoice.items.all())
-        vat = get_vat_rate()
+        vat = get_vat_rate() if invoice.include_vat else Decimal('0')
         invoice.subtotal = subtotal
         invoice.tax_amount = subtotal * vat
         invoice.total_amount = subtotal + invoice.tax_amount
@@ -110,7 +111,7 @@ class InvoiceService:
 
         # Recalculate totals to ensure consistency
         subtotal = sum(item.total for item in invoice.items.all())
-        vat = get_vat_rate()
+        vat = get_vat_rate() if invoice.include_vat else Decimal('0')
         tax = subtotal * vat
         total = subtotal + tax
 
@@ -161,14 +162,15 @@ class QuotationService:
 
     @staticmethod
     @transaction.atomic
-    def create_quotation(client, items_data, issue_date, valid_until, notes='', created_by=None):
+    def create_quotation(client, items_data, issue_date, valid_until, notes='', created_by=None, include_vat=True):
         """
         Create a draft quotation with line items.
         """
         notes_json = QuotationService._ensure_quill_json(notes)
         quotation = Quotation.objects.create(
             client=client, issue_date=issue_date, valid_until=valid_until,
-            notes=notes_json, created_by=created_by, status='draft'
+            notes=notes_json, created_by=created_by, status='draft',
+            include_vat=include_vat
         )
         subtotal = Decimal('0')
         for item in items_data:
@@ -180,7 +182,7 @@ class QuotationService:
                 quantity=qty, unit_price=price, total=total
             )
             subtotal += total
-        vat = get_vat_rate()
+        vat = get_vat_rate() if include_vat else Decimal('0')
         tax = subtotal * vat
         quotation.subtotal = subtotal
         quotation.tax_amount = tax
@@ -192,7 +194,7 @@ class QuotationService:
     def recalculate(quotation):
         """Recalculate quotation totals based on current line items."""
         subtotal = sum(i.total for i in quotation.items.all())
-        vat = get_vat_rate()
+        vat = get_vat_rate() if quotation.include_vat else Decimal('0')
         quotation.subtotal = subtotal
         quotation.tax_amount = subtotal * vat
         quotation.total_amount = subtotal + quotation.tax_amount
@@ -241,7 +243,8 @@ class QuotationService:
             due_date=date.today() + timedelta(days=30),
             notes=notes_json,
             created_by=created_by,
-            status='draft'
+            status='draft',
+            include_vat=quotation.include_vat  # ✅ NEW: copy include_vat flag
         )
         for q_item in quotation.items.all():
             InvoiceItem.objects.create(

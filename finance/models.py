@@ -73,6 +73,11 @@ class Invoice(models.Model):
         null=True, blank=True,
         related_name='invoices'
     )
+    # ✅ NEW: Optional VAT flag
+    include_vat = models.BooleanField(
+        default=True,
+        help_text="If unchecked, VAT will not be added to this invoice."
+    )
     history = HistoricalRecords()
 
     class Meta:
@@ -216,6 +221,11 @@ class Quotation(models.Model):
     client_feedback = models.TextField(blank=True, help_text="Client's rejection reason or change request")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # ✅ NEW: Optional VAT flag
+    include_vat = models.BooleanField(
+        default=True,
+        help_text="If unchecked, VAT will not be added to this quotation."
+    )
     history = HistoricalRecords()
 
     class Meta:

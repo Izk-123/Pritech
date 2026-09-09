@@ -250,7 +250,8 @@ class DuplicateQuotationView(RoleRequiredMixin, View):
             valid_until=date.today() + timedelta(days=30),
             notes=f"Duplicated from {original.quotation_number}",
             created_by=request.user,
-            status='draft'
+            status='draft',
+            include_vat=original.include_vat  # ✅ NEW: preserve VAT flag
         )
         for item in original.items.all():
             QuotationItem.objects.create(
@@ -395,8 +396,13 @@ def quotation_excel_export(request, pk):
 
     ws.cell(row=row+1, column=3, value="Subtotal").font = Font(bold=True)
     ws.cell(row=row+1, column=4, value=float(quotation.subtotal))
-    ws.cell(row=row+2, column=3, value=f"VAT ({float(config.vat_rate)*100:.1f}%)").font = Font(bold=True)
-    ws.cell(row=row+2, column=4, value=float(quotation.tax_amount))
+    # ✅ NEW: Conditionally include VAT row
+    if quotation.include_vat:
+        ws.cell(row=row+2, column=3, value=f"VAT ({float(config.vat_rate)*100:.1f}%)").font = Font(bold=True)
+        ws.cell(row=row+2, column=4, value=float(quotation.tax_amount))
+    else:
+        ws.cell(row=row+2, column=3, value="VAT").font = Font(bold=True)
+        ws.cell(row=row+2, column=4, value=0.0)
     ws.cell(row=row+3, column=3, value="Total").font = Font(bold=True, size=12)
     ws.cell(row=row+3, column=4, value=float(quotation.total_amount)).font = Font(bold=True, size=12)
 
