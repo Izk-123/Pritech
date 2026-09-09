@@ -160,10 +160,12 @@
             <span>Subtotal</span>
             <span>{{ config.currency_symbol }} {{ invoice.subtotal|floatformat:2 }}</span>
         </div>
+        {% if invoice.include_vat %}
         <div class="summary-row">
             <span>VAT ({{ vat_percent|default:'16.5' }}%)</span>
             <span>{{ config.currency_symbol }} {{ invoice.tax_amount|floatformat:2 }}</span>
         </div>
+        {% endif %}
         <div class="summary-row summary-total">
             <span>Total</span>
             <span>{{ config.currency_symbol }} {{ invoice.total_amount|floatformat:2 }}</span>

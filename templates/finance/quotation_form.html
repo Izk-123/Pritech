@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load finance_extras %} <!-- ✅ NEW: Load filter -->
 
 {% block title %}{% if form.instance.pk %}Edit Quotation{% else %}New Quotation{% endif %}{% endblock %}
 {% block page_title %}{% if form.instance.pk %}Edit Quotation{% else %}Create Quotation{% endif %}{% endblock %}
@@ -7,157 +8,35 @@
 {% block extra_css %}
 <style>
   /* ── Responsive Form Styles ── */
-  .form-container {
-    max-width: 1000px;
-    margin: 0 auto;
-  }
-  .card {
-    margin-bottom: 1.25rem;
-    border: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  }
-  .card-header {
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-    padding: 0.75rem 1rem;
-    font-weight: 600;
-  }
-  .card-body {
-    padding: 1rem;
-  }
-  @media (min-width: 768px) {
-    .card-body {
-      padding: 1.25rem;
-    }
-  }
+  .form-container { max-width: 1000px; margin: 0 auto; }
+  .card { margin-bottom: 1.25rem; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .card-header { background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color); padding: 0.75rem 1rem; font-weight: 600; }
+  .card-body { padding: 1rem; }
+  @media (min-width: 768px) { .card-body { padding: 1.25rem; } }
 
-  /* Items table – horizontal scroll on mobile */
-  .items-table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .items-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 550px;
-  }
-  .items-table th,
-  .items-table td {
-    padding: 0.6rem 0.5rem;
-    border-bottom: 1px solid var(--border-color);
-    vertical-align: middle;
-  }
-  .items-table th {
-    background: var(--bg-tertiary);
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--text-muted);
-  }
-  .items-table input {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.4rem 0.5rem;
-    font-size: 0.85rem;
-    width: 100%;
-  }
-  .items-table input:focus {
-    border-color: var(--primary);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(65,84,241,0.1);
-  }
-  .item-total {
-    font-weight: 700;
-    color: var(--primary);
-    text-align: right;
-  }
-  .remove-item {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: color 0.2s;
-  }
-  .remove-item:hover {
-    color: var(--danger);
-  }
+  /* Items table */
+  .items-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .items-table { width: 100%; border-collapse: collapse; min-width: 550px; }
+  .items-table th, .items-table td { padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+  .items-table th { background: var(--bg-tertiary); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+  .items-table input { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.4rem 0.5rem; font-size: 0.85rem; width: 100%; }
+  .items-table input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(65,84,241,0.1); }
+  .item-total { font-weight: 700; color: var(--primary); text-align: right; }
+  .remove-item { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; transition: color 0.2s; }
+  .remove-item:hover { color: var(--danger); }
 
-  /* Add item button */
-  .add-item-btn {
-    background: var(--bg-tertiary);
-    border: 1px dashed var(--border-color);
-    border-radius: 12px;
-    padding: 0.6rem;
-    width: calc(100% - 2rem);
-    margin: 0.75rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    color: var(--primary);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .add-item-btn:hover {
-    background: var(--active-bg);
-    border-color: var(--primary);
-  }
+  .add-item-btn { background: var(--bg-tertiary); border: 1px dashed var(--border-color); border-radius: 12px; padding: 0.6rem; width: calc(100% - 2rem); margin: 0.75rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: var(--primary); font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .add-item-btn:hover { background: var(--active-bg); border-color: var(--primary); }
 
-  /* Footer summary */
-  .summary-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 0.3rem 0;
-    font-size: 0.9rem;
-  }
-  .summary-total {
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--primary);
-    border-top: 1px solid var(--border-color);
-    padding-top: 0.5rem;
-    margin-top: 0.5rem;
-  }
+  .summary-row { display: flex; justify-content: space-between; align-items: baseline; padding: 0.3rem 0; font-size: 0.9rem; }
+  .summary-total { font-size: 1.2rem; font-weight: 800; color: var(--primary); border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem; }
 
-  /* Action buttons – stack on mobile */
-  .action-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-  }
-  @media (max-width: 576px) {
-    .action-buttons .btn {
-      flex: 1;
-      text-align: center;
-    }
-  }
+  .action-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+  @media (max-width: 576px) { .action-buttons .btn { flex: 1; text-align: center; } }
 
-  /* Field styles */
-  .field-group {
-    margin-bottom: 0.75rem;
-  }
-  .field-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 0.2rem;
-    display: block;
-  }
-  select.form-control, input.form-control {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 0.5rem 0.75rem;
-    width: 100%;
-  }
+  .field-group { margin-bottom: 0.75rem; }
+  .field-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.2rem; display: block; }
+  select.form-control, input.form-control { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.5rem 0.75rem; width: 100%; }
 </style>
 {% endblock %}
 
@@ -191,16 +70,14 @@
             <div class="field-group">
               <label class="field-label">Client *</label>
               {{ form.client }}
-              {% if form.client.errors %}
-                <div class="text-danger small mt-1">{{ form.client.errors|join:", " }}</div>
-              {% endif %}
+              {% if form.client.errors %}<div class="text-danger small mt-1">{{ form.client.errors|join:", " }}</div>{% endif %}
             </div>
           </div>
         </div>
       </div>
       <div class="col-md-6">
         <div class="card">
-          <div class="card-header">Dates</div>
+          <div class="card-header">Dates & Tax</div>
           <div class="card-body">
             <div class="row g-2">
               <div class="col-6">
@@ -216,6 +93,17 @@
                 </div>
               </div>
             </div>
+            <!-- ✅ NEW: Include VAT Checkbox -->
+            <div class="field-group mt-3">
+              <label class="field-label">Tax Settings</label>
+              <div class="form-check">
+                {{ form.include_vat }}
+                <label class="form-check-label" for="{{ form.include_vat.id_for_label }}">
+                  Include VAT ({{ site_config.vat_rate|multiply:100|floatformat:1 }}%)
+                </label>
+                <div class="form-text small text-muted">Uncheck to exclude VAT from this quotation.</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -225,9 +113,7 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Line Items</span>
-        <button type="button" class="btn btn-sm btn-primary" id="add-item-btn">
-          <i class="bi bi-plus-lg"></i> Add item
-        </button>
+        <button type="button" class="btn btn-sm btn-primary" id="add-item-btn"><i class="bi bi-plus-lg"></i> Add item</button>
       </div>
       <div class="card-body p-0">
         {{ items.management_form }}
@@ -252,13 +138,9 @@
                   <td class="item-total">0.00</td>
                   <td class="text-center">
                     {% if item_form.instance.pk %}
-                      <label class="remove-item" style="cursor: pointer;">
-                        {{ item_form.DELETE }} <i class="bi bi-trash3"></i>
-                      </label>
+                      <label class="remove-item" style="cursor: pointer;">{{ item_form.DELETE }} <i class="bi bi-trash3"></i></label>
                     {% else %}
-                      <button type="button" class="remove-item" title="Remove item">
-                        <i class="bi bi-x-circle"></i>
-                      </button>
+                      <button type="button" class="remove-item" title="Remove item"><i class="bi bi-x-circle"></i></button>
                     {% endif %}
                   </td>
                 </tr>
@@ -274,24 +156,16 @@
           </table>
         </div>
 
-        <button type="button" class="add-item-btn" id="add-item-btn-bottom">
-          <i class="bi bi-plus-circle"></i> Add item
-        </button>
+        <button type="button" class="add-item-btn" id="add-item-btn-bottom"><i class="bi bi-plus-circle"></i> Add item</button>
 
         <!-- Totals summary -->
         <div class="p-3 border-top">
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span id="subtotal-display">{{ site_config.currency_symbol }} 0.00</span>
-          </div>
-          <div class="summary-row">
-            <span>VAT ({{ site_config.vat_rate|floatformat:1 }}%)</span>
+          <div class="summary-row"><span>Subtotal</span><span id="subtotal-display">{{ site_config.currency_symbol }} 0.00</span></div>
+          <div class="summary-row" id="vat-row">
+            <span>VAT ({{ site_config.vat_rate|multiply:100|floatformat:1 }}%)</span>
             <span id="tax-display">{{ site_config.currency_symbol }} 0.00</span>
           </div>
-          <div class="summary-total d-flex justify-content-between">
-            <span>Total</span>
-            <span id="total-display">{{ site_config.currency_symbol }} 0.00</span>
-          </div>
+          <div class="summary-total d-flex justify-content-between"><span>Total</span><span id="total-display">{{ site_config.currency_symbol }} 0.00</span></div>
         </div>
       </div>
     </div>
@@ -299,20 +173,14 @@
     <!-- Notes -->
     <div class="card">
       <div class="card-header">Notes (optional)</div>
-      <div class="card-body">
-        {{ form.notes }}
-      </div>
+      <div class="card-body">{{ form.notes }}</div>
     </div>
 
     <!-- Action buttons -->
     <div class="action-buttons">
       <a href="{% url 'quotation_list' %}" class="btn btn-outline-secondary">Cancel</a>
-      <button type="submit" name="action" value="draft" class="btn btn-outline-primary">
-        <i class="bi bi-save"></i> Save as Draft
-      </button>
-      <button type="submit" name="action" value="send" class="btn btn-primary">
-        <i class="bi bi-envelope-paper"></i> Save & Send
-      </button>
+      <button type="submit" name="action" value="draft" class="btn btn-outline-primary"><i class="bi bi-save"></i> Save as Draft</button>
+      <button type="submit" name="action" value="send" class="btn btn-primary"><i class="bi bi-envelope-paper"></i> Save & Send</button>
     </div>
   </form>
 </div>
@@ -321,15 +189,16 @@
   (function() {
     "use strict";
 
-    // DOM elements
     const totalFormsInput = document.querySelector('[name="items-TOTAL_FORMS"]');
     const itemsBody = document.getElementById('items-body');
     const addButtons = document.querySelectorAll('#add-item-btn, #add-item-btn-bottom');
     const emptyMsg = document.getElementById('empty-msg');
-    const vatRate = parseFloat("{{ site_config.vat_rate }}") || 0.165;
+    // ✅ NEW: Fix VAT rate to 17.5% (0.175)
+    const vatRate = parseFloat("{{ site_config.vat_rate }}") || 0.175;
     const currency = "{{ site_config.currency_symbol }}";
+    const includeVatCheckbox = document.getElementById('{{ form.include_vat.id_for_label }}');
+    const vatRow = document.getElementById('vat-row');
 
-    // Helper: update all row totals and summary
     function updateTotals() {
       let subtotal = 0;
       document.querySelectorAll('#items-body .item-row').forEach(row => {
@@ -344,14 +213,27 @@
           subtotal += total;
         }
       });
-      const tax = subtotal * vatRate;
+
+      let tax = 0;
+      let showVat = includeVatCheckbox && includeVatCheckbox.checked;
+      if (showVat) {
+        tax = subtotal * vatRate;
+        vatRow.style.display = 'flex';
+      } else {
+        vatRow.style.display = 'none';
+      }
+
       const grand = subtotal + tax;
       document.getElementById('subtotal-display').innerHTML = `${currency} ${subtotal.toFixed(2)}`;
       document.getElementById('tax-display').innerHTML = `${currency} ${tax.toFixed(2)}`;
       document.getElementById('total-display').innerHTML = `${currency} ${grand.toFixed(2)}`;
     }
 
-    // Renumber rows sequentially and update TOTAL_FORMS
+    // ✅ NEW: Listen to VAT checkbox changes
+    if (includeVatCheckbox) {
+      includeVatCheckbox.addEventListener('change', updateTotals);
+    }
+
     function reindexRows() {
       const rows = document.querySelectorAll('#items-body .item-row');
       rows.forEach((row, idx) => {
@@ -364,7 +246,6 @@
       if (totalFormsInput) totalFormsInput.value = rows.length;
     }
 
-    // Create a new row (HTML string, then attach)
     function createNewRow(index) {
       const tr = document.createElement('tr');
       tr.className = 'item-row';
@@ -379,7 +260,6 @@
       return tr;
     }
 
-    // Add a new row
     function addNewRow() {
       if (emptyMsg) emptyMsg.remove();
       const currentCount = parseInt(totalFormsInput.value);
@@ -389,7 +269,6 @@
       updateTotals();
     }
 
-    // Remove a row (or mark DELETE for existing)
     function removeRow(row) {
       const deleteCheckbox = row.querySelector('input[name$="-DELETE"]');
       if (deleteCheckbox) {
@@ -402,10 +281,7 @@
       updateTotals();
     }
 
-    // Event: Add button clicks
     addButtons.forEach(btn => btn.addEventListener('click', addNewRow));
-
-    // Event: Remove item (delegation)
     document.body.addEventListener('click', function(e) {
       const target = e.target.closest('.remove-item');
       if (!target) return;
@@ -413,14 +289,12 @@
       if (row) removeRow(row);
     });
 
-    // Event: real‑time recalc on input changes
     itemsBody.addEventListener('input', function(e) {
       if (e.target.matches('input[name$="-quantity"], input[name$="-unit_price"]')) {
         updateTotals();
       }
     });
 
-    // Prepare existing rows with DELETE checkboxes: replace with visual button
     document.querySelectorAll('#items-body .item-row').forEach(row => {
       const delCheck = row.querySelector('input[name$="-DELETE"]');
       if (delCheck) {
@@ -438,7 +312,6 @@
       }
     });
 
-    // Form submit: reindex and validate
     const form = document.getElementById('quotation-form');
     form.addEventListener('submit', function(e) {
       reindexRows();
@@ -454,10 +327,7 @@
       }
     });
 
-    // Initial totals
     updateTotals();
-
-    // If completely empty, add one row automatically
     if (document.querySelectorAll('#items-body .item-row').length === 0 && !emptyMsg) {
       addNewRow();
     }

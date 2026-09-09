@@ -1,4 +1,6 @@
 {% extends "generic/form.html" %}
+{% load finance_extras %} <!-- ✅ NEW: Load filter -->
+
 {% block title %}New Invoice{% endblock %}
 {% block form_title %}Invoice{% endblock %}
 
@@ -14,17 +16,28 @@
           {% csrf_token %}
           {% for field in form %}
           <div class="mb-3">
-            <label class="form-label fw-semibold">{{ field.label }}</label>
-            {% if field.field.widget.input_type == 'select' %}
-              <select name="{{ field.html_name }}" class="form-select">
-                {% for val, label in field.field.choices %}
-                <option value="{{ val }}" {% if field.value|stringformat:'s' == val|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-              </select>
-            {% elif field.field.widget.input_type == 'textarea' %}
-              <textarea name="{{ field.html_name }}" class="form-control" rows="3">{{ field.value|default:'' }}</textarea>
+            {% if field.field.widget.input_type == 'checkbox' %}
+              <!-- ✅ NEW: Properly render the Include VAT checkbox -->
+              <div class="form-check">
+                {{ field }}
+                <label class="form-check-label" for="{{ field.id_for_label }}">
+                  {{ field.label }} ({{ site_config.vat_rate|multiply:100|floatformat:1 }}%)
+                </label>
+                <div class="form-text small text-muted">Uncheck to exclude VAT from this invoice.</div>
+              </div>
             {% else %}
-              <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" class="form-control" value="{{ field.value|default:'' }}">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              {% if field.field.widget.input_type == 'select' %}
+                <select name="{{ field.html_name }}" class="form-select">
+                  {% for val, label in field.field.choices %}
+                  <option value="{{ val }}" {% if field.value|stringformat:'s' == val|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              {% elif field.field.widget.input_type == 'textarea' %}
+                <textarea name="{{ field.html_name }}" class="form-control" rows="3">{{ field.value|default:'' }}</textarea>
+              {% else %}
+                <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" class="form-control" value="{{ field.value|default:'' }}">
+              {% endif %}
             {% endif %}
             {% if field.errors %}
             <div class="invalid-feedback d-block">{{ field.errors|join:", " }}</div>

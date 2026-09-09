@@ -288,7 +288,8 @@
                 <td class="text-end fw-semibold">{{ config.currency_symbol }}{{ item.total|floatformat:2 }}</td>
               </tr>
               {% empty %}
-              <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td>{% endfor %}
+              <tr><td colspan="4" class="text-center py-4 text-muted">No items added</td></tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -328,10 +329,12 @@
         <span>Subtotal</span>
         <span>{{ config.currency_symbol }}{{ quotation.subtotal|floatformat:2 }}</span>
       </div>
+      {% if quotation.include_vat %}
       <div class="d-flex justify-content-between py-1 border-bottom">
         <span>VAT ({{ config.vat_rate|floatformat:1 }}%)</span>
         <span>{{ config.currency_symbol }}{{ quotation.tax_amount|floatformat:2 }}</span>
       </div>
+      {% endif %}
       <div class="d-flex justify-content-between py-2 fs-5 fw-bold">
         <span>Total</span>
         <span class="text-primary">{{ config.currency_symbol }}{{ quotation.total_amount|floatformat:2 }}</span>

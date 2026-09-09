@@ -241,10 +241,12 @@
         <span class="total-label">Subtotal</span>
         <span class="total-value">{{ config.currency_symbol }} {{ quotation.subtotal|floatformat:2 }}</span>
       </div>
+      {% if quotation.include_vat %}
       <div class="total-row">
         <span class="total-label">VAT ({{ vat_percent|default:"16.5" }}%)</span>
         <span class="total-value">{{ config.currency_symbol }} {{ quotation.tax_amount|floatformat:2 }}</span>
       </div>
+      {% endif %}
       <div class="total-row total-grand">
         <span class="total-label">Total</span>
         <span class="total-value">{{ config.currency_symbol }} {{ quotation.total_amount|floatformat:2 }}</span>
