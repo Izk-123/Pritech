@@ -10,15 +10,27 @@
     <h1 class="mb-1">{{ invoice.invoice_number }}</h1>
     <span class="badge bg-{{ invoice.status_color }}">{{ invoice.get_status_display }}</span>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
     {% if invoice.status == 'draft' %}
     <form method="post" action="{% url 'invoice_issue' invoice.pk %}" class="d-inline">
       {% csrf_token %}
-      <button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i> Issue</button>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-send me-1"></i> Issue
+      </button>
     </form>
     {% endif %}
-    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i> Print</button>
-    
+
+    <a href="{% url 'invoice_pdf_direct' invoice.pk %}" class="btn btn-outline-primary">
+      <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+    </a>
+
+    <a href="{% url 'invoice_excel' invoice.pk %}" class="btn btn-outline-success">
+      <i class="bi bi-file-earmark-excel me-1"></i> Excel
+    </a>
+
+    <button onclick="window.print()" class="btn btn-outline-secondary">
+      <i class="bi bi-printer me-1"></i> Print
+    </button>
   </div>
 </div>
 
@@ -28,9 +40,8 @@
       <div class="card-body p-4 p-md-5">
         <div class="row mb-4">
           <div class="col-sm-6">
-            <!-- Logo added for print -->
-            <img src="{% static 'images/logo.png' %}" alt="{{ site_config.company_name }}" 
-                 style="max-height: 70px; width: auto; margin-bottom: 10px; display: block;">
+            <img src="{% static 'images/logo.png' %}" alt="{{ site_config.company_name }}"
+                 style="max-height: 120px; width: auto; margin-bottom: 12px; display: block;">
             <h2 class="fw-bold text-primary">{{ site_config.company_name }}</h2>
             {% if site_config.address %}<div class="small text-muted">{{ site_config.address|linebreaksbr }}</div>{% endif %}
             {% if site_config.email %}<div class="small">{{ site_config.email }}</div>{% endif %}
@@ -41,6 +52,7 @@
             <div class="fs-5 fw-semibold">{{ invoice.invoice_number }}</div>
           </div>
         </div>
+
         <div class="row mb-4">
           <div class="col-sm-6">
             <div class="text-uppercase small fw-semibold text-muted mb-2">Bill To</div>
@@ -58,10 +70,16 @@
             </div>
           </div>
         </div>
+
         <div class="table-responsive mb-4">
           <table class="table table-bordered">
             <thead class="table-dark">
-              <tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit Price</th><th class="text-end">Total</th></tr>
+              <tr>
+                <th>Description</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Unit Price</th>
+                <th class="text-end">Total</th>
+              </tr>
             </thead>
             <tbody>
               {% for item in items %}
@@ -77,27 +95,54 @@
             </tbody>
           </table>
         </div>
+
         <div class="d-flex justify-content-end">
           <div style="width: 300px;">
-            <div class="d-flex justify-content-between py-1"><span class="text-muted">Subtotal</span><span>{{ site_config.currency_symbol }}{{ invoice.subtotal|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted">Subtotal</span>
+              <span>{{ site_config.currency_symbol }}{{ invoice.subtotal|floatformat:2 }}</span>
+            </div>
             {% if invoice.include_vat %}
-            <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">VAT</span><span>{{ site_config.currency_symbol }}{{ invoice.tax_amount|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-1 border-bottom">
+              <span class="text-muted">VAT</span>
+              <span>{{ site_config.currency_symbol }}{{ invoice.tax_amount|floatformat:2 }}</span>
+            </div>
+            {% else %}
+            <div class="d-flex justify-content-between py-1 border-bottom text-muted">
+              <span>VAT (excluded)</span>
+              <span>{{ site_config.currency_symbol }}0.00</span>
+            </div>
             {% endif %}
-            <div class="d-flex justify-content-between py-2 fs-5 fw-bold"><span>Total</span><span>{{ site_config.currency_symbol }}{{ invoice.total_amount|floatformat:2 }}</span></div>
-            <div class="d-flex justify-content-between py-1"><span class="text-success">Paid</span><span class="text-success">{{ site_config.currency_symbol }}{{ invoice.amount_paid|floatformat:2 }}</span></div>
-            <div class="d-flex justify-content-between py-1 fw-bold {% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}"><span>Balance</span><span>{{ site_config.currency_symbol }}{{ invoice.balance_due|floatformat:2 }}</span></div>
+            <div class="d-flex justify-content-between py-2 fs-5 fw-bold">
+              <span>Total</span>
+              <span>{{ site_config.currency_symbol }}{{ invoice.total_amount|floatformat:2 }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-success">Paid</span>
+              <span class="text-success">{{ site_config.currency_symbol }}{{ invoice.amount_paid|floatformat:2 }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1 fw-bold {% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+              <span>Balance</span>
+              <span>{{ site_config.currency_symbol }}{{ invoice.balance_due|floatformat:2 }}</span>
+            </div>
           </div>
         </div>
-        {% if invoice.notes %}<div class="mt-4 p-3 bg-light rounded small">{{ invoice.notes }}</div>{% endif %}
+
+        {% if invoice.notes %}
+        <div class="mt-4 p-3 bg-light rounded small">{{ invoice.notes }}</div>
+        {% endif %}
       </div>
     </div>
+
     {% if invoice.status == 'draft' %}
     <div class="card mt-4">
       <div class="card-header"><h5 class="mb-0">Add Line Item</h5></div>
       <div class="card-body">
         <form method="post" action="{% url 'invoice_add_item' invoice.pk %}">
           {% csrf_token %}
-          <div class="mb-3"><input type="text" name="description" class="form-control" placeholder="Description" required></div>
+          <div class="mb-3">
+            <input type="text" name="description" class="form-control" placeholder="Description" required>
+          </div>
           <div class="row g-3">
             <div class="col-sm-6"><input type="number" name="quantity" class="form-control" value="1" step="0.5" required></div>
             <div class="col-sm-6"><input type="number" name="unit_price" class="form-control" placeholder="0.00" step="0.01" required></div>
@@ -108,24 +153,58 @@
     </div>
     {% endif %}
   </div>
+
   <div class="col-lg-4">
-    <div class="card"><div class="card-header"><h5 class="mb-0">Payments</h5></div><div class="card-body">
-      {% if payments %}{% for p in payments %}<div class="d-flex justify-content-between border-bottom py-2"><div><strong>{{ site_config.currency_symbol }}{{ p.amount }}</strong><br><small>{{ p.get_method_display }} · {{ p.date }}</small></div><span class="badge bg-success">Paid</span></div>{% endfor %}
-      {% else %}<p class="text-muted text-center py-3">No payments</p>{% endif %}
-    </div></div>
+    <div class="card">
+      <div class="card-header"><h5 class="mb-0">Payments</h5></div>
+      <div class="card-body">
+        {% if payments %}
+          {% for p in payments %}
+          <div class="d-flex justify-content-between border-bottom py-2">
+            <div>
+              <strong>{{ site_config.currency_symbol }}{{ p.amount }}</strong><br>
+              <small>{{ p.get_method_display }} · {{ p.date }}</small>
+            </div>
+            <span class="badge bg-success">Paid</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted text-center py-3">No payments</p>
+        {% endif %}
+      </div>
+    </div>
+
     {% if invoice.status != 'paid' and invoice.status != 'cancelled' and invoice.status != 'draft' %}
-    <div class="card"><div class="card-header"><h5 class="mb-0">Record Payment</h5></div><div class="card-body">
-      <form method="post" action="{% url 'invoice_payment' invoice.pk %}">
-        {% csrf_token %}
-        <div class="mb-3"><input type="number" name="amount" class="form-control" placeholder="Amount" step="0.01" required></div>
-        <div class="mb-3"><select name="method" class="form-select"><option>Cash</option><option>Bank Transfer</option><option>Mobile Money</option></select></div>
-        <div class="mb-3"><input type="date" name="date" class="form-control" required></div>
-        <div class="mb-3"><input type="text" name="reference" class="form-control" placeholder="Reference"></div>
-        <button type="submit" class="btn btn-success w-100">Record Payment</button>
-      </form>
-    </div></div>
+    <div class="card mt-3">
+      <div class="card-header"><h5 class="mb-0">Record Payment</h5></div>
+      <div class="card-body">
+        <form method="post" action="{% url 'invoice_payment' invoice.pk %}">
+          {% csrf_token %}
+          <div class="mb-3"><input type="number" name="amount" class="form-control" placeholder="Amount" step="0.01" required></div>
+          <div class="mb-3">
+            <select name="method" class="form-select">
+              <option value="cash">Cash</option>
+              <option value="bank_transfer">Bank Transfer</option>
+              <option value="mobile_money">Mobile Money</option>
+              <option value="cheque">Cheque</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="mb-3"><input type="date" name="date" class="form-control" required></div>
+          <div class="mb-3"><input type="text" name="reference" class="form-control" placeholder="Reference"></div>
+          <button type="submit" class="btn btn-success w-100">Record Payment</button>
+        </form>
+      </div>
+    </div>
     {% endif %}
   </div>
 </div>
-<style>@media print { .sidebar, .topbar, .bottom-nav, .page-header .btn, form, .card:not(#invoice-doc) { display: none !important; } }</style>
+
+<style>
+  @media print {
+    .sidebar, .topbar, .bottom-nav, .page-header .btn, form, .card:not(#invoice-doc) {
+      display: none !important;
+    }
+  }
+</style>
 {% endblock %}
