@@ -8,15 +8,23 @@ Accounts App – Core Models
 - UserSession (active session tracking)
 - LoginEvent (analytics)
 - RecoveryCode (2FA backup codes)
-- UserAuditLog, EmailVerificationToken, InvitationToken (existing)
+- UserAuditLog, EmailVerificationToken, InvitationToken
+
+CHANGED (verification lifecycle):
+    EmailVerificationToken now carries an ``updated_at`` timestamp and a
+    ``refresh()`` method so the link can be rotated and the 24-hour clock
+    restarted whenever a user asks for a new verification email. Every
+    other model is unchanged.
 """
 
 import uuid
 import secrets
-from django.db import models
-from django.contrib.auth.models import AbstractUser
-from django.utils import timezone
+from datetime import timedelta
+
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+from django.utils import timezone
 
 
 # ============================================================================
@@ -30,44 +38,50 @@ class User(AbstractUser):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    USER_TYPE_CHOICES = (('client', 'Client'), ('staff', 'Staff'))
+    USER_TYPE_CHOICES = (("client", "Client"), ("staff", "Staff"))
     CLIENT_ROLE_CHOICES = [
-        ('admin', 'Administrator'),
-        ('viewer', 'Viewer'),
-        ('billing', 'Billing'),
+        ("admin", "Administrator"),
+        ("viewer", "Viewer"),
+        ("billing", "Billing"),
     ]
 
-    user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='client')
+    user_type = models.CharField(
+        max_length=10, choices=USER_TYPE_CHOICES, default="client"
+    )
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
-    national_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    phone_number = models.CharField(
+        max_length=20, unique=True, null=True, blank=True
+    )
+    national_id = models.CharField(
+        max_length=50, unique=True, null=True, blank=True
+    )
     physical_address = models.TextField(blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
 
     client_role = models.CharField(
         max_length=20,
         choices=CLIENT_ROLE_CHOICES,
-        default='viewer',
+        default="viewer",
         blank=True,
-        help_text="Role within the client organization (only for client users)"
+        help_text="Role within the client organization (only for client users)",
     )
     is_2fa_enabled = models.BooleanField(default=False)
 
-    # ---- FIX: link to ClientOrganization (many users per organisation) ----
+    # Link to ClientOrganization (many users per organisation)
     client_organization = models.ForeignKey(
-        'clients.ClientOrganization',
+        "clients.ClientOrganization",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='users',
-        help_text="The organisation this user belongs to (client users only)"
+        related_name="users",
+        help_text="The organisation this user belongs to (client users only)",
     )
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
     class Meta:
-        ordering = ['email']
+        ordering = ["email"]
 
     def __str__(self):
         return f"{self.get_full_name() or self.email} ({self.user_type})"
@@ -81,13 +95,13 @@ class User(AbstractUser):
         from .models import RolePermission
         return RolePermission.objects.filter(
             role__user_roles__user=self,
-            permission__code=permission_code
+            permission__code=permission_code,
         ).exists()
 
     @property
     def primary_role(self):
         """Return the first assigned role (convenience property)."""
-        ur = self.user_roles.select_related('role').first()
+        ur = self.user_roles.select_related("role").first()
         return ur.role if ur else None
 
 
@@ -101,12 +115,16 @@ class UserProfile(models.Model):
     One-to-one with User.
     """
     GENDER_CHOICES = (
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('O', 'Other'),
+        ("M", "Male"),
+        ("F", "Female"),
+        ("O", "Other"),
     )
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    profile_photo = models.ImageField(upload_to='profile_photos/', null=True, blank=True)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="profile"
+    )
+    profile_photo = models.ImageField(
+        upload_to="profile_photos/", null=True, blank=True
+    )
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     bio = models.TextField(blank=True)
@@ -116,29 +134,38 @@ class UserProfile(models.Model):
 
 
 # ============================================================================
-# Session Tracking (Real‑time presence)
+# Session Tracking (Real-time presence)
 # ============================================================================
 
 class UserSession(models.Model):
     """
-    Tracks active user sessions for real‑time presence and analytics.
+    Tracks active user sessions for real-time presence and analytics.
     Updated on login, logout, and periodic activity.
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="sessions"
+    )
     session_key = models.CharField(max_length=40, unique=True)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True)
-    device = models.CharField(max_length=100, blank=True, help_text="Parsed device type (Desktop/Mobile/Tablet)")
+    device = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Parsed device type (Desktop/Mobile/Tablet)",
+    )
     login_time = models.DateTimeField(auto_now_add=True)
     last_activity = models.DateTimeField(auto_now=True)
     logout_time = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ['-login_time']
+        ordering = ["-login_time"]
 
     def __str__(self):
-        return f"{self.user.email} - {self.ip_address} ({self.login_time.strftime('%Y-%m-%d %H:%M')})"
+        return (
+            f"{self.user.email} - {self.ip_address} "
+            f"({self.login_time.strftime('%Y-%m-%d %H:%M')})"
+        )
 
 
 # ============================================================================
@@ -150,16 +177,20 @@ class LoginEvent(models.Model):
     Records every login attempt (success/failure/logout) for analytics.
     """
     EVENT_TYPES = (
-        ('success', 'Successful Login'),
-        ('failed', 'Failed Login'),
-        ('logout', 'Logout'),
+        ("success", "Successful Login"),
+        ("failed", "Failed Login"),
+        ("logout", "Logout"),
     )
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
     event_type = models.CharField(max_length=10, choices=EVENT_TYPES)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    reason = models.CharField(max_length=255, blank=True, help_text="Failure reason, if any")
+    reason = models.CharField(
+        max_length=255, blank=True, help_text="Failure reason, if any"
+    )
 
     def __str__(self):
         return f"{self.event_type} - {self.user} at {self.timestamp}"
@@ -171,15 +202,17 @@ class LoginEvent(models.Model):
 
 class RecoveryCode(models.Model):
     """
-    One‑time backup codes for two‑factor authentication.
+    One-time backup codes for two-factor authentication.
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recovery_codes')
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="recovery_codes"
+    )
     code = models.CharField(max_length=10, unique=True)
     is_used = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ["created_at"]
 
     def __str__(self):
         return f"Recovery code for {self.user.email}"
@@ -189,14 +222,14 @@ class RecoveryCode(models.Model):
         """Generate a set of recovery codes for a user."""
         codes = []
         for _ in range(num_codes):
-            code = secrets.token_hex(3).upper()   # 6 hex characters
+            code = secrets.token_hex(3).upper()  # 6 hex characters
             codes.append(cls(user=user, code=code))
         cls.objects.bulk_create(codes)
         return codes
 
 
 # ============================================================================
-# RBAC Models (unchanged from original, but kept for completeness)
+# RBAC Models
 # ============================================================================
 
 class Role(models.Model):
@@ -210,7 +243,7 @@ class Role(models.Model):
 
 
 class Permission(models.Model):
-    """Fine‑grained permission (e.g., view_invoice, create_ticket)."""
+    """Fine-grained permission (e.g., view_invoice, create_ticket)."""
     code = models.CharField(max_length=100, unique=True)
     description = models.TextField()
 
@@ -219,65 +252,113 @@ class Permission(models.Model):
 
 
 class UserRole(models.Model):
-    """Many‑to‑many between User and Role."""
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles')
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='user_roles')
+    """Many-to-many between User and Role."""
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="user_roles"
+    )
+    role = models.ForeignKey(
+        Role, on_delete=models.CASCADE, related_name="user_roles"
+    )
 
     class Meta:
-        unique_together = ('user', 'role')
+        unique_together = ("user", "role")
 
 
 class RolePermission(models.Model):
-    """Many‑to‑many between Role and Permission."""
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_permissions')
-    permission = models.ForeignKey(Permission, on_delete=models.CASCADE)
+    """Many-to-many between Role and Permission."""
+    role = models.ForeignKey(
+        Role, on_delete=models.CASCADE, related_name="role_permissions"
+    )
+    permission = models.ForeignKey(
+        Permission, on_delete=models.CASCADE
+    )
 
     class Meta:
-        unique_together = ('role', 'permission')
+        unique_together = ("role", "permission")
 
 
 # ============================================================================
-# Audit & Invitation Models (unchanged)
+# Audit & Invitation Models
 # ============================================================================
 
 class UserAuditLog(models.Model):
     """Audit trail for user actions (login, logout, critical changes)."""
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
     action = models.CharField(max_length=255)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ["-timestamp"]
 
     def __str__(self):
         return f"{self.user} - {self.action}"
 
 
+# ============================================================================
+# Email Verification Token
+# ── CHANGED ──────────────────────────────────────────────────────────────────
+# Adds ``updated_at`` + ``refresh()`` so a resend rotates the token AND
+# restarts the 24-hour clock. Previous code only had ``created_at`` and used
+# ``.days < 1`` — which mis-measured validity after a resend and could not
+# invalidate the old link.
+# ============================================================================
+
 class EmailVerificationToken(models.Model):
-    """Token for email verification (24h expiry)."""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='verification_token')
+    """
+    One-time email verification token.
+
+    Lifecycle:
+        created  → 24-hour window  →  expired
+        resend   → refresh()       → 24-hour window restarts, old token dies
+        verified → row deleted
+    """
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="verification_token"
+    )
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
-    def is_valid(self):
-        return (timezone.now() - self.created_at).days < 1
+    TOKEN_LIFETIME = timedelta(hours=24)
+
+    def is_valid(self) -> bool:
+        """True while the token is within its 24-hour window."""
+        return (timezone.now() - self.updated_at) < self.TOKEN_LIFETIME
+
+    def refresh(self) -> None:
+        """Rotate the token and reset the expiry clock (used on resend)."""
+        self.token = uuid.uuid4()
+        self.save(update_fields=["token", "updated_at"])
 
     def __str__(self):
         return f"Token for {self.user.email}"
 
 
+# ============================================================================
+# Invitation Token
+# ============================================================================
+
 class InvitationToken(models.Model):
-    """Invitation token for adding team members (7 days expiry)."""
+    """Invitation token for adding team members (7-day expiry)."""
     email = models.EmailField()
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    client_organization = models.ForeignKey('clients.ClientOrganization', on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=User.CLIENT_ROLE_CHOICES, default='viewer')
+    client_organization = models.ForeignKey(
+        "clients.ClientOrganization", on_delete=models.CASCADE
+    )
+    role = models.CharField(
+        max_length=20, choices=User.CLIENT_ROLE_CHOICES, default="viewer"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def is_valid(self):
         return (timezone.now() - self.created_at).days < 7
 
     def __str__(self):
-        return f"Invitation for {self.email} to {self.client_organization.name}"
+        return (
+            f"Invitation for {self.email} to "
+            f"{self.client_organization.name}"
+        )
