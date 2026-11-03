@@ -1,0 +1,308 @@
+{% extends "portfolio/base.html" %}
+{% load static %}
+{% block title %}My Profile – Pritech Client Portal{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+  <div class="container">
+
+    {# Page header #}
+    <div class="profile-header reveal">
+      <div class="profile-avatar-lg" aria-hidden="true">
+        {{ request.user.get_full_name|default:request.user.email|first|upper }}
+      </div>
+      <div class="profile-header-text">
+        <h1>{{ request.user.get_full_name|default:request.user.email }}</h1>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);margin-top:var(--space-2);">
+          <span class="badge badge-accent">{{ request.user.user_type|title }}</span>
+          {% if request.user.user_type == 'client' %}
+          <span class="badge" style="background:rgba(16,185,129,.1);color:var(--success);">{{ request.user.client_role|title }}</span>
+          {% endif %}
+          {% if request.user.is_2fa_enabled %}
+          <span class="badge" style="background:rgba(16,185,129,.1);color:var(--success);">
+            <i class="fa-solid fa-shield-halved fa-xs" aria-hidden="true"></i> 2FA Enabled
+          </span>
+          {% else %}
+          <span class="badge" style="background:rgba(245,158,11,.1);color:var(--warning);">
+            <i class="fa-solid fa-triangle-exclamation fa-xs" aria-hidden="true"></i> 2FA Disabled
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="profile-header-actions">
+        <a href="{% url 'client_profile_edit' %}" class="btn btn-primary">
+          <i class="fa-solid fa-pen" aria-hidden="true"></i> Edit Profile
+        </a>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline">
+          <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> Dashboard
+        </a>
+      </div>
+    </div>
+
+    <div class="profile-grid">
+
+      {# Personal info #}
+      <section class="profile-card reveal" aria-labelledby="personal-info-heading">
+        <h2 id="personal-info-heading" class="profile-card-title">
+          <i class="fa-solid fa-id-card" aria-hidden="true"></i>
+          Personal Information
+        </h2>
+        <dl class="profile-dl">
+          <div class="profile-dl-row">
+            <dt>Full Name</dt>
+            <dd>{{ request.user.get_full_name|default:"—" }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Email</dt>
+            <dd>
+              {{ request.user.email }}
+              {% if request.user.is_active %}
+              <span class="badge badge-success" style="margin-left:.5rem;">Verified</span>
+              {% else %}
+              <span class="badge badge-warning" style="margin-left:.5rem;">Unverified</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Phone</dt>
+            <dd>{{ request.user.phone_number|default:"—" }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Address</dt>
+            <dd>{{ request.user.physical_address|default:"—" }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Account Type</dt>
+            <dd>{{ request.user.user_type|title }}</dd>
+          </div>
+          {% if request.user.user_type == 'client' %}
+          <div class="profile-dl-row">
+            <dt>Portal Role</dt>
+            <dd>{{ request.user.client_role|title|default:"—" }}</dd>
+          </div>
+          {% endif %}
+          <div class="profile-dl-row">
+            <dt>Member Since</dt>
+            <dd>{{ request.user.date_joined|date:"F j, Y" }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Last Login</dt>
+            <dd>{{ request.user.last_login|date:"M j, Y, g:i a"|default:"Never" }}</dd>
+          </div>
+          {% if request.user.last_login_ip %}
+          <div class="profile-dl-row">
+            <dt>Last Login IP</dt>
+            <dd><code style="font-size:.85em;">{{ request.user.last_login_ip }}</code></dd>
+          </div>
+          {% endif %}
+        </dl>
+      </section>
+
+      {# Security settings #}
+      <section class="profile-card reveal reveal-delay-2" aria-labelledby="security-heading">
+        <h2 id="security-heading" class="profile-card-title">
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          Security Settings
+        </h2>
+
+        <div class="security-item">
+          <div class="security-item-info">
+            <div class="security-item-label">Password</div>
+            <div class="security-item-desc">Last changed: unknown</div>
+          </div>
+          <a href="{% url 'password_reset' %}" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-key" aria-hidden="true"></i>
+            Change
+          </a>
+        </div>
+
+        <div class="security-item">
+          <div class="security-item-info">
+            <div class="security-item-label">
+              Two-Factor Authentication
+              {% if request.user.is_2fa_enabled %}
+              <span class="badge badge-success" style="margin-left:.5rem;">On</span>
+              {% else %}
+              <span class="badge badge-warning" style="margin-left:.5rem;">Off</span>
+              {% endif %}
+            </div>
+            <div class="security-item-desc">
+              {% if request.user.is_2fa_enabled %}
+              Your account is protected with TOTP-based 2FA.
+              {% else %}
+              Enable 2FA for stronger account security.
+              {% endif %}
+            </div>
+          </div>
+          {% if request.user.is_2fa_enabled %}
+          <a href="{% url 'two_factor_disable' %}" class="btn btn-sm" style="background:rgba(239,68,68,.1);color:var(--error);border:1px solid rgba(239,68,68,.2);">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            Disable
+          </a>
+          {% else %}
+          <a href="{% url 'two_factor_setup' %}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+            Enable
+          </a>
+          {% endif %}
+        </div>
+
+        <div class="security-item">
+          <div class="security-item-info">
+            <div class="security-item-label">Email Verification</div>
+            <div class="security-item-desc">
+              {% if request.user.is_active %}
+                Account email is verified.
+              {% else %}
+                Your email has not been verified yet.
+              {% endif %}
+            </div>
+          </div>
+          <span class="badge {% if request.user.is_active %}badge-success{% else %}badge-warning{% endif %}">
+            {% if request.user.is_active %}Verified{% else %}Pending{% endif %}
+          </span>
+        </div>
+
+        {# Audit log link #}
+        <div style="margin-top:var(--space-6);padding-top:var(--space-5);border-top:1px solid var(--border);">
+          <a href="{% url 'client_audit_log' %}" class="btn btn-ghost btn-sm">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+            View Account Activity Log
+          </a>
+        </div>
+      </section>
+
+      {# Organisation card (clients only) #}
+      {% if request.user.user_type == 'client' and request.user.client_organization %}
+      <section class="profile-card reveal reveal-delay-3" aria-labelledby="org-heading">
+        <h2 id="org-heading" class="profile-card-title">
+          <i class="fa-solid fa-building" aria-hidden="true"></i>
+          Organisation
+        </h2>
+        {% with org=request.user.client_organization %}
+        <dl class="profile-dl">
+          <div class="profile-dl-row">
+            <dt>Name</dt>
+            <dd>{{ org.name }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Email</dt>
+            <dd>{{ org.email|default:"—" }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Phone</dt>
+            <dd>{{ org.phone|default:"—" }}</dd>
+          </div>
+          <div class="profile-dl-row">
+            <dt>Status</dt>
+            <dd>
+              <span class="badge {% if org.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                {{ org.status|title }}
+              </span>
+            </dd>
+          </div>
+        </dl>
+        <div style="margin-top:var(--space-5);">
+          <a href="{% url 'client_team' %}" class="btn btn-outline btn-sm">
+            <i class="fa-solid fa-users" aria-hidden="true"></i>
+            Manage Team
+          </a>
+        </div>
+        {% endwith %}
+      </section>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<style>
+.profile-page {
+  padding: calc(84px + var(--space-10)) 0 var(--space-20);
+}
+.profile-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-8);
+}
+.profile-avatar-lg {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: white;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+.profile-header-text { flex: 1; min-width: 200px; }
+.profile-header-text h1 { font-size: 1.6rem; margin-bottom: 0; }
+.profile-header-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+}
+@media (min-width: 900px) { .profile-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.profile-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+}
+.profile-card-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+}
+.profile-card-title i { color: var(--accent); }
+
+.profile-dl { display: flex; flex-direction: column; gap: var(--space-4); }
+.profile-dl-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+@media (min-width: 480px) {
+  .profile-dl-row { flex-direction: row; align-items: flex-start; gap: var(--space-4); }
+  .profile-dl-row dt { min-width: 130px; flex-shrink: 0; }
+}
+.profile-dl-row dt {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+  padding-top: 1px;
+}
+.profile-dl-row dd { color: var(--text-primary); font-size: .95rem; }
+
+.security-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+.security-item:last-of-type { border-bottom: none; }
+.security-item-label { font-weight: 600; font-size: .95rem; display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.security-item-desc { font-size: .825rem; color: var(--text-muted); margin-top: 2px; }
+</style>
+{% endblock %}

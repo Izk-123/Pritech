@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Account — Pritech ICT Solutions{% endblock %}
+{% block meta_description %}Register for a free Pritech client account and access our full-featured client portal.{% endblock %}
+
+{% block content %}
+<section class="auth-section" aria-labelledby="register-heading">
+  <div class="auth-container">
+
+    {# Panel #}
+    <div class="auth-panel" aria-hidden="true">
+      <div class="auth-panel-content">
+        <div class="auth-logo">
+          <img src="{% static 'images/logo-white.png' %}" alt="Pritech ICT Solutions" height="40" />
+        </div>
+        <h2 style="margin:2rem 0 1rem;color:white;font-size:1.8rem;">Join Pritech today.</h2>
+        <p style="color:rgba(255,255,255,.75);line-height:1.7;margin-bottom:2.5rem;">
+          Create your free account and unlock access to your personal client portal, real-time ticket updates, and dedicated ICT support.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:.875rem;">
+          {% for step in "123"|make_list %}
+          <div style="display:flex;align-items:center;gap:1rem;color:rgba(255,255,255,.9);">
+            <span style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;flex-shrink:0;">{{ forloop.counter }}</span>
+            <span>{% cycle 'Create your free account' 'Verify your email address' 'Access your client dashboard' %}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="auth-orb"></div>
+    </div>
+
+    {# Register form #}
+    <div class="auth-form-wrap">
+      <div class="auth-form-card" style="max-width:480px;">
+
+        <div class="auth-form-header">
+          <a href="{% url 'home' %}" class="auth-back-link">
+            <i class="fa-solid fa-arrow-left fa-sm" aria-hidden="true"></i>
+            Back to site
+          </a>
+          <h1 id="register-heading">Create Account</h1>
+          <p>Free to join. No credit card required.</p>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="auth-alert auth-alert--error" role="alert">
+          <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+          <span>{{ form.non_field_errors.0 }}</span>
+        </div>
+        {% endif %}
+
+        <form method="post" novalidate aria-label="Registration form">
+          {% csrf_token %}
+
+          {# Row 1: first/last name #}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            <div class="form-group">
+              <label class="form-label" for="{{ form.first_name.id_for_label }}">First Name <span class="required-star">*</span></label>
+              <input type="text" class="form-control{% if form.first_name.errors %} form-control--error{% endif %}"
+                     id="{{ form.first_name.id_for_label }}" name="first_name"
+                     placeholder="John" required autocomplete="given-name"
+                     value="{{ form.first_name.value|default:'' }}" />
+              {% if form.first_name.errors %}<span class="form-error" role="alert">{{ form.first_name.errors.0 }}</span>{% endif %}
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="{{ form.last_name.id_for_label }}">Last Name <span class="required-star">*</span></label>
+              <input type="text" class="form-control{% if form.last_name.errors %} form-control--error{% endif %}"
+                     id="{{ form.last_name.id_for_label }}" name="last_name"
+                     placeholder="Doe" required autocomplete="family-name"
+                     value="{{ form.last_name.value|default:'' }}" />
+              {% if form.last_name.errors %}<span class="form-error" role="alert">{{ form.last_name.errors.0 }}</span>{% endif %}
+            </div>
+          </div>
+
+          {# Company name #}
+          {% if form.company_name %}
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="{{ form.company_name.id_for_label }}">Company Name</label>
+            <input type="text" class="form-control"
+                   id="{{ form.company_name.id_for_label }}" name="company_name"
+                   placeholder="Your organization name (optional)"
+                   autocomplete="organization"
+                   value="{{ form.company_name.value|default:'' }}" />
+          </div>
+          {% endif %}
+
+          {# Email #}
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="{{ form.email.id_for_label }}">Email Address <span class="required-star">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="fa-solid fa-envelope input-icon" aria-hidden="true"></i>
+              <input type="email" class="form-control form-control--icon{% if form.email.errors %} form-control--error{% endif %}"
+                     id="{{ form.email.id_for_label }}" name="email"
+                     placeholder="your@email.com" required autocomplete="email"
+                     value="{{ form.email.value|default:'' }}" autofocus />
+            </div>
+            {% if form.email.errors %}<span class="form-error" role="alert">{{ form.email.errors.0 }}</span>{% endif %}
+          </div>
+
+          {# Phone #}
+          {% if form.phone_number %}
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="{{ form.phone_number.id_for_label }}">Phone Number</label>
+            <div class="input-icon-wrap">
+              <i class="fa-solid fa-phone input-icon" aria-hidden="true"></i>
+              <input type="tel" class="form-control form-control--icon"
+                     id="{{ form.phone_number.id_for_label }}" name="phone_number"
+                     placeholder="+265 XXX XXX XXX" autocomplete="tel"
+                     value="{{ form.phone_number.value|default:'' }}" />
+            </div>
+          </div>
+          {% endif %}
+
+          {# Password #}
+          <div class="form-group" style="margin-bottom:1rem;">
+            <label class="form-label" for="{{ form.password.id_for_label }}">Password <span class="required-star">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="fa-solid fa-lock input-icon" aria-hidden="true"></i>
+              <input type="password" class="form-control form-control--icon{% if form.password.errors %} form-control--error{% endif %}"
+                     id="{{ form.password.id_for_label }}" name="password"
+                     placeholder="Create a strong password" required autocomplete="new-password" />
+              <button type="button" class="input-toggle-pw" aria-label="Toggle password visibility">
+                <i class="fa-regular fa-eye" aria-hidden="true"></i>
+              </button>
+            </div>
+            {% if form.password.errors %}<span class="form-error" role="alert">{{ form.password.errors.0 }}</span>{% endif %}
+            <div id="pw-strength" style="height:4px;border-radius:99px;background:var(--surface);margin-top:8px;overflow:hidden;display:none;">
+              <div id="pw-strength-bar" style="height:100%;width:0;border-radius:99px;transition:width .3s,background .3s;"></div>
+            </div>
+            <span id="pw-strength-label" style="font-size:.75rem;color:var(--text-muted);display:none;margin-top:4px;display:block;"></span>
+          </div>
+
+          {# Password confirm #}
+          {% if form.password2 %}
+          <div class="form-group" style="margin-bottom:1.5rem;">
+            <label class="form-label" for="{{ form.password2.id_for_label }}">Confirm Password <span class="required-star">*</span></label>
+            <div class="input-icon-wrap">
+              <i class="fa-solid fa-lock input-icon" aria-hidden="true"></i>
+              <input type="password" class="form-control form-control--icon{% if form.password2.errors %} form-control--error{% endif %}"
+                     id="{{ form.password2.id_for_label }}" name="password2"
+                     placeholder="Repeat your password" required autocomplete="new-password" />
+            </div>
+            {% if form.password2.errors %}<span class="form-error" role="alert">{{ form.password2.errors.0 }}</span>{% endif %}
+          </div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-bottom:1rem;">
+            <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+            Create Free Account
+          </button>
+
+          <p style="text-align:center;font-size:.875rem;color:var(--text-muted);">
+            Already have an account? <a href="{% url 'login' %}" class="auth-link">Sign in</a>
+          </p>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+{% block extra_css %}
+{% endblock %}
+
+<style>
+  .form-control--error { border-color: var(--error) !important; }
+</style>
+
+<script>
+  // Password visibility
+  document.querySelector('.input-toggle-pw')?.addEventListener('click', function() {
+    const pw = document.getElementById('{{ form.password.id_for_label }}');
+    const icon = this.querySelector('i');
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+    icon.className = pw.type === 'password' ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash';
+  });
+
+  // Password strength meter
+  const pwInput = document.getElementById('{{ form.password.id_for_label }}');
+  const bar = document.getElementById('pw-strength-bar');
+  const label = document.getElementById('pw-strength-label');
+  const track = document.getElementById('pw-strength');
+
+  pwInput?.addEventListener('input', () => {
+    const v = pwInput.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+
+    const levels = [
+      { label: 'Very weak', color: '#ef4444', width: '25%' },
+      { label: 'Weak', color: '#f59e0b', width: '50%' },
+      { label: 'Good', color: '#3b82f6', width: '75%' },
+      { label: 'Strong', color: '#10b981', width: '100%' },
+    ];
+
+    if (v) {
+      track.style.display = 'block';
+      label.style.display = 'block';
+      const lvl = levels[Math.max(0, score - 1)];
+      bar.style.width = lvl.width;
+      bar.style.background = lvl.color;
+      label.textContent = 'Password strength: ' + lvl.label;
+      label.style.color = lvl.color;
+    } else {
+      track.style.display = 'none';
+      label.style.display = 'none';
+    }
+  });
+</script>
+{% endblock %}

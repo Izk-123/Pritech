@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard — Pritech Client Portal{% endblock %}
+
+{% block content %}
+<div class="dashboard-layout">
+
+  {# ── Sidebar ─────────────────────────────────────────────────── #}
+  <aside class="dashboard-sidebar" id="dashboardSidebar" aria-label="Dashboard navigation">
+    <div class="sidebar-inner">
+
+      <div class="sidebar-header">
+        <a href="{% url 'home' %}" class="sidebar-brand" aria-label="Pritech home">
+          <img src="{% static 'images/logo-blue.png' %}" alt="Pritech ICT Solutions" class="brand-logo brand-logo--light" height="40" />
+          <img src="{% static 'images/logo-white.png' %}" alt="Pritech ICT Solutions" class="brand-logo brand-logo--dark" height="40" />
+        </a>
+        <button class="sidebar-close" id="sidebarClose" aria-label="Close sidebar">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      {# User card #}
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" aria-hidden="true">
+          {{ request.user.get_full_name|default:request.user.email|first|upper }}
+        </div>
+        <div>
+          <div class="sidebar-user-name">{{ request.user.get_full_name|default:request.user.email|truncatechars:22 }}</div>
+          <div class="sidebar-user-role">
+            <span class="badge badge-accent">{{ request.user.user_type|title }}</span>
+          </div>
+        </div>
+      </div>
+
+      {# Nav #}
+      <nav aria-label="Dashboard navigation">
+        <ul class="sidebar-nav" role="list">
+
+          <li class="sidebar-nav-section">Overview</li>
+
+          <li>
+            <a href="{% url 'dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+              <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+
+          <li class="sidebar-nav-section">Support</li>
+
+          <li>
+            <a href="{% url 'ticket_list' %}" class="sidebar-link {% if 'ticket' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="fa-solid fa-ticket" aria-hidden="true"></i>
+              <span>My Tickets</span>
+              {% if open_tickets_count %}
+              <span class="sidebar-badge" aria-label="{{ open_tickets_count }} open tickets">{{ open_tickets_count }}</span>
+              {% endif %}
+            </a>
+          </li>
+
+          <li class="sidebar-nav-section">Finance</li>
+
+          <li>
+            <a href="{% url 'invoice_list' %}" class="sidebar-link {% if 'invoice' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+              <span>Invoices</span>
+            </a>
+          </li>
+
+          <li class="sidebar-nav-section">Account</li>
+
+          <li>
+            <a href="{% url 'profile' %}" class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+              <i class="fa-solid fa-id-card" aria-hidden="true"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+
+          {% if request.user.user_type == 'client' %}
+          <li>
+            <a href="{% url 'client_team' %}" class="sidebar-link {% if 'team' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="fa-solid fa-users" aria-hidden="true"></i>
+              <span>Team</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <li>
+            <a href="{% url 'client_audit_log' %}" class="sidebar-link {% if 'audit' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+              <span>Audit Log</span>
+            </a>
+          </li>
+
+          <li style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);">
+            <a href="{% url 'two_factor_setup' %}" class="sidebar-link">
+              <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+              <span>Security (2FA)</span>
+            </a>
+          </li>
+
+          <li>
+            <a href="{% url 'logout' %}" class="sidebar-link sidebar-link--danger">
+              <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+              <span>Sign Out</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+    </div>
+  </aside>
+
+  {# ── Main content ─────────────────────────────────────────────── #}
+  <main class="dashboard-main" id="dashboardMain">
+
+    {# Top bar #}
+    <header class="dash-topbar">
+      <button class="dash-menu-btn" id="dashMenuBtn" aria-label="Open sidebar" aria-expanded="false" aria-controls="dashboardSidebar">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+      </button>
+
+      <div class="dash-topbar-title">
+        {% block dash_title %}<h1 style="font-size:1.4rem;">Dashboard</h1>{% endblock %}
+      </div>
+
+      <div class="dash-topbar-actions">
+        <button class="theme-toggle" id="themeToggle2" aria-label="Toggle theme" style="border:1.5px solid var(--border);">
+          <span class="theme-icon theme-icon--moon" aria-hidden="true">🌙</span>
+          <span class="theme-icon theme-icon--sun" aria-hidden="true">☀️</span>
+        </button>
+        <a href="{% url 'home' %}#contact" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          New Request
+        </a>
+      </div>
+    </header>
+
+    {# Page content #}
+    <div class="dash-content">
+      {% block dash_content %}
+
+      {# ── Stat cards ─────────────────────────────────────────── #}
+      <div class="dash-stats-grid">
+
+        <div class="dash-stat-card">
+          <div class="dash-stat-icon" style="background:var(--accent-subtle);color:var(--accent);" aria-hidden="true">
+            <i class="fa-solid fa-ticket"></i>
+          </div>
+          <div class="dash-stat-body">
+            <div class="dash-stat-num" data-count="{{ open_tickets|default:0 }}">0</div>
+            <div class="dash-stat-label">Open Tickets</div>
+          </div>
+        </div>
+
+        <div class="dash-stat-card">
+          <div class="dash-stat-icon" style="background:rgba(16,185,129,.1);color:var(--success);" aria-hidden="true">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="dash-stat-body">
+            <div class="dash-stat-num" data-count="{{ resolved_tickets|default:0 }}">0</div>
+            <div class="dash-stat-label">Resolved</div>
+          </div>
+        </div>
+
+        <div class="dash-stat-card">
+          <div class="dash-stat-icon" style="background:rgba(245,158,11,.1);color:var(--warning);" aria-hidden="true">
+            <i class="fa-solid fa-file-invoice"></i>
+          </div>
+          <div class="dash-stat-body">
+            <div class="dash-stat-num" data-count="{{ pending_invoices|default:0 }}">0</div>
+            <div class="dash-stat-label">Pending Invoices</div>
+          </div>
+        </div>
+
+        <div class="dash-stat-card">
+          <div class="dash-stat-icon" style="background:rgba(139,92,246,.1);color:var(--accent2);" aria-hidden="true">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div class="dash-stat-body">
+            <div class="dash-stat-num" data-count="{{ team_members|default:1 }}">0</div>
+            <div class="dash-stat-label">Team Members</div>
+          </div>
+        </div>
+
+      </div>
+
+      {# ── Recent tickets ──────────────────────────────────────── #}
+      {% if recent_tickets %}
+      <section class="dash-card" aria-labelledby="recent-tickets-heading">
+        <div class="dash-card-header">
+          <h2 id="recent-tickets-heading">Recent Tickets</h2>
+          <a href="{% url 'ticket_list' %}" class="btn btn-ghost btn-sm">View all →</a>
+        </div>
+        <div class="dash-table-wrap">
+          <table class="dash-table" role="table" aria-label="Recent support tickets">
+            <thead>
+              <tr>
+                <th scope="col">Ticket #</th>
+                <th scope="col">Subject</th>
+                <th scope="col">Status</th>
+                <th scope="col">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ticket in recent_tickets %}
+              <tr>
+                <td><a href="{% url 'ticket_detail' ticket.pk %}" class="table-link">{{ ticket.ticket_number }}</a></td>
+                <td>{{ ticket.title|truncatechars:50 }}</td>
+                <td>
+                  <span class="badge {% if ticket.status == 'open' %}badge-error{% elif ticket.status == 'resolved' %}badge-success{% else %}badge-warning{% endif %}">
+                    {{ ticket.get_status_display }}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted);font-size:.85rem;">{{ ticket.updated_at|timesince }} ago</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {% else %}
+      <div class="dash-empty" role="status">
+        <div class="dash-empty-icon" aria-hidden="true">🎉</div>
+        <h3>No open tickets</h3>
+        <p>Everything looks good! Open a new support request if you need help.</p>
+        <a href="{% url 'home' %}#contact" class="btn btn-primary">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i> New Request
+        </a>
+      </div>
+      {% endif %}
+
+      {% endblock %}
+    </div>
+
+  </main>
+
+</div>
+
+<style>
+  /* ── Dashboard layout ────────────────────────────────────────── */
+  .dashboard-layout {
+    display: flex;
+    min-height: 100dvh;
+    padding-top: 84px;
+  }
+
+  /* Sidebar */
+  .dashboard-sidebar {
+    position: fixed;
+    top: 84px;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    z-index: var(--z-dropdown);
+    transform: translateX(-100%);
+    transition: transform var(--transition-base);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  @media (min-width: 1024px) {
+    .dashboard-sidebar { transform: translateX(0); }
+    .dashboard-main { margin-left: 260px; }
+  }
+
+  .dashboard-sidebar.open { transform: translateX(0); }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: calc(var(--z-dropdown) - 1);
+    backdrop-filter: blur(4px);
+  }
+  .sidebar-overlay.visible { display: block; }
+
+  .sidebar-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1.25rem;
+  }
+
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    text-decoration: none;
+  }
+
+  .sidebar-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: .25rem;
+    border-radius: 6px;
+    transition: all .2s;
+  }
+  .sidebar-close:hover { background: var(--surface); color: var(--text-primary); }
+  @media (min-width: 1024px) { .sidebar-close { display: none; } }
+
+  .sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .875rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    margin-bottom: 1.25rem;
+  }
+
+  .sidebar-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    color: white;
+    font-size: .95rem;
+    flex-shrink: 0;
+  }
+
+  .sidebar-user-name {
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidebar-user-role { margin-top: 2px; }
+
+  .sidebar-nav {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .sidebar-nav-section {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-muted);
+    padding: .875rem .5rem .375rem;
+    margin-top: .5rem;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .625rem .875rem;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: .9rem;
+    font-weight: 500;
+    transition: all .15s;
+    position: relative;
+  }
+
+  .sidebar-link i { width: 16px; text-align: center; }
+
+  .sidebar-link:hover, .sidebar-link.active {
+    background: var(--accent-subtle);
+    color: var(--accent);
+  }
+
+  .sidebar-link.active {
+    font-weight: 600;
+  }
+  .sidebar-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 25%; bottom: 25%;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .sidebar-link--danger:hover { background: rgba(239,68,68,.1); color: var(--error); }
+
+  .sidebar-badge {
+    margin-left: auto;
+    background: var(--accent);
+    color: white;
+    border-radius: var(--radius-full);
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  /* Main area */
+  .dashboard-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dash-topbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--nav-bg);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 84px;
+    z-index: 10;
+  }
+
+  .dash-menu-btn {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: .5rem .75rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all .2s;
+  }
+  .dash-menu-btn:hover { border-color: var(--accent); color: var(--accent); }
+  @media (min-width: 1024px) { .dash-menu-btn { display: none; } }
+
+  .dash-topbar-title { flex: 1; }
+  .dash-topbar-actions { display: flex; align-items: center; gap: .75rem; }
+
+  .dash-content { padding: 1.5rem; flex: 1; }
+  @media (min-width: 640px) { .dash-content { padding: 2rem; } }
+
+  /* Stats grid */
+  .dash-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (min-width: 900px) {
+    .dash-stats-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  .dash-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all .25s;
+  }
+  .dash-stat-card:hover { border-color: var(--border-accent); transform: translateY(-2px); }
+
+  .dash-stat-icon {
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .dash-stat-num {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+  }
+  .dash-stat-label {
+    font-size: .8rem;
+    color: var(--text-muted);
+    margin-top: .25rem;
+  }
+
+  /* Card */
+  .dash-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .dash-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .dash-card-header h2 { font-size: 1rem; font-weight: 600; }
+
+  /* Table */
+  .dash-table-wrap { overflow-x: auto; }
+  .dash-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .875rem;
+  }
+  .dash-table th, .dash-table td {
+    padding: .875rem 1.25rem;
+    text-align: left;
+  }
+  .dash-table th {
+    font-size: .75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    white-space: nowrap;
+  }
+  .dash-table tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+  .dash-table tr:last-child { border-bottom: none; }
+  .dash-table tbody tr:hover { background: var(--bg-secondary); }
+  .table-link { color: var(--accent); font-weight: 500; }
+  .table-link:hover { color: var(--accent-light); }
+
+  /* Empty state */
+  .dash-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+  .dash-empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+  .dash-empty h3 { margin-bottom: .5rem; }
+  .dash-empty p { color: var(--text-muted); margin-bottom: 1.5rem; }
+</style>
+
+<script>
+  // Mobile sidebar toggle
+  const sidebarEl = document.getElementById('dashboardSidebar');
+  const menuBtn = document.getElementById('dashMenuBtn');
+  const closeBtn = document.getElementById('sidebarClose');
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'sidebar-overlay';
+  document.body.appendChild(overlay);
+
+  const openSidebar = () => {
+    sidebarEl.classList.add('open');
+    overlay.classList.add('visible');
+    menuBtn.setAttribute('aria-expanded', 'true');
+  };
+  const closeSidebar = () => {
+    sidebarEl.classList.remove('open');
+    overlay.classList.remove('visible');
+    menuBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  menuBtn?.addEventListener('click', openSidebar);
+  closeBtn?.addEventListener('click', closeSidebar);
+  overlay.addEventListener('click', closeSidebar);
+
+  // Secondary theme toggle in dashboard
+  const themeBtn2 = document.getElementById('themeToggle2');
+  themeBtn2?.addEventListener('click', () => {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('pritech-theme', next);
+  });
+</script>
+{% endblock %}
