@@ -1,12 +1,19 @@
 # accounts/forms.py
 """
-Forms for registration, login, profile editing, staff management, and 2FA.
+Forms for the Accounts app.
 
-Email handling rules applied consistently across all user-facing forms:
+This module handles:
+  - Client self-registration
+  - Login (via Email OR Phone)
+  - Client profile & team management
+  - 2FA token verification
+  - Staff user management (Admin panel)
+  - Role & Permission management
 
+Email Handling Rules applied consistently:
   * Emails are stripped and lower-cased before persistence.
-  * Every form that creates or changes an email address runs the
-    ``validate_email_deliverable`` check (MX + disposable-domain block).
+  * Every form creating/changing an email runs `validate_email_deliverable`
+    (MX records + disposable-domain blocklist).
   * Email uniqueness is checked case-insensitively.
 """
 
@@ -16,8 +23,10 @@ from django.contrib.auth.forms import (
     UserCreationForm,
     UserChangeForm,
 )
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
-from .models import Permission, User, Role, UserRole
+from .models import Permission, User, Role
 from .validators import validate_email_deliverable
 
 
@@ -31,15 +40,34 @@ def _normalise_email(raw: str) -> str:
 
 
 def _email_in_use(email: str, exclude_pk=None) -> bool:
-    """Case-insensitive check that a User with this email exists."""
+    """Case-insensitive check that a User with this email already exists."""
     qs = User.objects.filter(email__iexact=email)
     if exclude_pk:
         qs = qs.exclude(pk=exclude_pk)
     return qs.exists()
 
 
+def _unique_username(email: str, exclude_pk=None) -> str:
+    """
+    Build a unique `username` from the email address.
+
+    The project logs in with email (USERNAME_FIELD = "email") but AbstractUser
+    still has a UNIQUE `username` column. If the form never fills it, every new
+    user gets username="" and the second insert raises
+    "UNIQUE constraint failed: accounts_user.username".
+    """
+    base = email[:150]
+    candidate = base
+    counter = 1
+    while User.objects.filter(username__iexact=candidate).exclude(pk=exclude_pk).exists():
+        suffix = f"-{counter}"
+        candidate = f"{base[:150 - len(suffix)]}{suffix}"
+        counter += 1
+    return candidate
+
+
 # ============================================================================
-# Client Registration
+# 1. Client Registration
 # ============================================================================
 
 class ClientRegisterForm(forms.ModelForm):
@@ -73,37 +101,18 @@ class ClientRegisterForm(forms.ModelForm):
             "company_name",
         ]
         widgets = {
-            "first_name": forms.TextInput(
-                attrs={"placeholder": "First name", "class": "form-control"}
-            ),
-            "last_name": forms.TextInput(
-                attrs={"placeholder": "Last name", "class": "form-control"}
-            ),
-            "email": forms.EmailInput(
-                attrs={"placeholder": "Email address", "class": "form-control"}
-            ),
-            "phone_number": forms.TextInput(
-                attrs={"placeholder": "+265 999 000 000", "class": "form-control"}
-            ),
-            "physical_address": forms.Textarea(
-                attrs={
-                    "placeholder": "Your address",
-                    "rows": 2,
-                    "class": "form-control",
-                }
-            ),
+            "first_name": forms.TextInput(attrs={"placeholder": "First name", "class": "form-control"}),
+            "last_name": forms.TextInput(attrs={"placeholder": "Last name", "class": "form-control"}),
+            "email": forms.EmailInput(attrs={"placeholder": "Email address", "class": "form-control"}),
+            "phone_number": forms.TextInput(attrs={"placeholder": "+265 999 000 000", "class": "form-control"}),
+            "physical_address": forms.Textarea(attrs={"placeholder": "Your address", "rows": 2, "class": "form-control"}),
         }
 
-    # ------------------------------------------------------------------
-    # Field-level clean
-    # ------------------------------------------------------------------
     def clean_email(self):
         email = _normalise_email(self.cleaned_data["email"])
         validate_email_deliverable(email)          # MX + disposable check
         if _email_in_use(email):
-            raise forms.ValidationError(
-                "A user with this email already exists."
-            )
+            raise forms.ValidationError("A user with this email already exists.")
         return email
 
     def clean(self):
@@ -116,7 +125,7 @@ class ClientRegisterForm(forms.ModelForm):
 
 
 # ============================================================================
-# Login (email or phone)
+# 2. Login
 # ============================================================================
 
 class CustomLoginForm(AuthenticationForm):
@@ -125,11 +134,7 @@ class CustomLoginForm(AuthenticationForm):
     username = forms.CharField(
         label="Email or Phone",
         widget=forms.TextInput(
-            attrs={
-                "placeholder": "Email or phone number",
-                "autofocus": True,
-                "class": "form-control",
-            }
+            attrs={"placeholder": "Email or phone number", "autofocus": True, "class": "form-control"}
         ),
     )
     password = forms.CharField(
@@ -140,19 +145,13 @@ class CustomLoginForm(AuthenticationForm):
 
 
 # ============================================================================
-# Client Profile Editing
+# 3. Client Profile & Team Management
 # ============================================================================
 
 class ClientProfileForm(forms.ModelForm):
     """
     Form for clients to edit their profile and linked organisation.
-
-    NOTE on email changes:
-        Changing the email address here does NOT re-trigger verification.
-        If you need that behaviour, override ``save()`` in the view to
-        reset ``is_active`` and resend the verification email whenever
-        ``email`` differs from the previous value.
-        The deliverability check below still blocks obvious fakes.
+    Changing the email does NOT re-trigger verification.
     """
 
     company_name = forms.CharField(max_length=200, required=True)
@@ -162,21 +161,13 @@ class ClientProfileForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = [
-            "first_name",
-            "last_name",
-            "email",
-            "phone_number",
-            "physical_address",
-        ]
+        fields = ["first_name", "last_name", "email", "phone_number", "physical_address"]
         widgets = {
             "first_name": forms.TextInput(attrs={"class": "form-control"}),
             "last_name": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
             "phone_number": forms.TextInput(attrs={"class": "form-control"}),
-            "physical_address": forms.Textarea(
-                attrs={"class": "form-control", "rows": 3}
-            ),
+            "physical_address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -188,46 +179,31 @@ class ClientProfileForm(forms.ModelForm):
             self.fields["company_address"].initial = self.client_org.address
             self.fields["company_email"].initial = self.client_org.email
 
-    # ------------------------------------------------------------------
-    # Field-level clean
-    # ------------------------------------------------------------------
     def clean_email(self):
         email = _normalise_email(self.cleaned_data["email"])
         validate_email_deliverable(email)
         if _email_in_use(email, exclude_pk=self.instance.pk):
-            raise forms.ValidationError(
-                "Another account already uses this email."
-            )
+            raise forms.ValidationError("Another account already uses this email.")
         return email
 
     def clean_company_email(self):
         email = _normalise_email(self.cleaned_data.get("company_email") or "")
-        # Optional field: only validate when provided.
         if email:
             validate_email_deliverable(email)
         return email
 
-    # ------------------------------------------------------------------
-    # Persistence
-    # ------------------------------------------------------------------
     def save(self, commit=True):
         user = super().save(commit=False)
         if commit:
             user.save()
-
         if self.client_org:
             self.client_org.name = self.cleaned_data["company_name"]
             self.client_org.phone = self.cleaned_data["company_phone"]
             self.client_org.address = self.cleaned_data["company_address"]
             self.client_org.email = self.cleaned_data["company_email"]
             self.client_org.save()
-
         return user
 
-
-# ============================================================================
-# Invite Team Member
-# ============================================================================
 
 class InviteTeamMemberForm(forms.ModelForm):
     """Invite a new user to the client organisation."""
@@ -249,14 +225,12 @@ class InviteTeamMemberForm(forms.ModelForm):
         email = _normalise_email(self.cleaned_data["email"])
         validate_email_deliverable(email)
         if _email_in_use(email):
-            raise forms.ValidationError(
-                "A user with this email already exists."
-            )
+            raise forms.ValidationError("A user with this email already exists.")
         return email
 
 
 # ============================================================================
-# 2FA Token
+# 4. 2FA Token
 # ============================================================================
 
 class TOTPTokenForm(forms.Form):
@@ -268,26 +242,29 @@ class TOTPTokenForm(forms.Form):
         min_length=6,
         required=True,
         widget=forms.TextInput(
-            attrs={
-                "class": "form-control",
-                "placeholder": "000000",
-                "autocomplete": "off",
-            }
+            attrs={"class": "form-control", "placeholder": "000000", "autocomplete": "off"}
         ),
     )
 
 
 # ============================================================================
-# Staff User Management (admin panel)
+# 5. Staff User Management (Admin Panel)
 # ============================================================================
 
 class StaffUserCreationForm(UserCreationForm):
-    """Form for creating staff users (admins only)."""
+    """
+    Form for creating staff users (admins only).
+
+    `user_type`, `is_staff` and `username` are NOT user-editable here: every
+    account created through this form is automatically a staff account, and the
+    username is generated from the email address.
+    """
 
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.all(),
         required=False,
         help_text="Assign roles to this user",
+        widget=forms.CheckboxSelectMultiple,
     )
 
     class Meta:
@@ -297,33 +274,53 @@ class StaffUserCreationForm(UserCreationForm):
             "first_name",
             "last_name",
             "phone_number",
-            "user_type",
             "is_active",
-            "is_staff",
             "is_superuser",
         ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Restrict user_type to staff – clients self-register elsewhere.
-        self.fields["user_type"].choices = [("staff", "Staff")]
-        self.fields["user_type"].initial = "staff"
 
     def clean_email(self):
         email = _normalise_email(self.cleaned_data["email"])
         validate_email_deliverable(email)
         if _email_in_use(email):
-            raise forms.ValidationError(
-                "A user with this email already exists."
-            )
+            raise forms.ValidationError("A user with this email already exists.")
         return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)   # also hashes password1
+        user.email = _normalise_email(user.email)
+        user.username = _unique_username(user.email)
+        user.user_type = "staff"            # auto-assign staff account
+        user.is_staff = True
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
 
 
 class StaffUserChangeForm(UserChangeForm):
-    """Form for editing staff users."""
-
+    """
+    Form for editing staff users. 
+    Includes optional password change fields with robust validation.
+    """
+    
+    # UserChangeForm natively includes a read-only 'password' hash field.
+    # We exclude it from Meta and provide our own password1/password2 fields.
+    password1 = forms.CharField(
+        label="New Password",
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "form-control"}),
+        required=False,
+        help_text="Leave blank to keep the current password."
+    )
+    password2 = forms.CharField(
+        label="Confirm New Password",
+        widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "form-control"}),
+        required=False,
+    )
+    
     roles = forms.ModelMultipleChoiceField(
-        queryset=Role.objects.all(), required=False
+        queryset=Role.objects.all(), 
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
     )
 
     class Meta:
@@ -333,9 +330,7 @@ class StaffUserChangeForm(UserChangeForm):
             "first_name",
             "last_name",
             "phone_number",
-            "user_type",
             "is_active",
-            "is_staff",
             "is_superuser",
         ]
 
@@ -343,14 +338,45 @@ class StaffUserChangeForm(UserChangeForm):
         email = _normalise_email(self.cleaned_data["email"])
         validate_email_deliverable(email)
         if _email_in_use(email, exclude_pk=self.instance.pk):
-            raise forms.ValidationError(
-                "Another account already uses this email."
-            )
+            raise forms.ValidationError("Another account already uses this email.")
         return email
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = _normalise_email(user.email)
+        if not user.username:
+            user.username = _unique_username(user.email, exclude_pk=user.pk)
+        user.user_type = "staff"            # always stays a staff account
+        user.is_staff = True
+        pwd = self.cleaned_data.get("password1")
+        if pwd:
+            user.set_password(pwd)
+        if commit:
+            user.save()
+            self.save_m2m()
+        return user
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pwd1 = cleaned_data.get("password1")
+        pwd2 = cleaned_data.get("password2")
+
+        # If either password field is filled, validate them
+        if pwd1 or pwd2:
+            if pwd1 != pwd2:
+                self.add_error("password2", "The two password fields didn’t match.")
+            else:
+                # Run Django's built-in password validators (length, commonality, etc.)
+                try:
+                    validate_password(pwd1, self.instance)
+                except ValidationError as e:
+                    self.add_error("password1", e)
+        
+        return cleaned_data
 
 
 # ============================================================================
-# Role & Permission Forms
+# 6. Role & Permission Management
 # ============================================================================
 
 class RoleForm(forms.ModelForm):
