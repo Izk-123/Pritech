@@ -1,11 +1,12 @@
 # infrastructure/pdf_reportlab.py
 """
-ReportLab-based PDF generator for Invoices and Quotations.
+ReportLab-based PDF generator for Invoices, Quotations, and Receipts.
 Matches the modern vertical-label design used across the platform.
 
 Public API:
     render_invoice_pdf(invoice, config, logo_data_uri=None) -> bytes
     render_quotation_pdf(quotation, config, logo_data_uri=None) -> bytes
+    render_receipt_pdf(receipt, config, logo_data_uri=None) -> bytes
     load_logo_data_uri(path=None) -> str | None
 """
 
@@ -43,17 +44,20 @@ PLACEHOLDER_BG = colors.HexColor('#e2e8f0')
 AMBER_BG = colors.HexColor('#fffbeb')
 AMBER_BORDER = colors.HexColor('#fde68a')
 AMBER_TEXT = colors.HexColor('#78350f')
+GREEN_SUCCESS = colors.HexColor('#15803d')
 
 
 # ---------------------------------------------------------------------------
-# Styles
+# Style factory
 # ---------------------------------------------------------------------------
 def _s(name, **kw):
+    """Create a ParagraphStyle with sensible defaults."""
     base = dict(fontName='Helvetica', fontSize=9.5, textColor=DARK, leading=12)
     base.update(kw)
     return ParagraphStyle(name, **base)
 
 
+# ---- Shared invoice/quotation styles ---------------------------------------
 STYLE_COMPANY      = _s('Company',     fontName='Helvetica-Bold', fontSize=15, textColor=BLUE, leading=18)
 STYLE_COMPANY_SUB  = _s('CompanySub',  fontSize=8.5, textColor=GREY, leading=11)
 STYLE_LABEL        = _s('Label',       fontName='Helvetica-Bold', fontSize=8,  textColor=BLUE, leading=10)
@@ -72,6 +76,31 @@ STYLE_THANK        = _s('Thank',       fontName='Helvetica-Oblique', fontSize=9,
 STYLE_TERMS_H      = _s('TermsH',      fontName='Helvetica-Bold', fontSize=8.5, textColor=BLUE, leading=11)
 STYLE_TERMS        = _s('Terms',       fontSize=8, textColor=GREY, leading=11)
 STYLE_VALIDITY     = _s('Validity',    fontSize=8.5, textColor=AMBER_TEXT, leading=11, alignment=TA_CENTER)
+
+# ---- Receipt-specific styles ------------------------------------------------
+STYLE_RECEIPT_HEADING = _s(
+    'ReceiptHeading', fontName='Helvetica-Bold', fontSize=22, textColor=BLUE,
+    leading=26, alignment=TA_RIGHT,
+)
+STYLE_RECEIPT_SUB = _s(
+    'ReceiptSub', fontSize=9, textColor=GREY, leading=12, alignment=TA_RIGHT,
+)
+STYLE_PAID_BADGE = _s(
+    'PaidBadge', fontName='Helvetica-Bold', fontSize=10.5,
+    textColor=colors.white, leading=14, alignment=TA_CENTER,
+)
+STYLE_DETAIL_LABEL = _s(
+    'DetailLabel', fontName='Helvetica-Bold', fontSize=8, textColor=BLUE, leading=10,
+)
+STYLE_DETAIL_VALUE = _s('DetailValue', fontSize=9, leading=12)
+STYLE_AMOUNT_LABEL = _s(
+    'AmountLabel', fontName='Helvetica-Bold', fontSize=11,
+    textColor=colors.white, leading=14,
+)
+STYLE_AMOUNT_VALUE = _s(
+    'AmountValue', fontName='Helvetica-Bold', fontSize=14,
+    textColor=colors.white, leading=18, alignment=TA_RIGHT,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -121,6 +150,7 @@ def _logo_flowable(logo_data_uri, size=3.4 * cm):
 
 
 def _fmt_money(symbol, value):
+    """Format a numeric value as 'SYM 1,234.56'."""
     try:
         return f"{symbol} {float(value):,.2f}"
     except Exception:
@@ -128,6 +158,7 @@ def _fmt_money(symbol, value):
 
 
 def _strip_html(text):
+    """Remove HTML tags from a Quill field / string."""
     if text is None:
         return ''
     if hasattr(text, 'html'):
@@ -136,16 +167,18 @@ def _strip_html(text):
 
 
 # ---------------------------------------------------------------------------
-# DocTemplate with vertical label on the left
+# DocTemplate with vertical label on the left (invoices & quotations)
 # ---------------------------------------------------------------------------
 class _VerticalLabelDoc(BaseDocTemplate):
     """A4 document with a rotated label on the left margin."""
 
     def __init__(self, buffer, doc_type, doc_number, **kwargs):
-        super().__init__(buffer, pagesize=A4,
-                         leftMargin=0, rightMargin=0,
-                         topMargin=0, bottomMargin=0,
-                         **kwargs)
+        super().__init__(
+            buffer, pagesize=A4,
+            leftMargin=0, rightMargin=0,
+            topMargin=0, bottomMargin=0,
+            **kwargs,
+        )
         self.doc_type = doc_type
         self.doc_number = doc_number
 
@@ -161,10 +194,11 @@ class _VerticalLabelDoc(BaseDocTemplate):
             leftPadding=0, rightPadding=0,
             topPadding=0, bottomPadding=0,
         )
-        self.addPageTemplates([PageTemplate(id='main', frames=[frame], onPage=self._draw_label)])
+        self.addPageTemplates([
+            PageTemplate(id='main', frames=[frame], onPage=self._draw_label)
+        ])
 
     def _draw_label(self, canvas, doc):
-        # Vertical text
         canvas.saveState()
         x = 1.7 * cm
         y = self.pagesize[1] - 1.6 * cm
@@ -190,9 +224,10 @@ class _VerticalLabelDoc(BaseDocTemplate):
 
 
 # ---------------------------------------------------------------------------
-# Building blocks
+# Building blocks (shared by invoices / quotations)
 # ---------------------------------------------------------------------------
 def _header_table(config, logo_data_uri):
+    """Company block (left) + logo (right)."""
     lines = [Paragraph(config.company_name, STYLE_COMPANY)]
     if config.address:
         lines.append(Paragraph(config.address.replace('\n', '<br/>'), STYLE_COMPANY_SUB))
@@ -206,8 +241,10 @@ def _header_table(config, logo_data_uri):
     if contact:
         lines.append(Paragraph(' · '.join(contact), STYLE_COMPANY_SUB))
 
-    tbl = Table([[lines, [_logo_flowable(logo_data_uri)]]],
-                colWidths=[11.4 * cm, 4.6 * cm])
+    tbl = Table(
+        [[lines, [_logo_flowable(logo_data_uri)]]],
+        colWidths=[11.4 * cm, 4.6 * cm],
+    )
     tbl.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
@@ -221,6 +258,7 @@ def _header_table(config, logo_data_uri):
 
 def _parties_table(config, client, d1_label, d1_val, d2_label, d2_val,
                    bill_to_label="Bill To"):
+    """Three-column parties block: Bill To | Location | Dates."""
     col1 = [
         Paragraph(bill_to_label, STYLE_LABEL),
         Paragraph(client.name, STYLE_PARTY_NAME),
@@ -263,6 +301,7 @@ def _parties_table(config, client, d1_label, d1_val, d2_label, d2_val,
 
 
 def _items_table(items, currency_symbol):
+    """Line-item table with blue header and zebra striping."""
     header = [
         Paragraph('Description', STYLE_TH),
         Paragraph('Qty',         STYLE_TH_R),
@@ -273,21 +312,20 @@ def _items_table(items, currency_symbol):
     for item in items:
         rows.append([
             Paragraph(str(item.description), STYLE_TD),
-            Paragraph(str(item.quantity),    STYLE_TD_R),
+            Paragraph(str(item.quantity), STYLE_TD_R),
             Paragraph(_fmt_money(currency_symbol, item.unit_price), STYLE_TD_R),
-            Paragraph(_fmt_money(currency_symbol, item.total),      STYLE_TD_R),
+            Paragraph(_fmt_money(currency_symbol, item.total), STYLE_TD_R),
         ])
 
-    tbl = Table(rows, colWidths=[9 * cm, 1.5 * cm, 2.8 * cm, 2.7 * cm],
-                repeatRows=1)
+    tbl = Table(rows, colWidths=[9 * cm, 1.5 * cm, 2.8 * cm, 2.7 * cm], repeatRows=1)
     style = [
-        ('BACKGROUND',   (0, 0), (-1, 0), BLUE),
-        ('VALIGN',       (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING',  (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING',   (0, 0), (-1, -1), 7),
-        ('BOTTOMPADDING',(0, 0), (-1, -1), 7),
-        ('LINEBELOW',    (0, 1), (-1, -1), 0.25, LIGHT_GREY),
+        ('BACKGROUND',    (0, 0), (-1, 0), BLUE),
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 8),
+        ('TOPPADDING',    (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+        ('LINEBELOW',     (0, 1), (-1, -1), 0.25, LIGHT_GREY),
     ]
     for i in range(1, len(rows)):
         if i % 2 == 0:
@@ -299,6 +337,7 @@ def _items_table(items, currency_symbol):
 def _totals_table(currency_symbol, subtotal, tax_amount, total_amount,
                   include_vat, vat_percent,
                   amount_paid=None, balance_due=None):
+    """Right-aligned totals block used on invoices."""
     rows = [[
         Paragraph('Subtotal', STYLE_TOT_LBL),
         Paragraph(_fmt_money(currency_symbol, subtotal), STYLE_TOT_VAL),
@@ -333,26 +372,27 @@ def _totals_table(currency_symbol, subtotal, tax_amount, total_amount,
 
     tbl = Table(rows, colWidths=[4.2 * cm, 3.4 * cm])
     style = [
-        ('VALIGN',       (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING',  (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-        ('TOPPADDING',   (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING',(0, 0), (-1, -1), 4),
-        ('BACKGROUND',   (0, grand_idx), (-1, grand_idx), BLUE),
-        ('TOPPADDING',   (0, grand_idx), (-1, grand_idx), 8),
-        ('BOTTOMPADDING',(0, grand_idx), (-1, grand_idx), 8),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
+        ('TOPPADDING',    (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BACKGROUND',    (0, grand_idx), (-1, grand_idx), BLUE),
+        ('TOPPADDING',    (0, grand_idx), (-1, grand_idx), 8),
+        ('BOTTOMPADDING', (0, grand_idx), (-1, grand_idx), 8),
     ]
     if balance_idx is not None:
         style += [
-            ('BACKGROUND',   (0, balance_idx), (-1, balance_idx), BLUE),
-            ('TOPPADDING',   (0, balance_idx), (-1, balance_idx), 8),
-            ('BOTTOMPADDING',(0, balance_idx), (-1, balance_idx), 8),
+            ('BACKGROUND',    (0, balance_idx), (-1, balance_idx), BLUE),
+            ('TOPPADDING',    (0, balance_idx), (-1, balance_idx), 8),
+            ('BOTTOMPADDING', (0, balance_idx), (-1, balance_idx), 8),
         ]
     tbl.setStyle(TableStyle(style))
     return tbl
 
 
 def _terms_table(config, notes=None):
+    """Footer with notes + bank / mobile money info."""
     rows = [[Paragraph('Terms & Instructions', STYLE_TERMS_H)]]
     note_text = _strip_html(notes) if notes else ''
     if note_text:
@@ -369,17 +409,17 @@ def _terms_table(config, notes=None):
 
     rows.append([Paragraph(
         config.invoice_footer or "Payment is due within 30 days. Thank you for your business.",
-        STYLE_TERMS
+        STYLE_TERMS,
     )])
 
     tbl = Table(rows, colWidths=[16 * cm])
     tbl.setStyle(TableStyle([
-        ('LINEABOVE',    (0, 0), (-1, 0), 0.5, LIGHT_GREY),
-        ('LEFTPADDING',  (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING',   (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING',(0, 0), (-1, -1), 3),
-        ('TOPPADDING',   (0, 0), (-1, 0), 10),
+        ('LINEABOVE',     (0, 0), (-1, 0), 0.5, LIGHT_GREY),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('TOPPADDING',    (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING',    (0, 0), (-1, 0), 10),
     ]))
     return tbl
 
@@ -388,6 +428,7 @@ def _totals_area(currency_symbol, subtotal, tax_amount, total_amount,
                  include_vat, vat_percent,
                  amount_paid=None, balance_due=None,
                  thank_text='Thank you for your business!'):
+    """Composite layout: thank-you (left) + totals table (right)."""
     left = Paragraph(thank_text, STYLE_THANK)
     right = _totals_table(
         currency_symbol, subtotal, tax_amount, total_amount,
@@ -396,19 +437,20 @@ def _totals_area(currency_symbol, subtotal, tax_amount, total_amount,
     )
     tbl = Table([[left, right]], colWidths=[8.4 * cm, 7.6 * cm])
     tbl.setStyle(TableStyle([
-        ('VALIGN',       (0, 0), (-1, -1), 'BOTTOM'),
-        ('LEFTPADDING',  (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING',   (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING',(0, 0), (-1, -1), 0),
+        ('VALIGN',        (0, 0), (-1, -1), 'BOTTOM'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('TOPPADDING',    (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
     return tbl
 
 
 # ---------------------------------------------------------------------------
-# Public render functions
+# Public renderers
 # ---------------------------------------------------------------------------
 def render_invoice_pdf(invoice, config, logo_data_uri=None):
+    """Render an invoice as a PDF."""
     buffer = io.BytesIO()
     doc = _VerticalLabelDoc(
         buffer,
@@ -450,6 +492,7 @@ def render_invoice_pdf(invoice, config, logo_data_uri=None):
 
 
 def render_quotation_pdf(quotation, config, logo_data_uri=None):
+    """Render a quotation as a PDF."""
     buffer = io.BytesIO()
     doc = _VerticalLabelDoc(
         buffer,
@@ -490,21 +533,288 @@ def render_quotation_pdf(quotation, config, logo_data_uri=None):
             f'This quotation is valid until '
             f'<b>{quotation.valid_until.strftime("%d/%m/%Y")}</b>. '
             f'Prices and availability are subject to change after this date.',
-            STYLE_VALIDITY
+            STYLE_VALIDITY,
         )]],
         colWidths=[16 * cm],
     )
     validity.setStyle(TableStyle([
-        ('BACKGROUND',   (0, 0), (-1, -1), AMBER_BG),
-        ('BOX',          (0, 0), (-1, -1), 0.5, AMBER_BORDER),
-        ('LEFTPADDING',  (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-        ('TOPPADDING',   (0, 0), (-1, -1), 7),
-        ('BOTTOMPADDING',(0, 0), (-1, -1), 7),
+        ('BACKGROUND',    (0, 0), (-1, -1), AMBER_BG),
+        ('BOX',           (0, 0), (-1, -1), 0.5, AMBER_BORDER),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
+        ('TOPPADDING',    (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
     ]))
     story.append(validity)
     story.append(Spacer(1, 14))
     story.append(_terms_table(config, quotation.notes))
+
+    doc.build(story)
+    return buffer.getvalue()
+
+
+def render_receipt_pdf(receipt, config, logo_data_uri=None):
+    """
+    Render a payment receipt as a PDF.
+
+    Matches the sample design:
+      - Company block + RECEIPT heading
+      - Received From / Paid To
+      - Receipt Date / Reference
+      - Items table
+      - Subtotal + Transaction fee
+      - Amount Paid (blue bar)
+      - PAID IN FULL banner (green)
+      - Payment Details table
+    """
+    payment = receipt.payment
+    invoice = receipt.invoice
+    client = invoice.client
+    symbol = config.currency_symbol
+
+    buffer = io.BytesIO()
+    doc = BaseDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=1.4 * cm, rightMargin=1.4 * cm,
+        topMargin=1.2 * cm, bottomMargin=1.2 * cm,
+        title=f"Receipt {receipt.receipt_number}",
+        author=config.company_name,
+        subject=f"Payment receipt for {invoice.invoice_number}",
+    )
+    frame = Frame(
+        doc.leftMargin, doc.bottomMargin, doc.width, doc.height,
+        id='main', showBoundary=0,
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0,
+    )
+    doc.addPageTemplates([PageTemplate(id='main', frames=[frame])])
+
+    story = []
+
+    # ---- Header: company block (left) | RECEIPT title (right) ----
+    company_lines = [Paragraph(config.company_name, STYLE_COMPANY)]
+    if config.address:
+        company_lines.append(
+            Paragraph(config.address.replace('\n', '<br/>'), STYLE_COMPANY_SUB)
+        )
+    contact = []
+    if config.email:
+        contact.append(config.email)
+    if config.phone:
+        contact.append(config.phone)
+    if contact:
+        company_lines.append(Paragraph(' · '.join(contact), STYLE_COMPANY_SUB))
+
+    receipt_dt = receipt.payment_datetime or receipt.issued_at
+
+    header_tbl = Table(
+        [[
+            company_lines,
+            [
+                Paragraph("RECEIPT", STYLE_RECEIPT_HEADING),
+                Paragraph(receipt.receipt_number, STYLE_RECEIPT_SUB),
+                Paragraph(
+                    f"Receipt Date: {receipt_dt.strftime('%d/%m/%Y')}",
+                    STYLE_RECEIPT_SUB,
+                ),
+                Paragraph(
+                    f"Reference: <b>{receipt.effective_reference}</b>",
+                    STYLE_RECEIPT_SUB,
+                ),
+            ],
+        ]],
+        colWidths=[10.5 * cm, 6.6 * cm],
+    )
+    header_tbl.setStyle(TableStyle([
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN',         (1, 0), (1, 0), 'RIGHT'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('TOPPADDING',    (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(header_tbl)
+    story.append(Spacer(1, 14))
+
+    # ---- Received From / Paid To ----
+    received = [
+        Paragraph("Received From", STYLE_LABEL),
+        Paragraph(client.name, STYLE_PARTY_NAME),
+        Paragraph(
+            " · ".join([p for p in [client.email or '', client.phone or ''] if p]),
+            STYLE_PARTY_DETAIL,
+        ),
+    ]
+    paid_to = [
+        Paragraph("Paid To", STYLE_LABEL),
+        Paragraph(config.company_name, STYLE_PARTY_NAME),
+        Paragraph(
+            " · ".join([
+                p for p in [
+                    config.address and str(config.address).replace('\n', ', '),
+                    config.phone,
+                ] if p
+            ]),
+            STYLE_PARTY_DETAIL,
+        ),
+    ]
+    parties_tbl = Table(
+        [[received, paid_to]],
+        colWidths=[8.5 * cm, 8.5 * cm],
+    )
+    parties_tbl.setStyle(TableStyle([
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('LINEABOVE',     (0, 0), (-1, 0), 0.5, LIGHT_GREY),
+        ('LINEBELOW',     (0, 0), (-1, 0), 0.5, LIGHT_GREY),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('TOPPADDING',    (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(parties_tbl)
+    story.append(Spacer(1, 12))
+
+    # ---- Items table (invoice line items) ----
+    story.append(_items_table(invoice.items.all(), symbol))
+    story.append(Spacer(1, 10))
+
+    # ---- Totals: subtotal + optional VAT + transaction fee ----
+    totals_rows = [[
+        Paragraph('Subtotal', STYLE_TOT_LBL),
+        Paragraph(_fmt_money(symbol, invoice.subtotal), STYLE_TOT_VAL),
+    ]]
+    if invoice.include_vat and invoice.tax_amount and invoice.tax_amount > 0:
+        vat_percent = f"{float(config.vat_rate) * 100:.1f}"
+        totals_rows.append([
+            Paragraph(f'VAT ({vat_percent}%)', STYLE_TOT_LBL),
+            Paragraph(_fmt_money(symbol, invoice.tax_amount), STYLE_TOT_VAL),
+        ])
+        totals_rows.append([
+            Paragraph('Total', STYLE_TOT_LBL),
+            Paragraph(_fmt_money(symbol, invoice.total_amount), STYLE_TOT_VAL),
+        ])
+    if receipt.transaction_fee and receipt.transaction_fee > 0:
+        totals_rows.append([
+            Paragraph('Transaction fee (paid by payer)', STYLE_TOT_LBL),
+            Paragraph(_fmt_money(symbol, receipt.transaction_fee), STYLE_TOT_VAL),
+        ])
+
+    totals_tbl = Table(totals_rows, colWidths=[5 * cm, 3.4 * cm])
+    totals_tbl.setStyle(TableStyle([
+        ('LEFTPADDING',   (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 10),
+        ('TOPPADDING',    (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+
+    thank = Paragraph("Thank you for your payment!", STYLE_THANK)
+    totals_area = Table([[thank, totals_tbl]], colWidths=[8 * cm, 8.4 * cm])
+    totals_area.setStyle(TableStyle([
+        ('VALIGN',        (0, 0), (-1, -1), 'BOTTOM'),
+        ('ALIGN',         (1, 0), (1, 0), 'RIGHT'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+    ]))
+    story.append(totals_area)
+    story.append(Spacer(1, 8))
+
+    # ---- Amount Paid (blue bar) ----
+    amount_paid_row = Table(
+        [[
+            Paragraph('Amount Paid', STYLE_AMOUNT_LABEL),
+            Paragraph(_fmt_money(symbol, payment.amount), STYLE_AMOUNT_VALUE),
+        ]],
+        colWidths=[8 * cm, 8.4 * cm],
+    )
+    amount_paid_row.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), BLUE),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 12),
+        ('TOPPADDING',    (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+    ]))
+    story.append(amount_paid_row)
+    story.append(Spacer(1, 6))
+
+    # ---- PAID IN FULL banner ----
+    status_text = "PAID IN FULL"
+    status_fill = GREEN_SUCCESS
+    if not receipt.is_paid_in_full:
+        status_text = "PARTIAL PAYMENT"
+        status_fill = AMBER_TEXT
+
+    badge = Table(
+        [[Paragraph(
+            f"{status_text} — Payment received for {receipt.effective_reference} "
+            f"on {receipt_dt.strftime('%d/%m/%Y')}.",
+            STYLE_PAID_BADGE,
+        )]],
+        colWidths=[16.4 * cm],
+    )
+    badge.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), status_fill),
+        ('TOPPADDING',    (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    story.append(badge)
+    story.append(Spacer(1, 18))
+
+    # ---- Payment Details section ----
+    story.append(Paragraph("Payment Details", STYLE_TERMS_H))
+    story.append(Spacer(1, 4))
+
+    detail_rows = [("Payment Method", payment.get_method_display())]
+    if receipt.source_account:
+        detail_rows.append(("Source Account", receipt.source_account))
+    if receipt.destination_account:
+        detail_rows.append(("Destination", receipt.destination_account))
+    if receipt.transaction_id:
+        detail_rows.append(("Transaction ID", receipt.transaction_id))
+    if receipt_dt:
+        detail_rows.append(("Date & Time", receipt_dt.strftime('%d %b %Y, %H:%M')))
+    detail_rows.append(("Description", receipt.effective_description))
+
+    if receipt.transaction_fee and receipt.transaction_fee > 0:
+        detail_rows.append((
+            "Total Deducted from Payer",
+            f"{_fmt_money(symbol, receipt.total_deducted)} "
+            f"({_fmt_money(symbol, payment.amount)} + "
+            f"{_fmt_money(symbol, receipt.transaction_fee)} fee)",
+        ))
+    else:
+        detail_rows.append(
+            ("Total Deducted from Payer", _fmt_money(symbol, payment.amount))
+        )
+
+    detail_tbl_data = [
+        [Paragraph(label, STYLE_DETAIL_LABEL),
+         Paragraph(str(value), STYLE_DETAIL_VALUE)]
+        for label, value in detail_rows
+    ]
+    detail_tbl = Table(detail_tbl_data, colWidths=[5 * cm, 11.4 * cm])
+    detail_tbl.setStyle(TableStyle([
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 6),
+        ('TOPPADDING',    (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('BACKGROUND',    (0, 0), (0, -1), colors.HexColor('#f8fafc')),
+        ('LINEBELOW',     (0, 0), (-1, -2), 0.25, LIGHT_GREY),
+    ]))
+    story.append(detail_tbl)
+    story.append(Spacer(1, 16))
+
+    # ---- Footer (bank / mobile money) ----
+    if config.bank_name or config.mobile_money:
+        footer_parts = []
+        if config.bank_name:
+            bank_line = f"Bank: {config.bank_name}"
+            if config.bank_account:
+                bank_line += f" — Account: {config.bank_account}"
+            footer_parts.append(bank_line)
+        if config.mobile_money:
+            footer_parts.append(f"Mobile Money: {config.mobile_money}")
+        story.append(_terms_table(config, notes='\n'.join(footer_parts)))
 
     doc.build(story)
     return buffer.getvalue()
