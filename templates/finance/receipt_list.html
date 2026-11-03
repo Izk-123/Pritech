@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Receipts{% endblock %}
+{% block page_title %}Receipts{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="mb-0">Receipts</h1>
+    <small class="text-muted d-block">Auto-issued when an invoice is fully paid</small>
+  </div>
+  <form method="get" class="d-flex gap-2 w-100 w-sm-auto mt-3 mt-sm-0">
+    <input type="text" name="q" class="form-control" placeholder="Search #, invoice or client" value="{{ request.GET.q }}">
+    <button class="btn btn-outline-secondary flex-shrink-0">
+      <i class="bi bi-search"></i>
+    </button>
+  </form>
+</div>
+
+{% if receipts %}
+  <!-- Desktop Table -->
+  <div class="card d-none d-md-block">
+    <div class="table-responsive">
+      <table class="modern-table mb-0">
+        <thead>
+          <tr>
+            <th>Receipt #</th>
+            <th>Invoice #</th>
+            <th>Client</th>
+            <th class="text-end">Amount Paid</th>
+            <th class="text-end">Fee</th>
+            <th>Issued</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in receipts %}
+          <tr>
+            <td><a href="{% url 'receipt_detail' r.pk %}" class="fw-semibold">{{ r.receipt_number }}</a></td>
+            <td><a href="{% url 'invoice_detail' r.invoice.pk %}">{{ r.invoice.invoice_number }}</a></td>
+            <td>{{ r.invoice.client.name }}</td>
+            <td class="text-end fw-semibold">{{ site_config.currency_symbol }}{{ r.payment.amount|floatformat:2 }}</td>
+            <td class="text-end text-muted">{{ site_config.currency_symbol }}{{ r.transaction_fee|floatformat:2 }}</td>
+            <td class="small">{{ r.issued_at|date:"d M Y, H:i" }}</td>
+            <td><a href="{% url 'receipt_detail' r.pk %}" class="btn btn-sm btn-outline-secondary">View</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="d-md-none">
+    {% for r in receipts %}
+    <div class="list-card">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <div>
+          <a href="{% url 'receipt_detail' r.pk %}" class="list-card-title d-block text-decoration-none">
+            {{ r.receipt_number }}
+          </a>
+          <div class="small text-muted mt-1">
+            {{ r.invoice.invoice_number }} · {{ r.invoice.client.name|truncatechars:24 }}
+          </div>
+        </div>
+        <span class="badge bg-success flex-shrink-0">PAID</span>
+      </div>
+      <div class="d-flex justify-content-between align-items-end mb-3">
+        <div>
+          <div class="small text-muted">Amount Paid</div>
+          <div class="fw-bold fs-6">
+            {{ site_config.currency_symbol }}{{ r.payment.amount|floatformat:2 }}
+          </div>
+          {% if r.transaction_fee > 0 %}
+          <div class="small text-muted">
+            + {{ site_config.currency_symbol }}{{ r.transaction_fee|floatformat:2 }} fee
+          </div>
+          {% endif %}
+        </div>
+        <div class="small text-muted text-end">
+          {{ r.issued_at|date:"d M Y" }}<br>{{ r.issued_at|date:"H:i" }}
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-2">
+        <a href="{% url 'receipt_detail' r.pk %}" class="btn btn-sm btn-primary flex-fill">
+          <i class="bi bi-eye me-1"></i> View
+        </a>
+        <a href="{% url 'receipt_pdf_direct' r.pk %}" class="btn btn-sm btn-outline-primary flex-fill">
+          <i class="bi bi-download me-1"></i> PDF
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if is_paginated %}
+  <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+    <div class="text-muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+    <div class="btn-group">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-secondary">← Prev</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}" class="btn btn-sm btn-outline-secondary">Next →</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="empty-icon"><i class="bi bi-receipt-cutoff"></i></div>
+      <h5 class="text-muted mb-1">No receipts yet</h5>
+      <p class="small mb-0">Receipts appear here automatically when an invoice is fully paid.</p>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Extra padding so the bottom nav doesn't cover the last card -->
+<div class="d-md-none" style="height: 100px;"></div>
+{% endblock %}

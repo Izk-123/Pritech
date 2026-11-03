@@ -3,14 +3,31 @@
 {% block page_title %}Team Members{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h1>Team Members</h1>
+<div class="page-header d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="mb-0">Team Members</h1>
+    <p class="text-muted small mb-0">
+      People in <strong>{{ request.user.client_organization.name }}</strong> who can sign in to your Pritech account.
+    </p>
+  </div>
   {% if can_invite %}
     <a href="{% url 'client_team_invite' %}" class="btn btn-primary">
       <i class="bi bi-person-plus"></i> Invite Member
     </a>
   {% endif %}
 </div>
+
+{# ── NEW: team-management warning ─────────────────────────────────────── #}
+{% if can_invite %}
+<div class="alert alert-info d-flex gap-2 align-items-start mb-3">
+  <i class="bi bi-info-circle mt-1"></i>
+  <div>
+    Only invite colleagues you trust — team members can view your tickets,
+    services, and (depending on their role) invoices. Removing a member
+    permanently deletes their account in this organisation.
+  </div>
+</div>
+{% endif %}
 
 <div class="card">
   <div class="table-responsive">
@@ -27,15 +44,23 @@
           <td>{{ member.date_joined|date:"d M Y" }}</td>
           <td>
             {% if can_invite and member != request.user %}
-            <form method="post" action="{% url 'client_team_remove' member.pk %}" class="d-inline" onsubmit="return confirm('Remove this member?');">
+            <form method="post" action="{% url 'client_team_remove' member.pk %}"
+                  class="d-inline" onsubmit="return confirm('Remove {{ member.email }} permanently from your organisation? Their account will be deleted.');">
               {% csrf_token %}
-              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove member">
+                <i class="bi bi-trash"></i>
+              </button>
             </form>
             {% endif %}
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5">No team members yet.</td></tr>
+        <tr><td colspan="5" class="text-center text-muted py-4">
+          No team members yet.
+          {% if can_invite %}
+            <a href="{% url 'client_team_invite' %}">Invite your first colleague</a>.
+          {% endif %}
+        </td></tr>
         {% endfor %}
       </tbody>
     </table>

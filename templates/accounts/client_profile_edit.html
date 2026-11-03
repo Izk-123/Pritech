@@ -4,14 +4,160 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
+  <div class="col-md-9 col-lg-8">
+
+    {# ── NEW: warning banner about email fields ────────────────────────── #}
+    <div class="alert alert-warning d-flex gap-2 align-items-start mb-3">
+      <i class="bi bi-shield-exclamation mt-1"></i>
+      <div>
+        <strong>Emails must be real and permanent.</strong>
+        Your <em>personal</em> email is what you use to log in — it cannot be a
+        disposable address (Mailinator, 10MinuteMail, …) and the domain must be
+        able to receive mail. If you change it, the new address must pass the
+        same checks.
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-body">
-        <form method="post">
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" novalidate>
           {% csrf_token %}
-          {{ form.as_p }}
-          <button type="submit" class="btn btn-primary">Save Changes</button>
-          <a href="{% url 'profile' %}" class="btn btn-secondary">Cancel</a>
+
+          <h6 class="text-uppercase text-muted small fw-bold mb-3">Personal details</h6>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">First name</label>
+              <input type="text" name="first_name"
+                     class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                     value="{{ form.first_name.value|default:'' }}">
+              {% if form.first_name.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.first_name.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Last name</label>
+              <input type="text" name="last_name"
+                     class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                     value="{{ form.last_name.value|default:'' }}">
+              {% if form.last_name.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.last_name.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Personal email <span class="text-danger">*</span>
+            </label>
+            <input type="email" name="email"
+                   class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                   value="{{ form.email.value|default:'' }}" required>
+            {% if form.email.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.email.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+            <div class="form-text">
+              <i class="bi bi-info-circle"></i>
+              Used for login and 2FA recovery. Must be a real, permanent address.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Phone number</label>
+            <input type="text" name="phone_number"
+                   class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}"
+                   value="{{ form.phone_number.value|default:'' }}">
+            {% if form.phone_number.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.phone_number.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Physical address</label>
+            <textarea name="physical_address"
+                      class="form-control {% if form.physical_address.errors %}is-invalid{% endif %}"
+                      rows="3">{{ form.physical_address.value|default:'' }}</textarea>
+            {% if form.physical_address.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.physical_address.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <hr class="my-4">
+
+          <h6 class="text-uppercase text-muted small fw-bold mb-3">Organisation</h6>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Company / organisation name</label>
+            <input type="text" name="company_name"
+                   class="form-control {% if form.company_name.errors %}is-invalid{% endif %}"
+                   value="{{ form.company_name.value|default:'' }}" required>
+            {% if form.company_name.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.company_name.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Company phone</label>
+              <input type="text" name="company_phone"
+                     class="form-control {% if form.company_phone.errors %}is-invalid{% endif %}"
+                     value="{{ form.company_phone.value|default:'' }}">
+              {% if form.company_phone.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.company_phone.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Company email</label>
+              <input type="email" name="company_email"
+                     class="form-control {% if form.company_email.errors %}is-invalid{% endif %}"
+                     value="{{ form.company_email.value|default:'' }}">
+              {% if form.company_email.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.company_email.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+              <div class="form-text">
+                Public contact email shown on invoices. Optional, but must be a real address if set.
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Company address</label>
+            <textarea name="company_address"
+                      class="form-control {% if form.company_address.errors %}is-invalid{% endif %}"
+                      rows="2">{{ form.company_address.value|default:'' }}</textarea>
+            {% if form.company_address.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.company_address.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{% url 'profile' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
         </form>
       </div>
     </div>

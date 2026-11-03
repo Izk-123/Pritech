@@ -4,14 +4,98 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
+  <div class="col-md-7 col-lg-6">
+
+    {# ── NEW: warning banner about real email requirement ──────────────── #}
+    <div class="alert alert-warning d-flex gap-2 align-items-start mb-3">
+      <i class="bi bi-shield-exclamation mt-1"></i>
+      <div>
+        <strong>Use a real, permanent email address.</strong>
+        Disposable / temporary providers (Mailinator, 10MinuteMail, Yopmail, …)
+        are blocked. The recipient must be able to click the invitation link we
+        send — otherwise they cannot join.
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-body">
-        <form method="post">
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" novalidate>
           {% csrf_token %}
-          {{ form.as_p }}
-          <button type="submit" class="btn btn-primary">Send Invitation</button>
-          <a href="{% url 'client_team' %}" class="btn btn-secondary">Cancel</a>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email address</label>
+            <input type="email" name="email"
+                   class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                   value="{{ form.email.value|default:'' }}"
+                   placeholder="teammate@company.com" required>
+            {% if form.email.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.email.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+            <div class="form-text">
+              The invitation link expires after 7 days.
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">First name</label>
+              <input type="text" name="first_name"
+                     class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                     value="{{ form.first_name.value|default:'' }}" required>
+              {% if form.first_name.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.first_name.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label fw-semibold">Last name</label>
+              <input type="text" name="last_name"
+                     class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                     value="{{ form.last_name.value|default:'' }}" required>
+              {% if form.last_name.errors %}
+                <div class="invalid-feedback d-block">
+                  {% for error in form.last_name.errors %}{{ error }}{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Role in your organisation</label>
+            <select name="role"
+                    class="form-select {% if form.role.errors %}is-invalid{% endif %}">
+              {% for value, label in form.fields.role.choices %}
+                <option value="{{ value }}"
+                  {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            {% if form.role.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.role.errors %}{{ error }}{% endfor %}
+              </div>
+            {% endif %}
+            <div class="form-text">
+              <strong>Administrator:</strong> can invite / remove team members.
+              <strong>Billing:</strong> accesses invoices &amp; quotations.
+              <strong>Viewer:</strong> read-only access to tickets &amp; services.
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i> Send Invitation
+            </button>
+            <a href="{% url 'client_team' %}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
         </form>
       </div>
     </div>

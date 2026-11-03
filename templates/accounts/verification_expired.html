@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Verification link expired{% endblock %}
+{% block page_title %}Link expired{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-sm border-0">
+        <div class="card-body text-center py-5">
+
+          <i class="bi bi-clock-history display-3 text-warning"></i>
+
+          <h2 class="fw-bold mt-3">This link has expired</h2>
+          <p class="text-muted mt-2">
+            Verification links are valid for 24 hours. No worries &mdash;
+            we can send a fresh one.
+          </p>
+
+          <form method="post" action="{% url 'resend_verification' %}">
+            {% csrf_token %}
+            <input type="hidden" name="email" value="{{ email }}">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-send me-1"></i>
+              Send a new link to {{ email }}
+            </button>
+          </form>
+
+          <hr class="my-4">
+
+          <a href="{% url 'login' %}" class="text-muted small">
+            <i class="bi bi-arrow-left me-1"></i> Back to sign in
+          </a>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

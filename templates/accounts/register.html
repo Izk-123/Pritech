@@ -13,37 +13,27 @@
   <style>
     body { background: var(--bg-secondary); }
     .register-card { max-width: 550px; border-radius: 20px; }
-    .password-wrapper {
-      position: relative;
-    }
-    .password-wrapper input {
-      padding-right: 40px;
-    }
+    .password-wrapper { position: relative; }
+    .password-wrapper input { padding-right: 40px; }
     .password-toggle {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      cursor: pointer;
-      color: var(--text-muted);
-      background: transparent;
-      border: none;
-      z-index: 10;
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      cursor: pointer; color: var(--text-muted); background: transparent;
+      border: none; z-index: 10;
     }
-    .password-match-feedback {
-      font-size: 0.8rem;
-      margin-top: 0.25rem;
+    .password-match-feedback { font-size: 0.8rem; margin-top: 0.25rem; }
+    .password-match-feedback.valid { color: var(--success); }
+    .password-match-feedback.invalid { color: var(--danger); }
+    .password-strength { margin-top: 0.25rem; font-size: 0.75rem; }
+    .field-error { color: var(--danger); font-size: 0.85rem; margin-top: 0.25rem; }
+    .email-warning-card {
+      background: #fff7ed; border: 1px solid #fbbf24; border-radius: 12px;
+      padding: 0.85rem 1rem; font-size: 0.85rem; color: #92400e;
     }
-    .password-match-feedback.valid {
-      color: var(--success);
+    [data-theme="dark"] .email-warning-card {
+      background: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.4);
+      color: #fcd34d;
     }
-    .password-match-feedback.invalid {
-      color: var(--danger);
-    }
-    .password-strength {
-      margin-top: 0.25rem;
-      font-size: 0.75rem;
-    }
+    .email-warning-card i { font-size: 1.1rem; }
   </style>
 </head>
 <body class="d-flex align-items-center min-vh-100 p-3">
@@ -65,61 +55,159 @@
             <h2 class="fw-bold" style="color: var(--text-primary);">Create account</h2>
             <p style="color: var(--text-muted);">Client registration</p>
           </div>
+
+          {# ── NEW: email-requirements warning banner ─────────────────────── #}
+          <div class="email-warning-card mb-3 d-flex gap-2 align-items-start">
+            <i class="bi bi-shield-exclamation mt-1"></i>
+            <div>
+              <strong>Use a real email address.</strong>
+              Temporary / disposable providers (Mailinator, 10MinuteMail, Yopmail, …)
+              are blocked, and we verify the domain can actually receive mail.
+              You must click the verification link we send before you can sign in.
+            </div>
+          </div>
+
+          {# ── NEW: non-field errors (e.g. password mismatch) ────────────── #}
           {% if form.non_field_errors %}
-            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            <div class="alert alert-danger mb-3">
+              {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
           {% endif %}
+          {% if messages %}
+            {% for m in messages %}
+              <div class="alert alert-{{ m.tags }} mb-3">{{ m }}</div>
+            {% endfor %}
+          {% endif %}
+
           <form method="post" id="registerForm" novalidate>
             {% csrf_token %}
             <div class="row g-3">
+
+              {# ── Company name ────────────────────────────────────────── #}
               <div class="col-12">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">Company name</label>
-                <input type="text" name="company_name" class="form-control" required>
+                <input type="text" name="company_name"
+                       class="form-control {% if form.company_name.errors %}is-invalid{% endif %}"
+                       value="{{ form.company_name.value|default:'' }}" required>
+                {% if form.company_name.errors %}
+                  <div class="field-error">
+                    {% for error in form.company_name.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
+
+              {# ── First / last name ───────────────────────────────────── #}
               <div class="col-sm-6">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">First name</label>
-                <input type="text" name="first_name" class="form-control" required>
+                <input type="text" name="first_name"
+                       class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                       value="{{ form.first_name.value|default:'' }}" required>
+                {% if form.first_name.errors %}
+                  <div class="field-error">
+                    {% for error in form.first_name.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
               <div class="col-sm-6">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">Last name</label>
-                <input type="text" name="last_name" class="form-control" required>
+                <input type="text" name="last_name"
+                       class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                       value="{{ form.last_name.value|default:'' }}" required>
+                {% if form.last_name.errors %}
+                  <div class="field-error">
+                    {% for error in form.last_name.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
+
+              {# ── Email (critical: shows deliverability errors) ──────── #}
               <div class="col-12">
-                <label class="form-label fw-semibold" style="color: var(--text-primary);">Email</label>
-                <input type="email" name="email" class="form-control" required>
+                <label class="form-label fw-semibold" style="color: var(--text-primary);">
+                  Email <span class="text-danger">*</span>
+                </label>
+                <input type="email" name="email"
+                       class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                       value="{{ form.email.value|default:'' }}"
+                       placeholder="you@company.com" required>
+                {% if form.email.errors %}
+                  <div class="field-error">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    {% for error in form.email.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
+                <div class="form-text" style="color: var(--text-muted); font-size: 0.78rem;">
+                  We'll send a verification link — you must click it before logging in.
+                </div>
               </div>
+
+              {# ── Phone ───────────────────────────────────────────────── #}
               <div class="col-12">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">Phone</label>
-                <input type="text" name="phone_number" class="form-control" placeholder="+265 999 000 000">
+                <input type="text" name="phone_number"
+                       class="form-control {% if form.phone_number.errors %}is-invalid{% endif %}"
+                       value="{{ form.phone_number.value|default:'' }}"
+                       placeholder="+265 999 000 000">
+                {% if form.phone_number.errors %}
+                  <div class="field-error">
+                    {% for error in form.phone_number.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
+
+              {# ── Address ────────────────────────────────────────────── #}
               <div class="col-12">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">Address</label>
-                <textarea name="physical_address" class="form-control" rows="2"></textarea>
+                <textarea name="physical_address"
+                          class="form-control {% if form.physical_address.errors %}is-invalid{% endif %}"
+                          rows="2">{{ form.physical_address.value|default:'' }}</textarea>
+                {% if form.physical_address.errors %}
+                  <div class="field-error">
+                    {% for error in form.physical_address.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
+
+              {# ── Password ───────────────────────────────────────────── #}
               <div class="col-sm-6">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">Password</label>
                 <div class="password-wrapper">
-                  <input type="password" name="password" id="password" class="form-control" required>
+                  <input type="password" name="password" id="password"
+                         class="form-control {% if form.password.errors %}is-invalid{% endif %}" required>
                   <button type="button" class="password-toggle" id="togglePassword">
                     <i class="bi bi-eye-slash"></i>
                   </button>
                 </div>
                 <div class="password-strength" id="passwordStrength"></div>
+                {% if form.password.errors %}
+                  <div class="field-error">
+                    {% for error in form.password.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
               <div class="col-sm-6">
                 <label class="form-label fw-semibold" style="color: var(--text-primary);">Confirm password</label>
                 <div class="password-wrapper">
-                  <input type="password" name="confirm_password" id="confirm_password" class="form-control" required>
+                  <input type="password" name="confirm_password" id="confirm_password"
+                         class="form-control {% if form.confirm_password.errors %}is-invalid{% endif %}" required>
                   <button type="button" class="password-toggle" id="toggleConfirmPassword">
                     <i class="bi bi-eye-slash"></i>
                   </button>
                 </div>
                 <div class="password-match-feedback" id="passwordMatchFeedback"></div>
+                {% if form.confirm_password.errors %}
+                  <div class="field-error">
+                    {% for error in form.confirm_password.errors %}{{ error }}{% endfor %}
+                  </div>
+                {% endif %}
               </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100 py-2 mt-4 fw-semibold">Create account</button>
+            <button type="submit" class="btn btn-primary w-100 py-2 mt-4 fw-semibold">
+              Create account
+            </button>
           </form>
           <p class="text-center mt-4 mb-0" style="color: var(--text-muted);">
-            Have an account? <a href="{% url 'login' %}" class="fw-semibold" style="color: var(--primary);">Sign in</a>
+            Have an account?
+            <a href="{% url 'login' %}" class="fw-semibold" style="color: var(--primary);">Sign in</a>
           </p>
         </div>
       </div>
@@ -145,9 +233,11 @@
         darkIcon.style.display = 'none';
       }
     }
-    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const savedTheme = localStorage.getItem('theme')
+      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     setTheme(savedTheme);
-    themeToggle?.addEventListener('click', () => setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
+    themeToggle?.addEventListener('click',
+      () => setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
 
     // Password visibility toggles
     const togglePassword = document.getElementById('togglePassword');
@@ -168,16 +258,13 @@
       this.querySelector('i').classList.toggle('bi-eye-slash');
     });
 
-    // Real‑time password match validation
+    // Password match validation
     const password = document.getElementById('password');
     const confirm = document.getElementById('confirm_password');
     const feedback = document.getElementById('passwordMatchFeedback');
-
     function validatePasswordMatch() {
       if (password.value === '' && confirm.value === '') {
-        feedback.textContent = '';
-        feedback.className = 'password-match-feedback';
-        return;
+        feedback.textContent = ''; feedback.className = 'password-match-feedback'; return;
       }
       if (password.value === confirm.value) {
         feedback.textContent = '✓ Passwords match';
@@ -187,18 +274,14 @@
         feedback.className = 'password-match-feedback invalid';
       }
     }
-
     password?.addEventListener('input', validatePasswordMatch);
     confirm?.addEventListener('input', validatePasswordMatch);
 
-    // Optional: simple password strength indicator (basic)
+    // Simple strength meter
     const strengthDiv = document.getElementById('passwordStrength');
     function checkStrength() {
       const val = password.value;
-      if (!val) {
-        strengthDiv.textContent = '';
-        return;
-      }
+      if (!val) { strengthDiv.textContent = ''; return; }
       let strength = 'Weak';
       if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val)) {
         strength = 'Strong';
@@ -206,7 +289,9 @@
         strength = 'Medium';
       }
       strengthDiv.textContent = `Password strength: ${strength}`;
-      strengthDiv.style.color = strength === 'Strong' ? 'var(--success)' : (strength === 'Medium' ? 'var(--warning)' : 'var(--danger)');
+      strengthDiv.style.color = strength === 'Strong'
+        ? 'var(--success)'
+        : (strength === 'Medium' ? 'var(--warning)' : 'var(--danger)');
     }
     password?.addEventListener('input', checkStrength);
   })();
