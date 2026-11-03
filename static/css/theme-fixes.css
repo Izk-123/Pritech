@@ -1,0 +1,349 @@
+/* ============================================================
+   PRITECH — THEME & MOBILE FIXES (v2.0)
+   Overrides Bootstrap's hard-coded colours, makes every
+   component respect --bg / --text / --border variables, and
+   improves mobile UX (touch targets, tables, page headers).
+   Load AFTER bootstrap.min.css AND mobile-first.css.
+   ============================================================ */
+
+/* ---------- BODY / GLOBAL ---------- */
+body {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+h1,h2,h3,h4,h5,h6,.h1,.h2,.h3,.h4,.h5,.h6 { color: var(--text-primary); }
+p, .text-body { color: var(--text-secondary); }
+a { color: var(--primary); }
+a:hover { color: var(--primary-dark); }
+.text-muted { color: var(--text-muted) !important; }
+.text-body  { color: var(--text-primary) !important; }
+.text-dark  { color: var(--text-primary) !important; }
+.text-light { color: var(--text-primary) !important; }
+
+code {
+  color: var(--primary);
+  background-color: var(--bg-tertiary);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+pre code { background: transparent; padding: 0; }
+
+/* ---------- FORMS ---------- */
+.form-control,
+.form-select,
+textarea,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"] {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  transition: border-color .15s, box-shadow .15s, background-color .15s;
+}
+.form-control::placeholder { color: var(--text-muted) !important; opacity: 1; }
+.form-control:focus,
+.form-select:focus {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(65,84,241,.15) !important;
+}
+.form-control:disabled,
+.form-select:disabled,
+.form-control[readonly] {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-muted) !important;
+}
+.form-control::file-selector-button {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.form-label,
+.form-check-label,
+.col-form-label { color: var(--text-primary); }
+.form-text,
+small.form-text { color: var(--text-muted) !important; }
+
+.form-check-input {
+  background-color: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+}
+.form-check-input:checked {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* ---------- CARDS ---------- */
+.card {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+.card-header,
+.card-footer {
+  background-color: transparent !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+.card-title { color: var(--text-primary) !important; }
+
+/* ---------- TABLES ---------- */
+.table {
+  --bs-table-color:            var(--text-primary);
+  --bs-table-bg:               transparent;
+  --bs-table-border-color:     var(--border-color);
+  --bs-table-striped-bg:       var(--bg-tertiary);
+  --bs-table-striped-color:    var(--text-primary);
+  --bs-table-hover-bg:         var(--hover-bg);
+  --bs-table-hover-color:      var(--text-primary);
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+.table > :not(caption) > * > * {
+  background-color: transparent;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+.table thead th { color: var(--text-secondary); }
+.table-light { --bs-table-bg: var(--bg-tertiary); --bs-table-color: var(--text-primary); }
+.table-dark  { --bs-table-bg: var(--bg-tertiary); --bs-table-color: var(--text-primary);
+               --bs-table-border-color: var(--border-color); }
+
+/* ---------- DROPDOWNS / MODALS / OFFCANVAS ---------- */
+.dropdown-menu {
+  background-color: var(--card-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary);
+}
+.dropdown-item                 { color: var(--text-secondary); }
+.dropdown-item:hover,
+.dropdown-item:focus           { background-color: var(--hover-bg) !important;
+                                 color: var(--text-primary) !important; }
+.dropdown-item.active,
+.dropdown-item:active          { background-color: var(--primary) !important;
+                                 color: #fff !important; }
+.dropdown-divider              { border-color: var(--border-color) !important; }
+
+.modal-content {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+.modal-header,
+.modal-footer { border-color: var(--border-color) !important; }
+
+.offcanvas {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+.offcanvas-header { border-color: var(--border-color); }
+
+[data-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* ---------- LIST GROUP / PAGINATION ---------- */
+.list-group-item {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+.page-link {
+  background-color: var(--card-bg) !important;
+  color: var(--primary) !important;
+  border-color: var(--border-color) !important;
+}
+.page-link:hover {
+  background-color: var(--hover-bg) !important;
+  color: var(--primary-dark) !important;
+}
+.page-item.active .page-link {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+}
+.page-item.disabled .page-link {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-muted) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* ---------- ALERTS (theme-aware) ---------- */
+.alert { color: var(--text-primary); border-width: 1px; }
+.alert-info    { background: rgba(13,202,240,.10) !important;
+                 border-color: rgba(13,202,240,.30) !important;
+                 color: var(--text-primary) !important; }
+.alert-success { background: rgba(25,135,84,.10) !important;
+                 border-color: rgba(25,135,84,.30) !important;
+                 color: var(--text-primary) !important; }
+.alert-warning { background: rgba(255,193,7,.10) !important;
+                 border-color: rgba(255,193,7,.30) !important;
+                 color: var(--text-primary) !important; }
+.alert-danger  { background: rgba(220,53,69,.10) !important;
+                 border-color: rgba(220,53,69,.30) !important;
+                 color: var(--text-primary) !important; }
+.alert-secondary { background: var(--bg-tertiary) !important;
+                   border-color: var(--border-color) !important;
+                   color: var(--text-primary) !important; }
+
+/* ---------- BADGES / BG UTILITIES ---------- */
+.badge.bg-light,
+.badge.bg-secondary {
+  background-color: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+.badge.bg-white {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="dark"] .bg-light { background-color: var(--bg-tertiary) !important;
+                                color: var(--text-primary) !important; }
+[data-theme="dark"] .bg-white { background-color: var(--bg-secondary) !important;
+                                color: var(--text-primary) !important; }
+
+/* ---------- NAV TABS ---------- */
+.nav-tabs { border-color: var(--border-color); }
+.nav-tabs .nav-link { color: var(--text-secondary); }
+.nav-tabs .nav-link.active {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color) var(--border-color) var(--card-bg);
+}
+
+/* ============================================================
+   MOBILE UX IMPROVEMENTS
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+  /* Force page-header to stack, even when templates add
+     Bootstrap's `.d-flex .align-items-center` (!important). */
+  .page-header,
+  .page-header.d-flex,
+  .page-header.d-flex.justify-content-between {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: .75rem;
+  }
+  .page-header h1             { font-size: 1.4rem; }
+  .page-header > .btn,
+  .page-header .d-flex > .btn { width: 100%; justify-content: center; }
+
+  .card-body   { padding: 1rem; }
+  .card-header { padding: .75rem 1rem; }
+  .card        { margin-bottom: 1rem; }
+
+  .stat-card   { padding: 1rem; border-radius: 12px; }
+  .stat-value,
+  .stat-number { font-size: 1.6rem; }
+  .stat-label  { font-size: .7rem; }
+
+  .container-fluid { padding-left: .75rem; padding-right: .75rem; }
+}
+
+@media (max-width: 767.98px) {
+  /* Touch-friendly targets */
+  .btn       { min-height: 42px; }
+  .btn-sm    { min-height: 34px; }
+  .nav-link  { min-height: 42px; display: flex; align-items: center; }
+
+  /* iOS: prevent zoom-on-focus by forcing 16px */
+  .form-control,
+  .form-select,
+  input,
+  select,
+  textarea { font-size: 16px !important; }
+
+  /* Search / filter rows: stack reliably */
+  .card-body .row.g-2 > [class*="col-md"],
+  .card-body .row.g-2 > .col-auto {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Horizontal scroll hint for tables */
+  .table-responsive {
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-responsive::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 22px;
+    background: linear-gradient(to right,
+                transparent, var(--card-bg));
+    pointer-events: none;
+    opacity: .85;
+    border-radius: 0 12px 12px 0;
+  }
+
+  .modern-table { min-width: 500px; }
+  .modern-table th,
+  .modern-table td {
+    padding: .65rem .75rem !important;
+    font-size: .875rem !important;
+  }
+
+  /* Remove hover translate on touch devices (jumpy UX) */
+  .card:hover,
+  .stat-card:hover,
+  .list-card:hover,
+  .project-card:hover { transform: none !important; }
+}
+
+@media (max-width: 575.98px) {
+  .stat-card   { padding: .8rem; }
+  .stat-value,
+  .stat-number { font-size: 1.35rem; }
+  .page-header h1 { font-size: 1.2rem; }
+  .card-body   { padding: .85rem; }
+  .modern-table { min-width: 420px; }
+  .modern-table th,
+  .modern-table td {
+    padding: .55rem .6rem !important;
+    font-size: .82rem !important;
+  }
+  .btn { font-size: .875rem; }
+}
+
+/* ============================================================
+   DARK-MODE EXTRAS (autofill, native select arrow, etc.)
+   ============================================================ */
+[data-theme="dark"] { color-scheme: dark; }
+
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-primary) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+[data-theme="dark"] .form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+}
+
+/* Fallback for templates using body.dark-mode instead of data-theme */
+body.dark-mode { color-scheme: dark; }
+
+/* ---------- FOCUS RINGS ---------- */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- PRINT ---------- */
+@media print {
+  body, .card, .table, .form-control {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ccc !important;
+  }
+  .btn, .page-header .btn { display: none !important; }
+}
