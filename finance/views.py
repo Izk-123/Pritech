@@ -3,14 +3,16 @@
 Finance App Views
 -----------------
 Complete set of views for financial management:
+
 - Quotations (CRUD, send, convert, duplicate, delete, PDF, print, Word, Excel)
-- Invoices (CRUD, add items, record payment, issue, bulk actions, CSV export, PDF, Excel)
-- Expenses (list, create, approve, reject)
+- Invoices   (CRUD, add items, record payment, issue, bulk actions, CSV, PDF, Excel)
+- Receipts   (list, detail, PDF download) — auto-created when invoice is paid
+- Expenses   (list, create, approve, reject)
 - Financial Reports
-- Client portal (invoices, quotations, approve/reject, subscription management)
+- Client portal (invoices, quotations, receipts, approve/reject, subscription)
 - HTMX real-time endpoints
 
-Excel exports now follow the printable invoice template layout:
+Excel exports follow the printable invoice template layout:
 - Vertical rotated "INVOICE"/"QUOTATION" label on the left (column B)
 - Company block (column C) with logo top-right
 - BILL TO / LOCATION / Dates three-column layout
@@ -23,25 +25,27 @@ import csv
 import json
 import logging
 from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.cache import cache
+from django.db import models, transaction
+from django.db.models import Q
+from django.http import HttpResponse, Http404
+from django.shortcuts import get_object_or_404, redirect
+from django.template.loader import render_to_string
+from django.template.response import TemplateResponse
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.utils.decorators import method_decorator
 from django.views.generic import (
     ListView, CreateView, DetailView, UpdateView,
     TemplateView, View, DeleteView,
 )
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
-from django.contrib import messages
-from django.http import HttpResponse, Http404
-from django.db import models, transaction
-from django.utils import timezone
-from django.core.cache import cache
-from django.utils.decorators import method_decorator
-from django.template.loader import render_to_string
-from django.template.response import TemplateResponse
-from django.db.models import Q
-from django.conf import settings
 
 # Excel
 import openpyxl
@@ -51,13 +55,13 @@ from openpyxl.drawing.image import Image as XLImage
 # Local imports
 from .models import (
     Invoice, Expense, InvoiceItem, Quotation, QuotationItem,
-    Plan, ClientSubscription,
+    Payment, Receipt, Plan, ClientSubscription,
 )
 from .forms import (
     InvoiceForm, InvoiceItemForm, PaymentForm, ExpenseForm,
     QuotationForm, QuotationItemFormSet, SubscriptionChangeForm,
 )
-from .services import InvoiceService, QuotationService
+from .services import InvoiceService, QuotationService, ReceiptService
 from .reports import ReportService
 from .tasks import generate_invoice_pdf, generate_quotation_pdf
 
@@ -79,10 +83,10 @@ GREY_LABEL = "64748B"
 
 
 # -----------------------------------------------------------------------------
-# Helper: send payment reminder
+# Helper: send payment reminder email
 # -----------------------------------------------------------------------------
 def send_payment_reminder(invoice):
-    """Send an email reminder to client for overdue or outstanding invoice."""
+    """Send an email reminder to client for an overdue or outstanding invoice."""
     try:
         from django.core.mail import send_mail
         config = SiteConfig.get()
@@ -90,25 +94,29 @@ def send_payment_reminder(invoice):
         message = (
             f"Dear {invoice.client.name},\n\n"
             f"Invoice {invoice.invoice_number} of amount "
-            f"{config.currency_symbol}{invoice.balance_due} is due on {invoice.due_date}. "
-            f"Please arrange payment.\n\n"
+            f"{config.currency_symbol}{invoice.balance_due} is due on "
+            f"{invoice.due_date}. Please arrange payment.\n\n"
             f"Thank you for your business.\n\n"
             f"{config.company_name}"
         )
         send_mail(
             subject=subject, message=message,
             from_email=config.email or settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[invoice.client.email], fail_silently=True,
+            recipient_list=[invoice.client.email],
+            fail_silently=True,
         )
     except Exception as e:
-        logger.warning(f"Failed to send payment reminder for {invoice.invoice_number}: {e}")
+        logger.warning(
+            f"Failed to send payment reminder for "
+            f"{invoice.invoice_number}: {e}"
+        )
 
 
 # -----------------------------------------------------------------------------
 # Excel helper functions
 # -----------------------------------------------------------------------------
 def _setup_excel_columns(ws):
-    """Set column widths matching the reference printable layout."""
+    """Set column widths matching the printable layout."""
     ws.column_dimensions['A'].width = 2
     ws.column_dimensions['B'].width = 5.5
     ws.column_dimensions['C'].width = 40
@@ -122,7 +130,9 @@ def _setup_excel_columns(ws):
 def _embed_logo_topright(ws, logo_path, size_px=130, anchor='F1'):
     """Place the logo floating top-right of the sheet."""
     if not logo_path or not Path(logo_path).exists():
-        logger.warning(f"Logo not found at {logo_path}; Excel export will have no logo.")
+        logger.warning(
+            f"Logo not found at {logo_path}; Excel export will have no logo."
+        )
         return
     try:
         img = XLImage(str(logo_path))
@@ -136,38 +146,23 @@ def _embed_logo_topright(ws, logo_path, size_px=130, anchor='F1'):
 def _write_excel_header(ws, config, doc_type, doc_number,
                         party_label, party_lines,
                         location_lines, date_lines):
-    """
-    Write the top header block (company, logo space, vertical label, parties, dates).
-
-    Layout (columns):
-      B3      -> #<doc_number>
-      C2      -> Company Name (blue, bold)
-      C3-C5   -> Address / Website / Contact
-      B9:B13  -> vertical (rotated) doc_type label
-      C8      -> party_label    (e.g. "BILL TO")
-      C9-C11  -> party_lines
-      E8      -> "LOCATION"
-      E9-E11  -> location_lines
-      G8/G9   -> date label/value pairs (right aligned)
-    """
-    # Reserve row heights for the logo area
+    """Write the top header block (company, logo, parties, dates)."""
     for r in range(1, 7):
         ws.row_dimensions[r].height = 22
 
-    # #INV-0001 in B3
-    ws.cell(row=3, column=2, value=f"#{doc_number}").font = Font(bold=True, size=10, color=BRAND_BLUE)
+    ws.cell(row=3, column=2, value=f"#{doc_number}").font = Font(
+        bold=True, size=10, color=BRAND_BLUE,
+    )
 
-    # Company name in C2
     c = ws.cell(row=2, column=3, value=config.company_name)
     c.font = Font(bold=True, size=16, color=BRAND_BLUE)
 
-    # Address / Website / Contact
     ws.cell(row=3, column=3, value=config.address or '').font = Font(size=9)
     ws.cell(row=4, column=3, value=config.website or '').font = Font(size=9)
     contact = " · ".join([p for p in [config.email, config.phone] if p])
     ws.cell(row=5, column=3, value=contact).font = Font(size=9)
 
-    # ---- Vertical label B9:B13 ----
+    # Vertical doc_type label
     ws.merge_cells('B9:B13')
     vcell = ws['B9']
     vcell.value = doc_type
@@ -176,22 +171,22 @@ def _write_excel_header(ws, config, doc_type, doc_number,
         text_rotation=90, horizontal='center', vertical='center'
     )
 
-    # ---- Party block (BILL TO / Prepared For) ----
+    # Party block
     ws.cell(row=8, column=3, value=party_label).font = Font(
-        bold=True, size=9, color=BRAND_BLUE
+        bold=True, size=9, color=BRAND_BLUE,
     )
     for i, line in enumerate(party_lines):
         cell = ws.cell(row=9 + i, column=3, value=line)
         cell.font = Font(bold=True, size=10) if i == 0 else Font(size=9)
 
-    # ---- Location block ----
+    # Location block
     ws.cell(row=8, column=5, value="LOCATION").font = Font(
-        bold=True, size=9, color=BRAND_BLUE
+        bold=True, size=9, color=BRAND_BLUE,
     )
     for i, line in enumerate(location_lines):
         ws.cell(row=9 + i, column=5, value=line).font = Font(size=9)
 
-    # ---- Dates (right aligned) ----
+    # Dates (right aligned)
     for i, (label, value) in enumerate(date_lines):
         lbl = ws.cell(row=8 + i, column=7, value=label)
         lbl.font = Font(bold=True, size=9)
@@ -201,17 +196,8 @@ def _write_excel_header(ws, config, doc_type, doc_number,
 
 
 def _write_items_table(ws, items, start_row):
-    """
-    Write the items table starting at `start_row`.
-    Header row: C=DESCRIPTION | E=QTY | F=UNIT PRICE | H=TOTAL
-    Returns the row index AFTER the last item.
-    """
-    headers = [
-        (3, "DESCRIPTION"),
-        (5, "QTY"),
-        (6, "UNIT PRICE"),
-        (8, "TOTAL"),
-    ]
+    """Write the items table starting at `start_row`. Returns next row index."""
+    headers = [(3, "DESCRIPTION"), (5, "QTY"), (6, "UNIT PRICE"), (8, "TOTAL")]
     for col, label in headers:
         c = ws.cell(row=start_row, column=col, value=label)
         c.font = Font(bold=True, color=WHITE, size=9)
@@ -225,23 +211,22 @@ def _write_items_table(ws, items, start_row):
 
     row = start_row + 1
     for idx, item in enumerate(items):
-        # Description
         ws.cell(row=row, column=3, value=str(item.description)).font = Font(size=9)
-        # Qty
         qty = ws.cell(row=row, column=5, value=float(item.quantity))
-        qty.font = Font(size=9); qty.alignment = Alignment(horizontal='center')
-        # Unit price
+        qty.font = Font(size=9)
+        qty.alignment = Alignment(horizontal='center')
         up = ws.cell(row=row, column=6, value=float(item.unit_price))
-        up.font = Font(size=9); up.alignment = Alignment(horizontal='right')
-        # Total
+        up.font = Font(size=9)
+        up.alignment = Alignment(horizontal='right')
         tot = ws.cell(row=row, column=8, value=float(item.total))
-        tot.font = Font(size=9); tot.alignment = Alignment(horizontal='right')
+        tot.font = Font(size=9)
+        tot.alignment = Alignment(horizontal='right')
 
-        # Zebra stripe
         if idx % 2 == 1:
             for col in (3, 5, 6, 8):
-                ws.cell(row=row, column=col).fill = PatternFill('solid', fgColor="F8FAFC")
-
+                ws.cell(row=row, column=col).fill = PatternFill(
+                    'solid', fgColor="F8FAFC"
+                )
         row += 1
     return row
 
@@ -249,13 +234,11 @@ def _write_items_table(ws, items, start_row):
 def _write_totals_block(ws, start_row, subtotal, tax_amount, total_amount,
                         include_vat, vat_rate,
                         amount_paid=None, balance_due=None):
-    """
-    Write the totals block starting at `start_row`.
-    Layout: G = label | H = value
-    """
+    """Write the totals block starting at `start_row`."""
     def _put(r, label, value, bold=False, highlight=False, fmt=None):
         lbl = ws.cell(row=r, column=7, value=label)
-        lbl.font = Font(bold=True, size=9, color=WHITE if highlight else "000000")
+        lbl.font = Font(bold=True, size=9,
+                        color=WHITE if highlight else "000000")
         lbl.alignment = Alignment(horizontal='right')
         val = ws.cell(row=r, column=8, value=value)
         val.font = Font(bold=bold, size=10 if highlight else 9,
@@ -270,16 +253,13 @@ def _write_totals_block(ws, start_row, subtotal, tax_amount, total_amount,
 
     _put(start_row, "SUBTOTAL", float(subtotal), bold=True)
     _put(start_row + 1, "DISCOUNT", 0.0)
-
     discount = 0.0
     _put(start_row + 2, "SUBTOTAL LESS DISCOUNT", float(subtotal) - discount)
 
     tax_rate = float(vat_rate) if include_vat else 0.0
     _put(start_row + 3, "TAX RATE", tax_rate, fmt='0.00%')
-
     _put(start_row + 4, "TOTAL TAX", float(tax_amount))
 
-    # Balance Due (highlighted)
     if amount_paid is not None and float(amount_paid) > 0:
         _put(start_row + 5, "Amount Paid", float(amount_paid))
         _put(start_row + 6, "Balance Due", float(balance_due or 0.0),
@@ -294,13 +274,15 @@ def _write_totals_block(ws, start_row, subtotal, tax_amount, total_amount,
 def _write_footer(ws, start_row, config, notes=None):
     """Write thank-you + Terms & Instructions footer."""
     thank_row = start_row + 2
-    ws.cell(row=thank_row, column=3, value="Thank you for your business!").font = Font(
-        italic=True, size=9, color=GREY_LABEL
+    ws.cell(row=thank_row, column=3,
+            value="Thank you for your business!").font = Font(
+        italic=True, size=9, color=GREY_LABEL,
     )
 
     terms_row = thank_row + 2
-    ws.cell(row=terms_row, column=3, value="Terms & Instructions").font = Font(
-        bold=True, size=9, color=BRAND_BLUE
+    ws.cell(row=terms_row, column=3,
+            value="Terms & Instructions").font = Font(
+        bold=True, size=9, color=BRAND_BLUE,
     )
 
     lines = []
@@ -316,7 +298,8 @@ def _write_footer(ws, start_row, config, notes=None):
     lines.append(config.invoice_footer or "Payment is due within 30 days.")
 
     for i, line in enumerate(lines):
-        ws.cell(row=terms_row + 1 + i, column=3, value=line).font = Font(size=9, color=GREY_LABEL)
+        ws.cell(row=terms_row + 1 + i, column=3,
+                value=line).font = Font(size=9, color=GREY_LABEL)
 
 
 # =============================================================================
@@ -380,7 +363,9 @@ class QuotationCreateView(RoleRequiredMixin, CreateView):
         return redirect('quotation_detail', pk=self.object.pk)
 
     def form_invalid(self, form):
-        messages.error(self.request, "Please correct errors in the quotation header.")
+        messages.error(
+            self.request, "Please correct errors in the quotation header."
+        )
         return self.render_to_response(self.get_context_data(form=form))
 
 
@@ -406,7 +391,9 @@ class QuotationUpdateView(RoleRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         if self.request.POST:
-            ctx['items'] = QuotationItemFormSet(self.request.POST, instance=self.object)
+            ctx['items'] = QuotationItemFormSet(
+                self.request.POST, instance=self.object
+            )
         else:
             ctx['items'] = QuotationItemFormSet(instance=self.object)
         return ctx
@@ -431,7 +418,9 @@ class QuotationUpdateView(RoleRequiredMixin, UpdateView):
         return redirect('quotation_detail', pk=self.object.pk)
 
     def form_invalid(self, form):
-        messages.error(self.request, "Please correct errors in the quotation header.")
+        messages.error(
+            self.request, "Please correct errors in the quotation header."
+        )
         return self.render_to_response(self.get_context_data(form=form))
 
 
@@ -454,8 +443,13 @@ class QuotationConvertView(RoleRequiredMixin, View):
     def post(self, request, pk):
         quotation = get_object_or_404(Quotation, pk=pk)
         try:
-            invoice = QuotationService.convert_to_invoice(quotation, created_by=request.user)
-            messages.success(request, f'Quotation converted to Invoice {invoice.invoice_number}.')
+            invoice = QuotationService.convert_to_invoice(
+                quotation, created_by=request.user
+            )
+            messages.success(
+                request,
+                f'Quotation converted to Invoice {invoice.invoice_number}.',
+            )
             return redirect('invoice_detail', pk=invoice.pk)
         except ValueError as e:
             messages.error(request, str(e))
@@ -478,10 +472,14 @@ class DuplicateQuotationView(RoleRequiredMixin, View):
         for item in original.items.all():
             QuotationItem.objects.create(
                 quotation=new_quotation, description=item.description,
-                quantity=item.quantity, unit_price=item.unit_price, total=item.total,
+                quantity=item.quantity, unit_price=item.unit_price,
+                total=item.total,
             )
         QuotationService.recalculate(new_quotation)
-        messages.success(request, f'Quotation duplicated as {new_quotation.quotation_number}.')
+        messages.success(
+            request,
+            f'Quotation duplicated as {new_quotation.quotation_number}.',
+        )
         return redirect('quotation_detail', pk=new_quotation.pk)
 
 
@@ -496,32 +494,43 @@ class QuotationDeleteView(RoleRequiredMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         obj = self.get_object()
-        messages.success(request, f"Quotation {obj.quotation_number} has been deleted.")
+        messages.success(
+            request,
+            f"Quotation {obj.quotation_number} has been deleted.",
+        )
         return super().delete(request, *args, **kwargs)
 
 
 # -----------------------------------------------------------------------------
-# Export Views
+# Quotation export views
 # -----------------------------------------------------------------------------
 
 def quotation_print_view(request, pk):
+    """Browser-printable quotation."""
     quotation = get_object_or_404(Quotation, pk=pk)
-    items = quotation.items.all()
     return TemplateResponse(request, 'finance/quotation_print.html', {
-        'quotation': quotation, 'items': items,
-        'site_config': SiteConfig.get(), 'config': SiteConfig.get(),
+        'quotation': quotation,
+        'items': quotation.items.all(),
+        'site_config': SiteConfig.get(),
+        'config': SiteConfig.get(),
     })
 
 
 def quotation_pdf_direct(request, pk):
-    from infrastructure.pdf_reportlab import render_quotation_pdf, load_logo_data_uri
+    """Generate the quotation PDF synchronously via ReportLab."""
+    from infrastructure.pdf_reportlab import (
+        render_quotation_pdf, load_logo_data_uri,
+    )
     quotation = get_object_or_404(Quotation, pk=pk)
     config = SiteConfig.get()
     logo_data_uri = load_logo_data_uri()
     try:
         pdf_bytes = render_quotation_pdf(quotation, config, logo_data_uri)
     except Exception as e:
-        logger.exception(f"ReportLab failed for quotation {quotation.quotation_number}: {e}")
+        logger.exception(
+            f"ReportLab failed for quotation "
+            f"{quotation.quotation_number}: {e}"
+        )
         messages.error(request, "Failed to generate PDF. Please try again.")
         return redirect('quotation_detail', pk=pk)
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -532,14 +541,19 @@ def quotation_pdf_direct(request, pk):
 
 
 def invoice_pdf_direct(request, pk):
-    from infrastructure.pdf_reportlab import render_invoice_pdf, load_logo_data_uri
+    """Generate the invoice PDF synchronously via ReportLab."""
+    from infrastructure.pdf_reportlab import (
+        render_invoice_pdf, load_logo_data_uri,
+    )
     invoice = get_object_or_404(Invoice, pk=pk)
     config = SiteConfig.get()
     logo_data_uri = load_logo_data_uri()
     try:
         pdf_bytes = render_invoice_pdf(invoice, config, logo_data_uri)
     except Exception as e:
-        logger.exception(f"ReportLab failed for invoice {invoice.invoice_number}: {e}")
+        logger.exception(
+            f"ReportLab failed for invoice {invoice.invoice_number}: {e}"
+        )
         messages.error(request, "Failed to generate PDF. Please try again.")
         return redirect('invoice_detail', pk=pk)
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -550,21 +564,22 @@ def invoice_pdf_direct(request, pk):
 
 
 def quotation_word_export(request, pk):
+    """Download the quotation as a .doc file (HTML wrapped)."""
     quotation = get_object_or_404(Quotation, pk=pk)
-    items = quotation.items.all()
     response = HttpResponse(content_type='application/msword')
     response['Content-Disposition'] = (
         f'attachment; filename="quotation_{quotation.quotation_number}.doc"'
     )
     template = render_to_string('finance/quotation_print.html', {
-        'quotation': quotation, 'items': items,
-        'site_config': SiteConfig.get(), 'config': SiteConfig.get(),
+        'quotation': quotation,
+        'items': quotation.items.all(),
+        'site_config': SiteConfig.get(),
+        'config': SiteConfig.get(),
     })
     response.write(template)
     return response
 
 
-# ------------------------- Excel: quotation -------------------------
 def quotation_excel_export(request, pk):
     """Export quotation as Excel (.xlsx) matching the printable template."""
     quotation = get_object_or_404(Quotation, pk=pk)
@@ -577,21 +592,17 @@ def quotation_excel_export(request, pk):
 
     _setup_excel_columns(ws)
 
-    # ---- Logo (top-right) ----
     logo_path = Path(settings.BASE_DIR) / 'static' / 'images' / 'logo.png'
     _embed_logo_topright(ws, logo_path, size_px=130, anchor='F1')
 
-    # ---- Header + parties ----
     party_lines = [
         quotation.client.name,
         quotation.client.address or '',
-        ", ".join([p for p in [quotation.client.email, quotation.client.phone] if p]),
+        ", ".join([
+            p for p in [quotation.client.email, quotation.client.phone] if p
+        ]),
     ]
-    location_lines = [
-        config.company_name,
-        config.address or '',
-        config.phone or '',
-    ]
+    location_lines = [config.company_name, config.address or '', config.phone or '']
     date_lines = [
         ("Issue Date:", quotation.issue_date.strftime('%d/%m/%Y')),
         ("Valid Until:", quotation.valid_until.strftime('%d/%m/%Y')),
@@ -601,10 +612,8 @@ def quotation_excel_export(request, pk):
         "BILL TO", party_lines, location_lines, date_lines,
     )
 
-    # ---- Items table ----
     row_after_items = _write_items_table(ws, items, start_row=14)
 
-    # ---- Totals ----
     _write_totals_block(
         ws, start_row=row_after_items + 1,
         subtotal=quotation.subtotal,
@@ -614,8 +623,10 @@ def quotation_excel_export(request, pk):
         vat_rate=config.vat_rate,
     )
 
-    # ---- Footer ----
-    _write_footer(ws, start_row=row_after_items + 8, config=config, notes=quotation.notes)
+    _write_footer(
+        ws, start_row=row_after_items + 8,
+        config=config, notes=quotation.notes,
+    )
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -627,7 +638,6 @@ def quotation_excel_export(request, pk):
     return response
 
 
-# ------------------------- Excel: invoice -------------------------
 def invoice_excel_export(request, pk):
     """Export invoice as Excel (.xlsx) matching the printable template."""
     invoice = get_object_or_404(Invoice, pk=pk)
@@ -640,21 +650,17 @@ def invoice_excel_export(request, pk):
 
     _setup_excel_columns(ws)
 
-    # ---- Logo (top-right) ----
     logo_path = Path(settings.BASE_DIR) / 'static' / 'images' / 'logo.png'
     _embed_logo_topright(ws, logo_path, size_px=130, anchor='F1')
 
-    # ---- Header + parties ----
     party_lines = [
         invoice.client.name,
         invoice.client.address or '',
-        ", ".join([p for p in [invoice.client.email, invoice.client.phone] if p]),
+        ", ".join([
+            p for p in [invoice.client.email, invoice.client.phone] if p
+        ]),
     ]
-    location_lines = [
-        config.company_name,
-        config.address or '',
-        config.phone or '',
-    ]
+    location_lines = [config.company_name, config.address or '', config.phone or '']
     date_lines = [
         ("Invoice Date:", invoice.issue_date.strftime('%d/%m/%Y')),
         ("Due Date:", invoice.due_date.strftime('%d/%m/%Y')),
@@ -664,10 +670,8 @@ def invoice_excel_export(request, pk):
         "BILL TO", party_lines, location_lines, date_lines,
     )
 
-    # ---- Items table ----
     row_after_items = _write_items_table(ws, items, start_row=14)
 
-    # ---- Totals (with paid / balance due) ----
     _write_totals_block(
         ws, start_row=row_after_items + 1,
         subtotal=invoice.subtotal,
@@ -679,8 +683,10 @@ def invoice_excel_export(request, pk):
         balance_due=invoice.balance_due,
     )
 
-    # ---- Footer ----
-    _write_footer(ws, start_row=row_after_items + 10, config=config, notes=invoice.notes)
+    _write_footer(
+        ws, start_row=row_after_items + 10,
+        config=config, notes=invoice.notes,
+    )
 
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -692,7 +698,10 @@ def invoice_excel_export(request, pk):
     return response
 
 
-@method_decorator(rate_limit(key_func=get_client_ip, rate='30/h', method='GET', block=True), name='dispatch')
+@method_decorator(
+    rate_limit(key_func=get_client_ip, rate='30/h', method='GET', block=True),
+    name='dispatch',
+)
 class QuotationPDFView(RoleRequiredMixin, View):
     required_roles = ['FINANCE', 'ADMIN']
 
@@ -742,9 +751,15 @@ class InvoiceListView(RoleRequiredMixin, ListView):
         ctx['due_from'] = self.request.GET.get('due_from', '')
         ctx['due_to'] = self.request.GET.get('due_to', '')
         qs = self.get_queryset()
-        ctx['total_amount_sum'] = qs.aggregate(total=models.Sum('total_amount'))['total'] or 0
-        ctx['total_paid_sum'] = qs.aggregate(total=models.Sum('amount_paid'))['total'] or 0
-        ctx['total_balance_sum'] = ctx['total_amount_sum'] - ctx['total_paid_sum']
+        ctx['total_amount_sum'] = (
+            qs.aggregate(total=models.Sum('total_amount'))['total'] or 0
+        )
+        ctx['total_paid_sum'] = (
+            qs.aggregate(total=models.Sum('amount_paid'))['total'] or 0
+        )
+        ctx['total_balance_sum'] = (
+            ctx['total_amount_sum'] - ctx['total_paid_sum']
+        )
         return ctx
 
 
@@ -756,7 +771,10 @@ class InvoiceCreateView(RoleRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        messages.success(self.request, 'Invoice created. You can now add line items.')
+        messages.success(
+            self.request,
+            'Invoice created. You can now add line items.',
+        )
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -775,6 +793,8 @@ class InvoiceDetailView(RoleRequiredMixin, DetailView):
         ctx['payment_form'] = PaymentForm()
         ctx['items'] = self.object.items.all()
         ctx['payments'] = self.object.payments.all()
+        # Receipt (if paid)
+        ctx['receipt'] = getattr(self.object, 'receipt', None)
         ctx['config'] = SiteConfig.get()
         return ctx
 
@@ -785,7 +805,9 @@ class AddInvoiceItemView(RoleRequiredMixin, View):
     def post(self, request, pk):
         invoice = get_object_or_404(Invoice, pk=pk)
         if invoice.status != 'draft':
-            messages.error(request, 'Items can only be added to draft invoices.')
+            messages.error(
+                request, 'Items can only be added to draft invoices.'
+            )
             return redirect('invoice_detail', pk=pk)
         form = InvoiceItemForm(request.POST)
         if form.is_valid():
@@ -800,25 +822,85 @@ class AddInvoiceItemView(RoleRequiredMixin, View):
 
 
 class RecordPaymentView(RoleRequiredMixin, View):
+    """
+    Record a payment against an invoice.
+
+    If the payment fully settles the invoice, a Receipt is auto-created by
+    InvoiceService.record_payment(). Optional transaction metadata
+    (transaction_id, fee, source/destination accounts, payment_datetime)
+    is read from POST fields when present.
+    """
     required_roles = ['FINANCE', 'ADMIN']
 
     def post(self, request, pk):
         invoice = get_object_or_404(Invoice, pk=pk)
+
         lock_key = f"payment_lock_{invoice.pk}_{request.user.pk}"
         if cache.get(lock_key):
-            messages.error(request, "You are recording payments too quickly. Please wait a moment.")
+            messages.error(
+                request,
+                "You are recording payments too quickly. Please wait a moment.",
+            )
             return redirect('invoice_detail', pk=pk)
+
         form = PaymentForm(request.POST)
-        if form.is_valid():
-            amount = form.cleaned_data['amount']
-            if amount > invoice.balance_due:
-                messages.error(request, f"Payment amount cannot exceed the outstanding balance ({invoice.balance_due}).")
-                return redirect('invoice_detail', pk=pk)
-            cache.set(lock_key, True, timeout=5)
-            InvoiceService.record_payment(invoice=invoice, recorded_by=request.user, **form.cleaned_data)
-            messages.success(request, 'Payment recorded.')
-        else:
+        if not form.is_valid():
             messages.error(request, 'Invalid payment data.')
+            return redirect('invoice_detail', pk=pk)
+
+        amount = form.cleaned_data['amount']
+        if amount > invoice.balance_due:
+            messages.error(
+                request,
+                f"Payment amount cannot exceed the outstanding balance "
+                f"({invoice.balance_due}).",
+            )
+            return redirect('invoice_detail', pk=pk)
+
+        cache.set(lock_key, True, timeout=5)
+
+        # Optional transaction metadata
+        try:
+            transaction_fee = Decimal(request.POST.get('transaction_fee') or '0')
+        except (InvalidOperation, ValueError):
+            transaction_fee = Decimal('0')
+
+        payment_datetime = None
+        raw_dt = (request.POST.get('payment_datetime') or '').strip()
+        if raw_dt:
+            try:
+                parsed = parse_datetime(raw_dt)
+                if parsed and timezone.is_naive(parsed):
+                    parsed = timezone.make_aware(
+                        parsed, timezone.get_current_timezone()
+                    )
+                payment_datetime = parsed
+            except (ValueError, TypeError):
+                payment_datetime = None
+
+        InvoiceService.record_payment(
+            invoice=invoice,
+            recorded_by=request.user,
+            transaction_id=(request.POST.get('transaction_id') or '').strip(),
+            transaction_fee=transaction_fee,
+            source_account=(request.POST.get('source_account') or '').strip(),
+            destination_account=(
+                request.POST.get('destination_account') or ''
+            ).strip(),
+            payment_datetime=payment_datetime,
+            **form.cleaned_data,
+        )
+        messages.success(request, 'Payment recorded.')
+
+        # If the invoice became fully paid, surface the auto-receipt
+        invoice.refresh_from_db()
+        receipt = getattr(invoice, 'receipt', None)
+        if receipt:
+            messages.success(
+                request,
+                f"Receipt {receipt.receipt_number} was issued automatically.",
+            )
+
         return redirect('invoice_detail', pk=pk)
 
 
@@ -829,7 +911,9 @@ class IssueInvoiceView(RoleRequiredMixin, View):
         invoice = get_object_or_404(Invoice, pk=pk)
         try:
             InvoiceService.issue(invoice)
-            messages.success(request, f'Invoice {invoice.invoice_number} issued.')
+            messages.success(
+                request, f'Invoice {invoice.invoice_number} issued.'
+            )
         except ValueError as e:
             messages.error(request, str(e))
         return redirect('invoice_detail', pk=pk)
@@ -844,16 +928,20 @@ class BulkInvoiceActionView(RoleRequiredMixin, View):
         if not invoice_ids:
             messages.error(request, 'No invoices selected.')
             return redirect(request.META.get('HTTP_REFERER', 'invoice_list'))
+
         invoices = Invoice.objects.filter(pk__in=invoice_ids)
         if action == 'send_reminder':
             for inv in invoices:
                 send_payment_reminder(inv)
-            messages.success(request, f'Reminder sent to {len(invoices)} client(s).')
+            messages.success(
+                request, f'Reminder sent to {len(invoices)} client(s).'
+            )
         elif action == 'issue':
             count = 0
             for inv in invoices:
                 if inv.status == 'draft':
-                    InvoiceService.issue(inv); count += 1
+                    InvoiceService.issue(inv)
+                    count += 1
             messages.success(request, f'{count} invoice(s) issued.')
         else:
             messages.error(request, 'Invalid action.')
@@ -878,17 +966,24 @@ class ExportInvoiceCSVView(RoleRequiredMixin, View):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="invoices.csv"'
         writer = csv.writer(response)
-        writer.writerow(['Invoice #', 'Client', 'Issue Date', 'Due Date',
-                         'Total', 'Paid', 'Balance', 'Status'])
+        writer.writerow([
+            'Invoice #', 'Client', 'Issue Date', 'Due Date',
+            'Total', 'Paid', 'Balance', 'Status',
+        ])
         for inv in qs:
             writer.writerow([
-                inv.invoice_number, inv.client.name, inv.issue_date, inv.due_date,
-                inv.total_amount, inv.amount_paid, inv.balance_due, inv.get_status_display(),
+                inv.invoice_number, inv.client.name,
+                inv.issue_date, inv.due_date,
+                inv.total_amount, inv.amount_paid,
+                inv.balance_due, inv.get_status_display(),
             ])
         return response
 
 
-@method_decorator(rate_limit(key_func=get_client_ip, rate='30/h', method='GET', block=True), name='dispatch')
+@method_decorator(
+    rate_limit(key_func=get_client_ip, rate='30/h', method='GET', block=True),
+    name='dispatch',
+)
 class InvoicePDFView(RoleRequiredMixin, View):
     required_roles = ['FINANCE', 'ADMIN']
 
@@ -902,6 +997,71 @@ class InvoicePDFView(RoleRequiredMixin, View):
             'PDF is being generated. Please refresh in a few moments.',
             status=202, content_type='text/plain',
         )
+
+
+# =============================================================================
+# RECEIPT VIEWS
+# =============================================================================
+
+class ReceiptListView(RoleRequiredMixin, ListView):
+    """Finance/admin list of all receipts."""
+    model = Receipt
+    template_name = 'finance/receipt_list.html'
+    context_object_name = 'receipts'
+    paginate_by = 20
+    required_roles = ['FINANCE', 'ADMIN']
+
+    def get_queryset(self):
+        qs = super().get_queryset().select_related(
+            'payment', 'invoice', 'invoice__client'
+        )
+        q = self.request.GET.get('q')
+        if q:
+            qs = qs.filter(
+                Q(receipt_number__icontains=q)
+                | Q(invoice__invoice_number__icontains=q)
+                | Q(invoice__client__name__icontains=q)
+            )
+        return qs
+
+
+class ReceiptDetailView(RoleRequiredMixin, DetailView):
+    """Printable/viewable receipt detail for staff."""
+    model = Receipt
+    template_name = 'finance/receipt_detail.html'
+    context_object_name = 'receipt'
+    required_roles = ['FINANCE', 'ADMIN']
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['config'] = SiteConfig.get()
+        ctx['payment'] = self.object.payment
+        ctx['invoice'] = self.object.invoice
+        ctx['items'] = self.object.invoice.items.all()
+        return ctx
+
+
+def receipt_pdf_direct(request, pk):
+    """Synchronous PDF download for a receipt."""
+    from infrastructure.pdf_reportlab import (
+        render_receipt_pdf, load_logo_data_uri,
+    )
+    receipt = get_object_or_404(Receipt, pk=pk)
+    config = SiteConfig.get()
+    logo_data_uri = load_logo_data_uri()
+    try:
+        pdf_bytes = render_receipt_pdf(receipt, config, logo_data_uri)
+    except Exception as e:
+        logger.exception(
+            f"ReportLab failed for receipt {receipt.receipt_number}: {e}"
+        )
+        messages.error(request, "Failed to generate receipt PDF. Please try again.")
+        return redirect('receipt_detail', pk=pk)
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="receipt_{receipt.receipt_number}.pdf"'
+    )
+    return response
 
 
 # =============================================================================
@@ -940,7 +1100,9 @@ class ApproveExpenseView(RoleRequiredMixin, View):
         expense.approved_by = request.user
         expense.approved_at = timezone.now()
         expense.save()
-        messages.success(request, f'Expense "{expense.description}" approved.')
+        messages.success(
+            request, f'Expense "{expense.description}" approved.'
+        )
         return redirect('expense_list')
 
 
@@ -954,7 +1116,9 @@ class RejectExpenseView(RoleRequiredMixin, View):
             return redirect('expense_list')
         expense.status = 'rejected'
         expense.save()
-        messages.warning(request, f'Expense "{expense.description}" rejected.')
+        messages.warning(
+            request, f'Expense "{expense.description}" rejected.'
+        )
         return redirect('expense_list')
 
 
@@ -971,7 +1135,9 @@ class ReportView(RoleRequiredMixin, TemplateView):
         period = self.request.GET.get('period', 'this_month')
         start, end = ReportService.date_range(period)
         ctx.update({
-            'period': period, 'start': start, 'end': end,
+            'period': period,
+            'start': start,
+            'end': end,
             'income': ReportService.income_statement(start, end),
             'aging': ReportService.accounts_receivable_aging(),
             'top_clients': ReportService.client_revenue(start, end),
@@ -986,10 +1152,18 @@ class ReportView(RoleRequiredMixin, TemplateView):
         })
         try:
             ctx['service_revenue'] = ReportService.service_revenue(start, end)
-            ctx['most_requested_services'] = ReportService.most_requested_services()
-            ctx['technician_performance'] = ReportService.technician_performance()
+            ctx['most_requested_services'] = (
+                ReportService.most_requested_services()
+            )
+            ctx['technician_performance'] = (
+                ReportService.technician_performance()
+            )
         except Exception as e:
-            ctx.update({'service_revenue': [], 'most_requested_services': [], 'technician_performance': []})
+            ctx.update({
+                'service_revenue': [],
+                'most_requested_services': [],
+                'technician_performance': [],
+            })
             logger.warning(f"Could not load service analytics: {e}")
         return ctx
 
@@ -1007,7 +1181,9 @@ class ClientInvoiceListView(LoginRequiredMixin, ListView):
         client_org = getattr(self.request.user, 'client_organization', None)
         if not client_org:
             return Invoice.objects.none()
-        return Invoice.objects.filter(client=client_org).order_by('-created_at')
+        return Invoice.objects.filter(
+            client=client_org
+        ).order_by('-created_at')
 
 
 class ClientInvoiceDetailView(LoginRequiredMixin, DetailView):
@@ -1031,6 +1207,7 @@ class ClientInvoiceDetailView(LoginRequiredMixin, DetailView):
         ctx['config'] = SiteConfig.get()
         ctx['items'] = self.object.items.all()
         ctx['payments'] = self.object.payments.all()
+        ctx['receipt'] = getattr(self.object, 'receipt', None)
         return ctx
 
 
@@ -1043,7 +1220,9 @@ class ClientQuotationListView(LoginRequiredMixin, ListView):
         client_org = getattr(self.request.user, 'client_organization', None)
         if not client_org:
             return Quotation.objects.none()
-        return Quotation.objects.filter(client=client_org).order_by('-created_at')
+        return Quotation.objects.filter(
+            client=client_org
+        ).order_by('-created_at')
 
 
 class ClientQuotationDetailView(LoginRequiredMixin, DetailView):
@@ -1071,15 +1250,28 @@ class ClientQuotationDetailView(LoginRequiredMixin, DetailView):
 
 class ClientQuotationApproveView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        quotation = get_object_or_404(Quotation, pk=pk, client=request.user.client_organization)
+        quotation = get_object_or_404(
+            Quotation, pk=pk,
+            client=request.user.client_organization,
+        )
         if quotation.status != 'sent':
-            messages.error(request, f"This quotation cannot be approved (current status: {quotation.status}).")
+            messages.error(
+                request,
+                f"This quotation cannot be approved "
+                f"(current status: {quotation.status}).",
+            )
             return redirect('client_quotation_detail', pk=pk)
         quotation.status = 'approved'
         quotation.save(update_fields=['status'])
         try:
-            invoice = QuotationService.convert_to_invoice(quotation, created_by=request.user)
-            messages.success(request, f"Quotation {quotation.quotation_number} approved and converted to invoice {invoice.invoice_number}.")
+            invoice = QuotationService.convert_to_invoice(
+                quotation, created_by=request.user
+            )
+            messages.success(
+                request,
+                f"Quotation {quotation.quotation_number} approved and "
+                f"converted to invoice {invoice.invoice_number}.",
+            )
             return redirect('client_invoice_detail', pk=invoice.pk)
         except ValueError as e:
             messages.error(request, f"Conversion failed: {e}")
@@ -1090,31 +1282,85 @@ class ClientQuotationApproveView(LoginRequiredMixin, View):
 
 class ClientQuotationRejectView(LoginRequiredMixin, View):
     def post(self, request, pk):
-        quotation = get_object_or_404(Quotation, pk=pk, client=request.user.client_organization)
+        quotation = get_object_or_404(
+            Quotation, pk=pk,
+            client=request.user.client_organization,
+        )
         if quotation.status != 'sent':
             messages.error(request, "This quotation cannot be rejected.")
             return redirect('client_quotation_detail', pk=pk)
         reason = request.POST.get('reason', '').strip()
         if not reason:
-            messages.error(request, "Please provide a reason for rejection or change request.")
+            messages.error(
+                request,
+                "Please provide a reason for rejection or change request.",
+            )
             return redirect('client_quotation_detail', pk=pk)
         quotation.status = 'rejected'
         quotation.client_feedback = reason
         quotation.save(update_fields=['status', 'client_feedback'])
+
         try:
             from django.core.mail import send_mail
             config = SiteConfig.get()
             send_mail(
-                subject=f"Quotation {quotation.quotation_number} rejected by {quotation.client.name}",
+                subject=(
+                    f"Quotation {quotation.quotation_number} rejected by "
+                    f"{quotation.client.name}"
+                ),
                 message=f"Client feedback:\n{reason}",
                 from_email=config.email or settings.DEFAULT_FROM_EMAIL,
-                recipient_list=['finance@pritech.mw'], fail_silently=True,
+                recipient_list=['finance@pritech.mw'],
+                fail_silently=True,
             )
         except Exception:
             pass
-        messages.success(request, "Quotation rejected. We'll review your feedback and get back to you.")
+
+        messages.success(
+            request,
+            "Quotation rejected. We'll review your feedback and get back to you.",
+        )
         return redirect('client_quotation_detail', pk=pk)
 
+
+# ---- Client Receipts --------------------------------------------------------
+
+class ClientReceiptListView(LoginRequiredMixin, ListView):
+    """Client's list of receipts (their payment history)."""
+    template_name = 'finance/client_receipt_list.html'
+    context_object_name = 'receipts'
+    paginate_by = 20
+
+    def get_queryset(self):
+        org = getattr(self.request.user, 'client_organization', None)
+        if not org:
+            return Receipt.objects.none()
+        return Receipt.objects.filter(
+            invoice__client=org
+        ).select_related('invoice', 'payment').order_by('-issued_at')
+
+
+class ClientReceiptDetailView(LoginRequiredMixin, DetailView):
+    """Client's view of a single receipt."""
+    template_name = 'finance/client_receipt_detail.html'
+    context_object_name = 'receipt'
+
+    def get_queryset(self):
+        org = getattr(self.request.user, 'client_organization', None)
+        if not org:
+            return Receipt.objects.none()
+        return Receipt.objects.filter(invoice__client=org)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['config'] = SiteConfig.get()
+        ctx['payment'] = self.object.payment
+        ctx['invoice'] = self.object.invoice
+        ctx['items'] = self.object.invoice.items.all()
+        return ctx
+
+
+# ---- Client Subscriptions --------------------------------------------------
 
 class ClientSubscriptionDetailView(LoginRequiredMixin, DetailView):
     template_name = 'finance/client_subscription_detail.html'
@@ -1128,7 +1374,9 @@ class ClientSubscriptionDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['available_plans'] = Plan.objects.filter(is_active=True).exclude(pk=self.object.plan.pk)
+        ctx['available_plans'] = Plan.objects.filter(
+            is_active=True
+        ).exclude(pk=self.object.plan.pk)
         return ctx
 
 
@@ -1150,11 +1398,16 @@ class ClientSubscriptionUpgradeView(LoginRequiredMixin, UpdateView):
         if new_plan.monthly_price > subscription.plan.monthly_price:
             subscription.plan = new_plan
             subscription.save()
-            messages.success(self.request, f"Plan upgraded to {new_plan.name}.")
+            messages.success(
+                self.request, f"Plan upgraded to {new_plan.name}."
+            )
         else:
             subscription.cancel_at_period_end = True
             subscription.save()
-            messages.info(self.request, f"Plan will downgrade to {new_plan.name} at the end of current period.")
+            messages.info(
+                self.request,
+                f"Plan will downgrade to {new_plan.name} at the end of current period.",
+            )
         return redirect(self.success_url)
 
 
@@ -1164,10 +1417,15 @@ class ClientSubscriptionCancelView(LoginRequiredMixin, View):
         if not client_org:
             messages.error(request, "No active subscription found.")
             return redirect('client_subscription_detail')
-        subscription = get_object_or_404(ClientSubscription, client=client_org)
+        subscription = get_object_or_404(
+            ClientSubscription, client=client_org
+        )
         subscription.cancel_at_period_end = True
         subscription.save()
-        messages.warning(request, "Your subscription will be cancelled at the end of the current billing period.")
+        messages.warning(
+            request,
+            "Your subscription will be cancelled at the end of the current billing period.",
+        )
         return redirect('client_subscription_detail')
 
 
@@ -1181,12 +1439,14 @@ def live_quotation_search(request):
     quotations = Quotation.objects.select_related('client').all()
     if query:
         quotations = quotations.filter(
-            Q(quotation_number__icontains=query) | Q(client__name__icontains=query)
+            Q(quotation_number__icontains=query)
+            | Q(client__name__icontains=query)
         )
     if status:
         quotations = quotations.filter(status=status)
     html = render_to_string('finance/partials/quotation_rows.html', {
-        'quotations': quotations, 'site_config': SiteConfig.get(),
+        'quotations': quotations,
+        'site_config': SiteConfig.get(),
     })
     return HttpResponse(html)
 
@@ -1206,7 +1466,8 @@ def update_quotation_status(request, pk):
     }
     badge_class = badge_map.get(quotation.status, 'secondary')
     return HttpResponse(
-        f'<span class="badge bg-{badge_class}">{quotation.get_status_display()}</span>'
+        f'<span class="badge bg-{badge_class}">'
+        f'{quotation.get_status_display()}</span>'
     )
 
 
@@ -1216,11 +1477,13 @@ def live_invoice_search(request):
     invoices = Invoice.objects.select_related('client').all()
     if query:
         invoices = invoices.filter(
-            Q(invoice_number__icontains=query) | Q(client__name__icontains=query)
+            Q(invoice_number__icontains=query)
+            | Q(client__name__icontains=query)
         )
     if status:
         invoices = invoices.filter(status=status)
     html = render_to_string('finance/partials/invoice_rows.html', {
-        'invoices': invoices, 'site_config': SiteConfig.get(),
+        'invoices': invoices,
+        'site_config': SiteConfig.get(),
     })
     return HttpResponse(html)
