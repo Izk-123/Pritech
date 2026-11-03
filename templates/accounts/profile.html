@@ -4,52 +4,86 @@
 {% block page_title %}My Profile{% endblock %}
 
 {% block content %}
-<div class="row">
-  <div class="col-md-4">
+<div class="row g-4">
+  {# ── LEFT: Summary card ───────────────────────────────────── #}
+  <div class="col-12 col-md-4">
     <div class="card mb-4">
       <div class="card-header">Profile Summary</div>
       <div class="card-body text-center">
-        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+        <div class="avatar-lg bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+             style="width: 80px; height: 80px; font-size: 2rem;">
           {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
         </div>
-        <h5>{{ request.user.get_full_name|default:request.user.email }}</h5>
-        <p class="text-muted">{{ request.user.email }}</p>
+        <h5 class="mb-1">
+          {{ request.user.get_full_name|default:request.user.email }}
+        </h5>
+        <p class="text-muted mb-3">{{ request.user.email }}</p>
         <hr>
-        <p><strong>Role:</strong> {{ request.user.get_user_type_display }}</p>
-        {% if request.user.user_type == 'client' %}
-          <p><strong>Client role:</strong> {{ request.user.get_client_role_display }}</p>
-          <p><strong>Organisation:</strong> {{ request.user.client_organization.name|default:"—" }}</p>
-        {% endif %}
-        <p><strong>Member since:</strong> {{ request.user.date_joined|date:"d M Y" }}</p>
-        <p><strong>Last login:</strong> {{ request.user.last_login|date:"d M Y H:i" }}</p>
-        <a href="{% url 'client_profile_edit' %}" class="btn btn-outline-primary mt-2">Edit Profile</a>
+        <div class="text-start">
+          <p class="mb-2">
+            <strong>Role:</strong>
+            {{ request.user.get_user_type_display }}
+          </p>
+          {% if request.user.user_type == 'client' %}
+            <p class="mb-2">
+              <strong>Client role:</strong>
+              {{ request.user.get_client_role_display }}
+            </p>
+            <p class="mb-2">
+              <strong>Organisation:</strong>
+              {{ request.user.client_organization.name|default:"—" }}
+            </p>
+          {% endif %}
+          <p class="mb-2">
+            <strong>Member since:</strong>
+            {{ request.user.date_joined|date:"d M Y" }}
+          </p>
+          <p class="mb-2">
+            <strong>Last login:</strong>
+            {{ request.user.last_login|date:"d M Y H:i" }}
+          </p>
+        </div>
+        <a href="{% url 'client_profile_edit' %}" class="btn btn-outline-primary mt-2 w-100">
+          <i class="bi bi-pencil"></i> Edit Profile
+        </a>
       </div>
     </div>
   </div>
 
-  <div class="col-md-8">
+  {# ── RIGHT: Security / Contact / Activity ─────────────────── #}
+  <div class="col-12 col-md-8">
+
     <!-- Security Card (2FA + Recovery Codes) -->
     <div class="card mb-4">
       <div class="card-header">Security</div>
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <strong>Two‑factor authentication (2FA)</strong>
-            <p class="text-muted small mb-0">Add an extra layer of security to your account.</p>
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+          <div class="flex-grow-1">
+            <strong class="d-block">Two-factor authentication (2FA)</strong>
+            <p class="text-muted small mb-0">
+              Add an extra layer of security to your account.
+            </p>
           </div>
-          <div>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
             {% if request.user.is_2fa_enabled %}
               <span class="badge bg-success">Enabled</span>
-              <a href="{% url 'two_factor_disable' %}" class="btn btn-sm btn-outline-danger ms-2">Disable</a>
+              <a href="{% url 'two_factor_disable' %}" class="btn btn-sm btn-outline-danger">
+                Disable
+              </a>
             {% else %}
               <span class="badge bg-secondary">Disabled</span>
-              <a href="{% url 'two_factor_setup' %}" class="btn btn-sm btn-primary ms-2">Enable</a>
+              <a href="{% url 'two_factor_setup' %}" class="btn btn-sm btn-primary">
+                Enable
+              </a>
             {% endif %}
           </div>
         </div>
         {% if request.user.is_2fa_enabled %}
-          <div class="mt-2">
-            <a href="{% url 'recovery_codes' %}" class="btn btn-sm btn-outline-secondary">View / Regenerate Recovery Codes</a>
+          <div class="pt-2 border-top">
+            <a href="{% url 'recovery_codes' %}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-key me-1"></i>
+              View / Regenerate Recovery Codes
+            </a>
           </div>
         {% endif %}
       </div>
@@ -60,12 +94,27 @@
       <div class="card-header">Contact Information</div>
       <div class="card-body">
         <ul class="list-unstyled mb-0">
-          <li class="mb-2"><strong>Email:</strong> {{ request.user.email }}</li>
-          <li class="mb-2"><strong>Phone:</strong> {{ request.user.phone_number|default:"—" }}</li>
-          <li class="mb-2"><strong>Address:</strong> {{ request.user.physical_address|default:"—"|linebreaks }}</li>
+          <li class="mb-3">
+            <strong class="d-block text-muted small text-uppercase">Email</strong>
+            {{ request.user.email }}
+          </li>
+          <li class="mb-3">
+            <strong class="d-block text-muted small text-uppercase">Phone</strong>
+            {{ request.user.phone_number|default:"—" }}
+          </li>
+          <li class="mb-3">
+            <strong class="d-block text-muted small text-uppercase">Address</strong>
+            {{ request.user.physical_address|default:"—"|linebreaksbr }}
+          </li>
           {% if request.user.user_type == 'client' and request.user.client_organization %}
-            <li><strong>Company name:</strong> {{ request.user.client_organization.name }}</li>
-            <li><strong>Company email:</strong> {{ request.user.client_organization.email|default:"—" }}</li>
+            <li class="mb-3">
+              <strong class="d-block text-muted small text-uppercase">Company name</strong>
+              {{ request.user.client_organization.name }}
+            </li>
+            <li>
+              <strong class="d-block text-muted small text-uppercase">Company email</strong>
+              {{ request.user.client_organization.email|default:"—" }}
+            </li>
           {% endif %}
         </ul>
       </div>
@@ -84,18 +133,31 @@
       <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead>
-            <tr><th>Action</th><th>IP Address</th><th>Time</th></tr>
+            <tr>
+              <th>Action</th>
+              <th>IP Address</th>
+              <th>Time</th>
+            </tr>
           </thead>
           <tbody>
             {% for log in request.user.userauditlog_set.all|slice:":5" %}
-              <tr><td>{{ log.action }}</td><td>{{ log.ip_address|default:"—" }}</td><td>{{ log.timestamp|date:"d M H:i" }}</td></tr>
+              <tr>
+                <td>{{ log.action }}</td>
+                <td><code>{{ log.ip_address|default:"—" }}</code></td>
+                <td><span class="text-muted small">{{ log.timestamp|date:"d M H:i" }}</span></td>
+              </tr>
             {% empty %}
-              <tr><td colspan="3">No recent activity.</td></tr>
+              <tr>
+                <td colspan="3" class="text-center text-muted py-3">
+                  No recent activity.
+                </td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
+
   </div>
 </div>
 {% endblock %}

@@ -3,66 +3,201 @@
 {% block title %}Manage Users{% endblock %}
 {% block page_title %}Users{% endblock %}
 
+{% block extra_css %}
+<style>
+  /* ── MOBILE TABLE-TO-CARD TRANSFORMATION ── */
+  @media (max-width: 767.98px) {
+    /* Hide the table header */
+    .users-table thead {
+      display: none;
+    }
+    
+    /* Transform each row into a card */
+    .users-table tbody tr {
+      display: flex;
+      flex-direction: column;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .users-table tbody tr:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    
+    /* Transform cells into rows inside the card */
+    .users-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0 !important;
+      border: none !important;
+      text-align: right;
+      font-size: 0.9rem;
+    }
+    
+    /* Use the data-label attribute to show the column name */
+    .users-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      margin-right: 1rem;
+      text-align: left;
+    }
+    
+    /* Special handling for the Actions cell */
+    .users-table tbody td[data-label="Actions"] {
+      flex-direction: column;
+      align-items: stretch;
+      border-top: 1px solid var(--border-color) !important;
+      margin-top: 0.5rem;
+      padding-top: 1rem !important;
+    }
+    
+    .users-table tbody td[data-label="Actions"]::before {
+      display: none;
+    }
+    
+    .users-table tbody td[data-label="Actions"] .d-flex {
+      flex-direction: row;
+      gap: 0.5rem;
+    }
+    
+    .users-table tbody td[data-label="Actions"] .btn {
+      flex: 1;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Fix the empty state row */
+    .users-table tbody tr.empty-row {
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+    .users-table tbody tr.empty-row td {
+      justify-content: center;
+      text-align: center;
+    }
+    .users-table tbody tr.empty-row td::before {
+      display: none;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center mb-3">
   <div>
     <div class="page-breadcrumb">Staff</div>
     <h1>All Users</h1>
   </div>
-  <a href="{% url 'user_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Add User</a>
+  <a href="{% url 'user_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Add User
+  </a>
 </div>
 
 <div class="card">
   <div class="card-body">
+    
+    {# ── Filters (stack on mobile, inline on md+) ──────────────── #}
     <form method="get" class="row g-2 mb-3">
-      <div class="col-md-4">
-        <input type="text" name="q" class="form-control" placeholder="Search by email or name" value="{{ request.GET.q|default:'' }}">
+      <div class="col-12 col-md-4">
+        <input type="text" name="q" class="form-control"
+               placeholder="Search by email or name"
+               value="{{ request.GET.q|default:'' }}">
       </div>
-      <div class="col-md-3">
+      <div class="col-12 col-md-3">
         <select name="user_type" class="form-select">
           <option value="">All types</option>
           {% for value, label in user_type_choices %}
-            <option value="{{ value }}" {% if request.GET.user_type == value %}selected{% endif %}>{{ label }}</option>
+            <option value="{{ value }}" {% if request.GET.user_type == value %}selected{% endif %}>
+              {{ label }}
+            </option>
           {% endfor %}
         </select>
       </div>
-      <div class="col-md-auto">
-        <button type="submit" class="btn btn-secondary">Filter</button>
+      <div class="col-12 col-md-auto">
+        <button type="submit" class="btn btn-secondary w-100">
+          <i class="bi bi-funnel me-1"></i> Filter
+        </button>
       </div>
     </form>
 
+    {# ── Table (card layout on mobile, standard table on desktop) ── #}
     <div class="table-responsive">
-      <table class="table table-hover align-middle">
+      <table class="table table-hover align-middle users-table mb-0">
         <thead>
-          <tr><th>Email</th><th>Name</th><th>Type</th><th>Active</th><th>Roles</th><th>Actions</th></tr>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Active</th>
+            <th>Roles</th>
+            <th>Actions</th>
+          </tr>
         </thead>
         <tbody>
           {% for u in users %}
             <tr>
-              <td>{{ u.email }}</td>
-              <td>{{ u.get_full_name|default:"—" }}</td>
-              <td>{{ u.get_user_type_display }}</td>
-              <td>{% if u.is_active %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-danger">No</span>{% endif %}</td>
-              <td>
-                {% for ur in u.user_roles.all %}
-                  <span class="badge bg-secondary">{{ ur.role.name }}</span>
-                {% empty %}—{% endfor %}
-               </td>
-              <td>
-                <a href="{% url 'user_update' u.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                <a href="{% url 'user_delete' u.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
-               </td>
-             </tr>
+              <td data-label="Email" class="fw-medium">{{ u.email }}</td>
+              <td data-label="Name">{{ u.get_full_name|default:"—" }}</td>
+              <td data-label="Type">{{ u.get_user_type_display }}</td>
+              <td data-label="Active">
+                {% if u.is_active %}
+                  <span class="badge bg-success">Yes</span>
+                {% else %}
+                  <span class="badge bg-danger">No</span>
+                {% endif %}
+              </td>
+              <td data-label="Roles">
+                <div class="d-flex flex-wrap gap-1 justify-content-end justify-content-md-start">
+                  {% for ur in u.user_roles.all %}
+                    <span class="badge bg-secondary">{{ ur.role.name }}</span>
+                  {% empty %}
+                    <span class="text-muted">—</span>
+                  {% endfor %}
+                </div>
+              </td>
+              <td data-label="Actions">
+                <div class="d-flex gap-1 flex-wrap">
+                  <a href="{% url 'user_update' u.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit
+                  </a>
+                  <a href="{% url 'user_delete' u.pk %}" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-trash"></i> Delete
+                  </a>
+                </div>
+              </td>
+            </tr>
           {% empty %}
-            <tr><td colspan="6">No users found.</td></tr>
+            <tr class="empty-row">
+              <td colspan="6" class="text-center text-muted py-4">
+                <i class="bi bi-people display-6 d-block mb-2 opacity-50"></i>
+                No users found.
+                <a href="{% url 'user_create' %}">Create one</a>.
+              </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
     {% if is_paginated %}
-      <nav>{% include "includes/pagination.html" %}</nav>
+      <div class="mt-3">
+        {% include "includes/pagination.html" %}
+      </div>
     {% endif %}
+    
   </div>
 </div>
 {% endblock %}
