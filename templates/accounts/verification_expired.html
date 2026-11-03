@@ -1,40 +1,227 @@
-{% extends "base.html" %}
-{% block title %}Verification link expired{% endblock %}
-{% block page_title %}Link expired{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Link expired — Pritech</title>
+  <link href="{% static 'img/favicon.ico' %}" rel="icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/mobile-first.css' %}">
+  <style>
+    body { background: var(--bg-secondary); }
+    .expired-card { max-width: 520px; border-radius: 20px; }
 
-{% block content %}
-<div class="container py-4">
+    /* Warning hero icon (amber clock) */
+    .hero-icon-warning {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: rgba(251, 191, 36, 0.15);
+      color: #d97706;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      font-size: 2.75rem;
+      animation: floatIn 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) both;
+    }
+    @keyframes floatIn {
+      from { transform: scale(0.7); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* Email pill (same style as check_your_email) */
+    .email-pill {
+      display: inline-block;
+      max-width: 100%;
+      padding: 0.55rem 1rem;
+      background: var(--bg-tertiary);
+      border-radius: 60px;
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-all;
+      font-size: 0.95rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Amber warning banner */
+    .warn-banner {
+      background: #fff7ed;
+      border: 1px solid #fbbf24;
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+      color: #92400e;
+      text-align: left;
+    }
+    [data-theme="dark"] .warn-banner {
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.4);
+      color: #fcd34d;
+    }
+    .warn-banner i { font-size: 1.15rem; }
+
+    /* Primary CTA */
+    .btn-primary-pill {
+      border-radius: 60px;
+      font-weight: 600;
+      padding: 0.7rem 1.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }
+    .btn-primary-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(65, 84, 241, 0.25);
+    }
+  </style>
+</head>
+<body class="d-flex align-items-center min-vh-100 p-3">
+<div class="container">
   <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow-sm border-0">
-        <div class="card-body text-center py-5">
+    <div class="col-12 col-md-8 col-lg-6">
+      <div class="card expired-card shadow-lg border-0">
+        <div class="card-body p-4 p-md-5">
 
-          <i class="bi bi-clock-history display-3 text-warning"></i>
-
-          <h2 class="fw-bold mt-3">This link has expired</h2>
-          <p class="text-muted mt-2">
-            Verification links are valid for 24 hours. No worries &mdash;
-            we can send a fresh one.
-          </p>
-
-          <form method="post" action="{% url 'resend_verification' %}">
-            {% csrf_token %}
-            <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-send me-1"></i>
-              Send a new link to {{ email }}
+          <!-- Theme toggle -->
+          <div class="d-flex justify-content-end mb-2">
+            <button class="theme-toggle-btn" id="themeToggle" type="button">
+              <i class="bi bi-sun-fill light-icon"></i>
+              <i class="bi bi-moon-stars-fill dark-icon"></i>
             </button>
+          </div>
+
+          <!-- Hero icon -->
+          <div class="text-center">
+            <div class="hero-icon-warning">
+              <i class="bi bi-clock-history"></i>
+            </div>
+            <h2 class="fw-bold" style="color: var(--text-primary);">
+              This link has expired
+            </h2>
+            <p class="mt-2 mb-1" style="color: var(--text-muted);">
+              The verification link sent to
+            </p>
+
+            {% if email %}
+              <div class="mb-3">
+                <span class="email-pill">{{ email }}</span>
+              </div>
+            {% endif %}
+
+            <p class="text-muted small mb-0">
+              Verification links are valid for
+              <strong style="color: var(--text-primary);">24&nbsp;hours</strong>.
+              No worries &mdash; we can send a fresh one.
+            </p>
+          </div>
+
+          <!-- Flash messages -->
+          {% if messages %}
+            {% for m in messages %}
+              <div class="alert alert-{{ m.tags }} mt-4 mb-0 small">{{ m }}</div>
+            {% endfor %}
+          {% endif %}
+
+          <!-- Amber warning -->
+          <div class="warn-banner mt-4 d-flex gap-2 align-items-start">
+            <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+            <div>
+              <strong>Why did it expire?</strong>
+              Verification links only work for 24 hours to keep your
+              account secure. Click below to receive a new one.
+            </div>
+          </div>
+
+          <!-- Resend form (primary CTA) -->
+          <form method="post"
+                action="{% url 'resend_verification' %}"
+                class="text-center mt-4">
+            {% csrf_token %}
+            {% if email %}
+              <input type="hidden" name="email" value="{{ email }}">
+              <button type="submit" class="btn btn-primary btn-primary-pill">
+                <i class="bi bi-send"></i>
+                Send a new link to {{ email }}
+              </button>
+            {% else %}
+              {# No email in context — ask for it #}
+              <div class="text-start mb-3">
+                <label class="form-label fw-semibold small"
+                       style="color: var(--text-primary);">
+                  Your email address
+                </label>
+                <input type="email"
+                       name="email"
+                       class="form-control"
+                       placeholder="you@company.com"
+                       required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-primary-pill">
+                <i class="bi bi-send"></i>
+                Send a new verification link
+              </button>
+            {% endif %}
           </form>
 
-          <hr class="my-4">
+          <!-- Divider -->
+          <hr class="my-4" style="border-color: var(--border-color);">
 
-          <a href="{% url 'login' %}" class="text-muted small">
-            <i class="bi bi-arrow-left me-1"></i> Back to sign in
-          </a>
+          <!-- Footer -->
+          <div class="text-center">
+            <a href="{% url 'login' %}" class="text-muted small" style="text-decoration: none;">
+              <i class="bi bi-arrow-left me-1"></i>
+              Back to sign in
+            </a>
+          </div>
 
         </div>
       </div>
+
+      <!-- Brand tagline -->
+      <p class="text-center mt-3 mb-0 small" style="color: var(--text-muted);">
+        Powered by <strong style="color: var(--text-secondary);">Pritech</strong>
+      </p>
+
     </div>
   </div>
 </div>
-{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  (function() {
+    /* ──────── Theme toggle (persists via localStorage) ──────── */
+    const html = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+
+    function setTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      html.setAttribute('data-bs-theme', theme);
+      localStorage.setItem('theme', theme);
+      const lightIcon = document.querySelector('.light-icon');
+      const darkIcon = document.querySelector('.dark-icon');
+      if (theme === 'dark') {
+        lightIcon.style.display = 'none';
+        darkIcon.style.display = 'inline-block';
+      } else {
+        lightIcon.style.display = 'inline-block';
+        darkIcon.style.display = 'none';
+      }
+    }
+
+    const savedTheme = localStorage.getItem('theme')
+      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(savedTheme);
+
+    themeToggle?.addEventListener('click', () =>
+      setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light')
+    );
+  })();
+</script>
+</body>
+</html>

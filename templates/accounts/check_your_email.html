@@ -1,62 +1,221 @@
-{% extends "base.html" %}
-{% block title %}Check your email{% endblock %}
-{% block page_title %}Verify your email{% endblock %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Check your email — Pritech</title>
+  <link href="{% static 'img/favicon.ico' %}" rel="icon">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/mobile-first.css' %}">
+  <style>
+    body { background: var(--bg-secondary); }
+    .verify-card { max-width: 520px; border-radius: 20px; }
 
-{% block content %}
-<div class="container py-4">
+    /* Big hero icon */
+    .hero-icon {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: rgba(65, 84, 241, 0.12);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      font-size: 2.75rem;
+      animation: floatIn 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1) both;
+    }
+    @keyframes floatIn {
+      from { transform: scale(0.7); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* Email pill */
+    .email-pill {
+      display: inline-block;
+      max-width: 100%;
+      padding: 0.55rem 1rem;
+      background: var(--bg-tertiary);
+      border-radius: 60px;
+      font-weight: 600;
+      color: var(--text-primary);
+      word-break: break-all;
+      font-size: 0.95rem;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Help list */
+    .help-list {
+      text-align: left;
+      background: rgba(65, 84, 241, 0.06);
+      border-left: 3px solid var(--primary);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .help-list ul { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+    .help-list li { margin-bottom: 0.2rem; }
+    .help-list li:last-child { margin-bottom: 0; }
+    .help-list strong { color: var(--text-primary); }
+
+    /* Resend button (secondary style — not as loud as the primary CTA) */
+    .btn-resend {
+      background: transparent;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+      border-radius: 60px;
+      font-weight: 600;
+      padding: 0.55rem 1.25rem;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-resend:hover {
+      background: var(--primary);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(65, 84, 241, 0.25);
+    }
+
+    .meta-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+    }
+  </style>
+</head>
+<body class="d-flex align-items-center min-vh-100 p-3">
+<div class="container">
   <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow-sm border-0">
-        <div class="card-body text-center py-5">
+    <div class="col-12 col-md-8 col-lg-6">
+      <div class="card verify-card shadow-lg border-0">
+        <div class="card-body p-4 p-md-5">
 
-          <div class="mb-3">
-            <i class="bi bi-envelope-check display-3 text-primary"></i>
+          <!-- Theme toggle -->
+          <div class="d-flex justify-content-end mb-2">
+            <button class="theme-toggle-btn" id="themeToggle" type="button">
+              <i class="bi bi-sun-fill light-icon"></i>
+              <i class="bi bi-moon-stars-fill dark-icon"></i>
+            </button>
           </div>
 
-          <h2 class="fw-bold">Check your email</h2>
-          <p class="lead mt-2 mb-1">
-            We've sent a verification link to
-          </p>
-          <p class="fw-semibold text-break">
-            {% if email %}{{ email }}{% else %}your email address{% endif %}
-          </p>
+          <!-- Hero icon -->
+          <div class="text-center">
+            <div class="hero-icon">
+              <i class="bi bi-envelope-check-fill"></i>
+            </div>
+            <h2 class="fw-bold" style="color: var(--text-primary);">
+              Check your email
+            </h2>
+            <p class="mt-2 mb-1" style="color: var(--text-muted);">
+              We've sent a verification link to
+            </p>
 
-          <p class="text-muted small">
-            Click the link to activate your account. The link is valid for
-            <strong>24 hours</strong>.
-          </p>
+            <div class="mb-3">
+              <span class="email-pill">
+                {% if email %}{{ email }}{% else %}your email address{% endif %}
+              </span>
+            </div>
 
-          <div class="alert alert-info text-start mt-4 small">
+            <p class="text-muted small mb-0">
+              Click the link to activate your account. It's valid for
+              <strong style="color: var(--text-primary);">24&nbsp;hours</strong>.
+            </p>
+          </div>
+
+          <!-- Flash messages (success/error from the server) -->
+          {% if messages %}
+            {% for m in messages %}
+              <div class="alert alert-{{ m.tags }} mt-4 mb-0 small">{{ m }}</div>
+            {% endfor %}
+          {% endif %}
+
+          <!-- Help checklist -->
+          <div class="help-list mt-4">
             <strong class="d-block mb-1">
-              <i class="bi bi-question-circle me-1"></i> Didn't get the email?
+              <i class="bi bi-question-circle me-1"></i>
+              Didn't get the email?
             </strong>
-            <ul class="mb-0 ps-3">
+            <ul>
               <li>Check your <strong>spam / junk</strong> folder</li>
               <li>Wait 1–2 minutes — emails can be delayed</li>
-              <li>Make sure the address you used is a real, working inbox</li>
+              <li>Make sure the address above is correct</li>
             </ul>
           </div>
 
+          <!-- Resend form -->
           <form method="post"
                 action="{% url 'resend_verification' %}"
-                class="mt-4">
+                class="text-center mt-4">
             {% csrf_token %}
             <input type="hidden" name="email" value="{{ email }}">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-arrow-repeat me-1"></i>
+            <button type="submit" class="btn-resend">
+              <i class="bi bi-arrow-repeat"></i>
               Resend verification email
             </button>
+            <div class="meta-note">
+              You can resend up to 3 times per hour.
+            </div>
           </form>
 
-          <hr class="my-4">
+          <!-- Divider -->
+          <hr class="my-4" style="border-color: var(--border-color);">
 
-          <a href="{% url 'login' %}" class="text-muted small">
-            <i class="bi bi-arrow-left me-1"></i> Back to sign in
-          </a>
+          <!-- Footer -->
+          <div class="text-center">
+            <a href="{% url 'login' %}" class="text-muted small" style="text-decoration: none;">
+              <i class="bi bi-arrow-left me-1"></i>
+              Back to sign in
+            </a>
+          </div>
 
         </div>
       </div>
+
+      <!-- Brand tagline -->
+      <p class="text-center mt-3 mb-0 small" style="color: var(--text-muted);">
+        Powered by <strong style="color: var(--text-secondary);">Pritech</strong>
+      </p>
+
     </div>
   </div>
 </div>
-{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  (function() {
+    /* ──────── Theme toggle (persists via localStorage) ──────── */
+    const html = document.documentElement;
+    const themeToggle = document.getElementById('themeToggle');
+
+    function setTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      html.setAttribute('data-bs-theme', theme);
+      localStorage.setItem('theme', theme);
+      const lightIcon = document.querySelector('.light-icon');
+      const darkIcon = document.querySelector('.dark-icon');
+      if (theme === 'dark') {
+        lightIcon.style.display = 'none';
+        darkIcon.style.display = 'inline-block';
+      } else {
+        lightIcon.style.display = 'inline-block';
+        darkIcon.style.display = 'none';
+      }
+    }
+
+    const savedTheme = localStorage.getItem('theme')
+      || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(savedTheme);
+
+    themeToggle?.addEventListener('click', () =>
+      setTheme(html.getAttribute('data-theme') === 'light' ? 'dark' : 'light')
+    );
+  })();
+</script>
+</body>
+</html>
