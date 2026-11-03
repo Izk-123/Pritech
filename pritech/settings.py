@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.linkedin_oauth2',
     'simple_history',
     'channels',
+    # "hcaptcha",  # enable if using hCaptcha on register
 
     # Local apps
     'core',
@@ -147,14 +148,27 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 # -----------------------------------------------------------------------------
 # DJANGO-ALLAUTH (production)
 # -----------------------------------------------------------------------------
+# * ACCOUNT_ADAPTER  – disables allauth's own /social/accounts/signup/ page
+#                      so all registrations go through /accounts/register/
+# * ACCOUNT_ALLOW_REGISTRATION = False
+#                      – belt-and-braces for older allauth versions.
+# * ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+#                      – enforce email verification.
+# * SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+#                      – explicit; Google/LinkedIn always return verified
+#                        emails, so this only affects edge-case providers.
 SITE_ID = 1
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory'   # enforce email verification
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'                      # enforced
+ACCOUNT_ALLOW_REGISTRATION = False                            # NEW
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
+ACCOUNT_ADAPTER = 'accounts.adapters.CustomAccountAdapter'    # NEW
+
 SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_LOGIN_METHODS = {'email'}
 SOCIALACCOUNT_ADAPTER = 'accounts.adapters.SocialAccountAdapter'
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'mandatory'                # NEW
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -234,6 +248,13 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 # Portfolio App & GDPR Settings
 # -----------------------------------------------------------------------------
 ADMIN_EMAIL = config('ADMIN_EMAIL', default='admin@pritech.mw')
+
+# -----------------------------------------------------------------------------
+# CAPTCHA (optional – strongly recommended on public signup)
+# -----------------------------------------------------------------------------
+# pip install django-hcaptcha
+# HCAPTCHA_SITEKEY = config("HCAPTCHA_SITEKEY")
+# HCAPTCHA_SECRET  = config("HCAPTCHA_SECRET")
 
 # -----------------------------------------------------------------------------
 # CELERY (production – Redis broker)
